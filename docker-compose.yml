@@ -1,0 +1,93 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: gutshot-postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - ./docker/postgres/data:/var/lib/postgresql/data
+    networks:
+      - gutshot-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: gutshot-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - ./docker/redis/data:/data
+    networks:
+      - gutshot-network
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: gutshot-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${API_PORT:-3000}:3000"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - gutshot-network
+
+  mini-app:
+    build:
+      context: .
+      dockerfile: apps/mini-app/Dockerfile
+    container_name: gutshot-mini-app
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+    networks:
+      - gutshot-network
+
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+    container_name: gutshot-admin
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    depends_on:
+      - api
+    networks:
+      - gutshot-network
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: gutshot-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx:/etc/nginx/conf.d
+      - ./docker/nginx/certs:/etc/letsencrypt
+    depends_on:
+      - api
+      - mini-app
+      - admin
+    networks:
+      - gutshot-network
+
+networks:
+  gutshot-network:
+    driver: bridge

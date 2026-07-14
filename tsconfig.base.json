@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noImplicitAny": true,
+    "baseUrl": ".",
+    "paths": {
+      "@gutshot/shared": ["packages/shared/src"],
+      "@gutshot/shared/*": ["packages/shared/src/*"],
+      "@gutshot/types": ["packages/types/src"],
+      "@gutshot/types/*": ["packages/types/src/*"],
+      "@gutshot/ui": ["packages/ui/src"],
+      "@gutshot/ui/*": ["packages/ui/src/*"]
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "@gutshot/types",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GUTSHOT — shared TypeScript types and enums (User, Tournament, Registration, etc.)",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts"
+}

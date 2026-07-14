@@ -1,0 +1,207 @@
+// GUTSHOT Poker Club — Prisma Schema
+// Источник: docs/02-database-design.md, docs/03-prisma-models.md
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------
+// ENUMS
+// ---------------------------------
+
+enum TournamentStatus {
+  DRAFT
+  REGISTRATION_OPEN
+  REGISTRATION_CLOSED
+  IN_PROGRESS
+  FINISHED
+  ARCHIVED
+}
+
+enum RegistrationStatus {
+  REGISTERED
+  CHECKED_IN
+  PLAYING
+  FINISHED
+  CANCELLED
+  NO_SHOW
+  WAITING
+}
+
+enum XPReason {
+  TOURNAMENT_PARTICIPATION
+  TOURNAMENT_PLACE
+  TOURNAMENT_WIN
+  BONUS
+  PENALTY
+  MANUAL
+}
+
+enum NotificationType {
+  REGISTRATION
+  REMINDER
+  TOURNAMENT_START
+  TOURNAMENT_RESULT
+  SYSTEM
+}
+
+enum AdminRole {
+  OWNER
+  ADMIN
+  MANAGER
+}
+
+// ---------------------------------
+// MODELS
+// ---------------------------------
+
+model User {
+  id        String   @id @default(cuid())
+  telegramId String  @unique
+  username  String?
+  firstName String?
+  lastName  String?
+  photoUrl  String?
+  isBlocked Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  playerProfile     PlayerProfile?
+  registrations     Registration[]
+  tournamentResults TournamentResult[]
+  xpHistory         XPHistory[]
+  notifications     Notification[]
+
+  @@index([telegramId])
+}
+
+model PlayerProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  xp        Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Tournament {
+  id                 String           @id @default(cuid())
+  title              String
+  description        String?
+  date               DateTime
+  buyIn              Int
+  maxPlayers         Int
+  status             TournamentStatus @default(DRAFT)
+  registrationOpen   DateTime?
+  registrationClose  DateTime?
+  reminderSentAt     DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  registrations     Registration[]
+  tournamentResults TournamentResult[]
+
+  @@index([date])
+  @@index([status])
+}
+
+model Registration {
+  id             String             @id @default(cuid())
+  userId         String
+  tournamentId   String
+  status         RegistrationStatus @default(REGISTERED)
+  registeredAt   DateTime           @default(now())
+  checkedInAt    DateTime?
+  cancelledAt    DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  user       User        @relation(fields: [userId], references: [id])
+  tournament Tournament  @relation(fields: [tournamentId], references: [id])
+  qrToken    QRToken?
+
+  @@unique([userId, tournamentId])
+  @@index([tournamentId])
+  @@index([status])
+}
+
+model QRToken {
+  id             String   @id @default(cuid())
+  registrationId String   @unique
+  token          String   @unique
+  expiresAt      DateTime
+  usedAt         DateTime?
+  createdAt      DateTime @default(now())
+
+  registration Registration @relation(fields: [registrationId], references: [id])
+
+  @@index([token])
+  @@index([expiresAt])
+}
+
+model TournamentResult {
+  id           String   @id @default(cuid())
+  tournamentId String
+  userId       String
+  place        Int
+  xpEarned     Int
+  createdAt    DateTime @default(now())
+
+  user       User        @relation(fields: [userId], references: [id])
+  tournament Tournament  @relation(fields: [tournamentId], references: [id])
+  xpHistory  XPHistory[]
+
+  @@unique([userId, tournamentId])
+  @@index([tournamentId])
+  @@index([place])
+}
+
+model XPHistory {
+  id                  String   @id @default(cuid())
+  userId              String
+  tournamentResultId  String?
+  reason              XPReason
+  amount              Int
+  createdAt           DateTime @default(now())
+
+  user             User              @relation(fields: [userId], references: [id])
+  tournamentResult TournamentResult? @relation(fields: [tournamentResultId], references: [id])
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  sentAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([sentAt])
+}
+
+model AdminUser {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String
+  role         AdminRole @default(MANAGER)
+  lastLogin    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([email])
+}

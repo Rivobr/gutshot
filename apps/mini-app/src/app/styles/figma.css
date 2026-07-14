@@ -1,0 +1,195 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,600&family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* ── Keyframes ─────────────────────────────────────────────── */
+@keyframes chip-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes btn-shine {
+  0%,
+  73%,
+  100% {
+    transform: translateX(-220%);
+    opacity: 0;
+  }
+  78% {
+    opacity: 1;
+  }
+  88% {
+    transform: translateX(220%);
+    opacity: 0;
+  }
+}
+@keyframes float-hero {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+@keyframes xp-grow {
+  from {
+    width: 0%;
+  }
+}
+@keyframes pulse-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(199, 154, 61, 0);
+  }
+  50% {
+    box-shadow: 0 0 20px 3px rgba(199, 154, 61, 0.2);
+  }
+}
+@keyframes ticker-glow {
+  0%,
+  100% {
+    text-shadow: 0 0 8px rgba(247, 217, 138, 0.3);
+  }
+  50% {
+    text-shadow: 0 0 20px rgba(247, 217, 138, 0.75);
+  }
+}
+@keyframes nav-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 3px rgba(199, 154, 61, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 7px rgba(247, 217, 138, 0.7));
+  }
+}
+
+.chip-spin {
+  animation: chip-spin 30s linear infinite;
+}
+.float-hero {
+  animation: float-hero 7s ease-in-out infinite;
+}
+.xp-grow {
+  animation: xp-grow 1.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 0.4s;
+}
+.pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+.ticker-glow {
+  animation: ticker-glow 2s ease-in-out infinite;
+}
+.nav-active-glow {
+  animation: nav-glow 3s ease-in-out infinite;
+}
+
+/* ── Shine button ──────────────────────────────────────────── */
+.btn-shine {
+  position: relative;
+  overflow: hidden;
+}
+.btn-shine::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.13) 50%, transparent 100%);
+  transform: translateX(-220%);
+  opacity: 0;
+  animation: btn-shine 7s ease-in-out infinite;
+}
+
+/* ── Gold text ─────────────────────────────────────────────── */
+.gold-text {
+  background: linear-gradient(135deg, #9c6a1f 0%, #c89a3d 30%, #f7d98a 55%, #c89a3d 75%, #9c6a1f 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.gold-text-sm {
+  background: linear-gradient(135deg, #c89a3d 0%, #f7d98a 50%, #c89a3d 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Decorative surfaces ───────────────────────────────────── */
+.deco-lines {
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(199, 154, 61, 0.04) 0px,
+    rgba(199, 154, 61, 0.04) 1px,
+    transparent 1px,
+    transparent 48px
+  );
+}
+.vip-card {
+  background: linear-gradient(145deg, #1c1916 0%, #161310 50%, #111009 100%);
+  border: 1px solid rgba(199, 154, 61, 0.25);
+  border-top-color: rgba(247, 217, 138, 0.3);
+  box-shadow:
+    0 6px 32px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 rgba(247, 217, 138, 0.07),
+    inset 0 0 40px rgba(156, 106, 31, 0.025);
+}
+.vip-card-hero {
+  background: linear-gradient(145deg, #211d14 0%, #1a1710 45%, #13110a 100%);
+  border: 1px solid rgba(199, 154, 61, 0.38);
+  border-top-color: rgba(247, 217, 138, 0.45);
+  box-shadow:
+    0 12px 56px rgba(0, 0, 0, 0.75),
+    0 0 80px rgba(156, 106, 31, 0.07),
+    inset 0 1px 0 rgba(247, 217, 138, 0.1);
+}
+.card-pressed {
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.card-pressed:active {
+  transform: scale(0.982) translateY(1px);
+}
+
+.gold-divider {
+  background: linear-gradient(90deg, transparent, rgba(199, 154, 61, 0.4), transparent);
+  height: 1px;
+}
+.gold-border-thin {
+  border: 1px solid rgba(199, 154, 61, 0.22);
+}
+.status-upcoming {
+  background: rgba(199, 154, 61, 0.1);
+  border: 1px solid rgba(199, 154, 61, 0.35);
+  color: #c89a3d;
+}
+.status-done {
+  background: rgba(80, 80, 80, 0.12);
+  border: 1px solid rgba(100, 100, 100, 0.25);
+  color: #666;
+}
+
+/* ── Hide scrollbars ───────────────────────────────────────── */
+.hs::-webkit-scrollbar {
+  display: none;
+}
+.hs {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ── Typography helpers ────────────────────────────────────── */
+.serif {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+}
+.sans {
+  font-family: 'Inter', system-ui, sans-serif;
+}
+.num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings:
+    'tnum' 1,
+    'lnum' 1;
+  font-family: 'Inter', system-ui, sans-serif;
+}
