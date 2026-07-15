@@ -49,6 +49,8 @@ services:
     build:
       context: .
       dockerfile: apps/mini-app/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-https://api.ottisk.store/api/v1}
     container_name: gutshot-mini-app
     restart: unless-stopped
     ports:
@@ -62,6 +64,8 @@ services:
     build:
       context: .
       dockerfile: apps/admin/Dockerfile
+      args:
+        VITE_ADMIN_API_URL: ${VITE_ADMIN_API_URL:-https://api.ottisk.store/api/v1}
     container_name: gutshot-admin
     restart: unless-stopped
     ports:
