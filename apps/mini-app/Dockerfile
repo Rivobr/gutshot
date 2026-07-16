@@ -12,7 +12,7 @@ FROM base AS build
 ARG VITE_API_URL=https://api.ottisk.store/api/v1
 ENV VITE_API_URL=$VITE_API_URL
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app ./
 COPY . .
 RUN pnpm --filter @gutshot/mini-app build
 

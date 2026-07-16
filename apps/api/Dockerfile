@@ -11,17 +11,18 @@ RUN pnpm install --frozen-lockfile
 
 FROM base AS build
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app ./
 COPY . .
 RUN pnpm --filter @gutshot/api prisma:generate
 RUN pnpm --filter @gutshot/api build
 
 FROM base AS runtime
-WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=build /app/apps/api/package.json ./package.json
-COPY --from=build /app/apps/api/dist ./dist
-COPY --from=build /app/apps/api/prisma ./prisma
 COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=build /app/apps/api/package.json ./apps/api/package.json
+COPY --from=build /app/apps/api/dist ./apps/api/dist
+COPY --from=build /app/apps/api/prisma ./apps/api/prisma
+WORKDIR /app/apps/api
 EXPOSE 3000
 CMD ["node", "dist/main.js"]
