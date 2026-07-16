@@ -19,6 +19,7 @@ RUN pnpm --filter @gutshot/api build
 FROM base AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
+COPY --from=build /app/apps/api/package.json ./package.json
 COPY --from=build /app/apps/api/dist ./dist
 COPY --from=build /app/apps/api/prisma ./prisma
 COPY --from=build /app/node_modules ./node_modules
