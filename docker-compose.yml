@@ -33,6 +33,7 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
+      network: host
     container_name: gutshot-api
     restart: unless-stopped
     env_file:
@@ -49,6 +50,7 @@ services:
     build:
       context: .
       dockerfile: apps/mini-app/Dockerfile
+      network: host
       args:
         VITE_API_URL: ${VITE_API_URL:-https://api.ottisk.store/api/v1}
     container_name: gutshot-mini-app
@@ -64,6 +66,7 @@ services:
     build:
       context: .
       dockerfile: apps/admin/Dockerfile
+      network: host
       args:
         VITE_ADMIN_API_URL: ${VITE_ADMIN_API_URL:-https://api.ottisk.store/api/v1}
     container_name: gutshot-admin
