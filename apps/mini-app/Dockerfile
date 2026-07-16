@@ -9,7 +9,7 @@ COPY packages ./packages
 RUN pnpm install --frozen-lockfile
 
 FROM base AS build
-ARG VITE_API_URL=https://api.ottisk.store/api/v1
+ARG VITE_API_URL=https://api.gutshotapp.ru/api/v1
 ENV VITE_API_URL=$VITE_API_URL
 WORKDIR /app
 COPY --from=deps /app ./
