@@ -15,6 +15,9 @@ COPY --from=deps /app ./
 COPY . .
 RUN pnpm --filter @gutshot/api prisma:generate
 RUN pnpm --filter @gutshot/api build
+RUN cd apps/api && npx tsc prisma/seed.ts --outDir dist/prisma \
+  --module commonjs --target ES2021 --moduleResolution node \
+  --esModuleInterop --skipLibCheck --noEmitOnError false
 
 FROM base AS runtime
 ENV NODE_ENV=production
