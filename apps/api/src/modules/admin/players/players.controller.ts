@@ -29,4 +29,14 @@ export class AdminPlayersController {
   unblock(@Param('id') id: string) {
     return this.playersService.unblock(id);
   }
+
+  @Patch(':id/verify')
+  verify(@Param('id') id: string) {
+    return this.playersService.setVerified(id, true);
+  }
+
+  @Patch(':id/unverify')
+  unverify(@Param('id') id: string) {
+    return this.playersService.setVerified(id, false);
+  }
 }

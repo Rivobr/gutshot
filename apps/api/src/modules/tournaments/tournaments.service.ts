@@ -1,10 +1,50 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Tournament, TournamentStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { calculateLevel } from '../../common/utils/level.util';
 
 @Injectable()
 export class TournamentsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async getParticipants(id: string) {
+    await this.findById(id);
+
+    const registrations = await this.prisma.registration.findMany({
+      where: {
+        tournamentId: id,
+        status: { in: ['REGISTERED', 'CHECKED_IN', 'PLAYING', 'FINISHED', 'WAITING'] },
+      },
+      orderBy: { registeredAt: 'asc' },
+      include: {
+        user: {
+          include: {
+            playerProfile: true,
+            tournamentResults: { select: { place: true } },
+          },
+        },
+      },
+    });
+
+    return registrations.map((reg) => {
+      const results = reg.user.tournamentResults;
+      const itm = results.filter((r) => r.place <= 10).length;
+      const top10Percent =
+        results.length > 0 ? Math.round((itm / results.length) * 100) : 0;
+
+      return {
+        userId: reg.user.id,
+        firstName: reg.user.firstName,
+        lastName: reg.user.lastName,
+        username: reg.user.username,
+        photoUrl: reg.user.photoUrl,
+        level: calculateLevel(reg.user.playerProfile?.xp ?? 0),
+        top10Percent,
+        status: reg.status,
+        qrToken: `gutshot:player:${reg.user.id}`,
+      };
+    });
+  }
 
   async findAll(filters: { status?: TournamentStatus; date?: string }): Promise<Tournament[]> {
     return this.prisma.tournament.findMany({

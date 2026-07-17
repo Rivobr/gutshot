@@ -28,6 +28,7 @@ export class AdminPlayersService {
       lastName: user.lastName,
       photoUrl: user.photoUrl,
       isBlocked: user.isBlocked,
+      isVerified: user.isVerified,
       xp: user.playerProfile?.xp ?? 0,
       level: calculateLevelProgress(user.playerProfile?.xp ?? 0).level,
       visits: user._count.registrations,
@@ -62,5 +63,10 @@ export class AdminPlayersService {
   async unblock(id: string) {
     await this.findById(id);
     return this.prisma.user.update({ where: { id }, data: { isBlocked: false } });
+  }
+
+  async setVerified(id: string, isVerified: boolean) {
+    await this.findById(id);
+    return this.prisma.user.update({ where: { id }, data: { isVerified } });
   }
 }

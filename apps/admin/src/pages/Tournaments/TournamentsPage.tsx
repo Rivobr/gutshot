@@ -16,12 +16,12 @@ export function TournamentsPage(): JSX.Element {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-medium">Турниры</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-xl font-medium sm:text-2xl">Турниры</h1>
         <Button onClick={() => setCreateOpen(true)}>+ Создать турнир</Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {tournaments?.map((tournament) => (
           <Card key={tournament.id} className="gap-3">
             <div className="flex items-center justify-between">

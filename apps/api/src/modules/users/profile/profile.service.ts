@@ -16,14 +16,30 @@ export class ProfileService {
       throw new NotFoundException('Профиль не найден');
     }
 
-    const [tournamentsPlayed, wins] = await Promise.all([
+    const [tournamentsPlayed, results] = await Promise.all([
       this.prisma.registration.count({
         where: { userId, status: 'FINISHED' },
       }),
-      this.prisma.tournamentResult.count({
-        where: { userId, place: 1 },
+      this.prisma.tournamentResult.findMany({
+        where: { userId },
+        select: { place: true },
       }),
     ]);
+
+    const resultsCount = results.length;
+    const wins = results.filter((r) => r.place === 1).length;
+    const firstPlaces = wins;
+    const itm = results.filter((r) => r.place <= 10).length;
+    const top10Percent =
+      resultsCount > 0 ? Math.round((itm / resultsCount) * 100) : 0;
+    const averagePlace =
+      resultsCount > 0
+        ? Math.round(results.reduce((sum, r) => sum + r.place, 0) / resultsCount)
+        : null;
+    const daysInClub = Math.max(
+      0,
+      Math.floor((Date.now() - user.createdAt.getTime()) / 86_400_000),
+    );
 
     const levelProgress = calculateLevelProgress(user.playerProfile.xp);
 
@@ -35,10 +51,17 @@ export class ProfileService {
       lastName: user.lastName,
       photoUrl: user.photoUrl,
       xp: user.playerProfile.xp,
+      memberSince: user.createdAt.toISOString(),
+      isVerified: user.isVerified,
       ...levelProgress,
       stats: {
         tournamentsPlayed,
         wins,
+        firstPlaces,
+        itm,
+        top10Percent,
+        averagePlace,
+        daysInClub,
       },
     };
   }

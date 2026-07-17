@@ -1,61 +1,100 @@
 import type { ReactNode } from 'react';
 
+export function BrandMark({ height = 26 }: { height?: number }): JSX.Element {
+  const barW = height * 0.16;
+  const gap = height * 0.11;
+  const bars = [0, 1, 2, 3, 4];
+  return (
+    <div className="flex items-end justify-center" style={{ gap }}>
+      {bars.map((i) => {
+        const ruby = i === 2;
+        return (
+          <span
+            key={i}
+            style={{
+              width: barW,
+              height,
+              borderRadius: barW * 0.28,
+              background: ruby
+                ? 'linear-gradient(150deg,#7a0b2c 0%,#e0115f 45%,#ff4d7d 60%,#a10d3d 100%)'
+                : 'linear-gradient(150deg,#7d5417 0%,#c89a3d 42%,#f7d98a 58%,#8a5c1c 100%)',
+              boxShadow: ruby
+                ? '0 0 10px rgba(224,17,95,0.5), inset 0 1px 0 rgba(255,255,255,0.35)'
+                : '0 1px 4px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.3)',
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 export function Logo({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }): JSX.Element {
   const cfg = {
-    sm: { title: 12, sub: 7.5, gap: 2 },
-    md: { title: 16, sub: 9, gap: 3 },
-    lg: { title: 24, sub: 11, gap: 4 },
+    sm: { title: 14, sub: 7, gap: 4, mark: 15 },
+    md: { title: 19, sub: 8.5, gap: 5, mark: 20 },
+    lg: { title: 27, sub: 11, gap: 7, mark: 30 },
   }[size];
 
   return (
     <div className="flex flex-col items-center" style={{ gap: cfg.gap }}>
-      <div className="flex items-center gap-2">
-        <svg width={cfg.title * 0.55} height={cfg.title * 0.55} viewBox="0 0 20 20" fill="none">
-          <path
-            d="M10 1 L12.5 7.5 L19 8.5 L14.5 13 L15.8 19.5 L10 16.5 L4.2 19.5 L5.5 13 L1 8.5 L7.5 7.5 Z"
-            fill="url(#lg1)"
-          />
-          <defs>
-            <linearGradient id="lg1" x1="0" y1="0" x2="20" y2="20">
-              <stop stopColor="#9C6A1F" />
-              <stop offset="0.5" stopColor="#F7D98A" />
-              <stop offset="1" stopColor="#9C6A1F" />
-            </linearGradient>
-          </defs>
-        </svg>
-        <span
-          className="gold-text serif tracking-widest font-semibold"
-          style={{ fontSize: cfg.title, letterSpacing: '0.2em', lineHeight: 1 }}
-        >
-          GUTSHOT
-        </span>
-        <svg width={cfg.title * 0.55} height={cfg.title * 0.55} viewBox="0 0 20 20" fill="none">
-          <path
-            d="M10 1 L12.5 7.5 L19 8.5 L14.5 13 L15.8 19.5 L10 16.5 L4.2 19.5 L5.5 13 L1 8.5 L7.5 7.5 Z"
-            fill="url(#lg2)"
-          />
-          <defs>
-            <linearGradient id="lg2" x1="0" y1="0" x2="20" y2="20">
-              <stop stopColor="#9C6A1F" />
-              <stop offset="0.5" stopColor="#F7D98A" />
-              <stop offset="1" stopColor="#9C6A1F" />
-            </linearGradient>
-          </defs>
-        </svg>
-      </div>
-      <div className="gold-divider w-full" style={{ opacity: 0.55 }} />
+      <BrandMark height={cfg.mark} />
       <span
-        className="sans uppercase tracking-widest"
+        className="gold-text serif font-semibold"
+        style={{ fontSize: cfg.title, letterSpacing: '0.16em', lineHeight: 1 }}
+      >
+        GUTSHOT
+      </span>
+      <span
+        className="sans uppercase"
         style={{
           fontSize: cfg.sub,
-          color: 'rgba(199,154,61,0.65)',
-          letterSpacing: '0.28em',
+          color: 'rgba(199,154,61,0.6)',
+          letterSpacing: '0.34em',
           lineHeight: 1,
         }}
       >
         Poker Club
       </span>
     </div>
+  );
+}
+
+const SUIT_PATHS: Record<string, string> = {
+  spade:
+    'M32 6C22 18 10 26 10 38a11 11 0 0 0 19 8c-1 6-3 9-7 12h20c-4-3-6-6-7-12a11 11 0 0 0 19-8c0-12-12-20-22-32Z',
+  club:
+    'M32 8a10 10 0 0 0-8 16 11 11 0 1 0-2 21c3 0 6-1 8-3-1 5-3 8-6 12h16c-3-4-5-7-6-12 2 2 5 3 8 3a11 11 0 1 0-2-21 10 10 0 0 0-8-16Z',
+  diamond: 'M32 4 54 34 32 64 10 34Z',
+  heart:
+    'M32 58C12 44 8 30 8 22a12 12 0 0 1 24-4 12 12 0 0 1 24 4c0 8-4 22-24 36Z',
+};
+
+export function SuitWatermark({
+  suit = 'spade',
+  className = '',
+  style,
+}: {
+  suit?: 'spade' | 'club' | 'diamond' | 'heart';
+  className?: string;
+  style?: React.CSSProperties;
+}): JSX.Element {
+  return (
+    <svg
+      viewBox="0 0 64 68"
+      className={className}
+      style={style}
+      fill="none"
+      aria-hidden
+    >
+      <path d={SUIT_PATHS[suit]} fill="url(#suitGrad)" />
+      <defs>
+        <linearGradient id="suitGrad" x1="0" y1="0" x2="64" y2="68">
+          <stop stopColor="#C89A3D" stopOpacity="0.9" />
+          <stop offset="1" stopColor="#5a3f16" stopOpacity="0.6" />
+        </linearGradient>
+      </defs>
+    </svg>
   );
 }
 

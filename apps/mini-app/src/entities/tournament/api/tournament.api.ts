@@ -1,4 +1,4 @@
-import { Tournament } from '@gutshot/types';
+import { Tournament, TournamentParticipant } from '@gutshot/types';
 import { apiClient } from '../../../shared/api/client';
 
 export const tournamentApi = {
@@ -12,6 +12,10 @@ export const tournamentApi = {
   },
   async getNearest(): Promise<Tournament | null> {
     const { data } = await apiClient.get('/tournaments/nearest');
+    return data.data;
+  },
+  async getParticipants(id: string): Promise<TournamentParticipant[]> {
+    const { data } = await apiClient.get(`/tournaments/${id}/participants`);
     return data.data;
   },
 };

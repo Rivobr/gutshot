@@ -21,3 +21,12 @@ export function useTogglePlayerBlock() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'players'] }),
   });
 }
+
+export function useTogglePlayerVerify() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, verified }: { id: string; verified: boolean }) =>
+      verified ? adminPlayersApi.unverify(id) : adminPlayersApi.verify(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'players'] }),
+  });
+}

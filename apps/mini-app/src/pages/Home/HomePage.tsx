@@ -198,8 +198,8 @@ export function HomePage(): JSX.Element {
           <Loader />
         ) : (
           <div className="flex flex-col gap-3">
-            {tournaments?.map((tournament) => (
-              <TournamentCard key={tournament.id} tournament={tournament} />
+            {tournaments?.map((tournament, i) => (
+              <TournamentCard key={tournament.id} tournament={tournament} index={i} />
             ))}
           </div>
         )}

@@ -10,9 +10,9 @@ export function DashboardPage(): JSX.Element {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-medium">Dashboard</h1>
+      <h1 className="text-xl font-medium sm:text-2xl">Dashboard</h1>
 
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Card>
           <p className="text-sm text-muted-foreground">Игроков</p>
           <p className="text-2xl font-medium">{data.playersCount}</p>
@@ -45,11 +45,16 @@ export function DashboardPage(): JSX.Element {
         <p className="text-sm text-muted-foreground">Последние регистрации</p>
         <div className="flex flex-col divide-y divide-border">
           {data.recentRegistrations?.map((registration) => (
-            <div key={registration.id} className="flex items-center justify-between py-2 text-sm">
-              <span>
+            <div
+              key={registration.id}
+              className="flex flex-col gap-1 py-2 text-sm sm:flex-row sm:items-center sm:justify-between sm:gap-3"
+            >
+              <span className="font-medium">
                 {registration.user?.firstName} {registration.user?.lastName}
               </span>
-              <span className="text-muted-foreground">{registration.tournament?.title}</span>
+              <span className="text-muted-foreground sm:flex-1 sm:text-center">
+                {registration.tournament?.title}
+              </span>
               <span className="text-primary">{registration.status}</span>
             </div>
           ))}

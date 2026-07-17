@@ -39,10 +39,29 @@ export interface PlayerProfileDto {
   currentLevelXp: number;
   nextLevelXp: number;
   progress: number;
+  memberSince: string;
+  isVerified: boolean;
   stats: {
     tournamentsPlayed: number;
     wins: number;
+    firstPlaces: number;
+    itm: number;
+    top10Percent: number;
+    averagePlace: number | null;
+    daysInClub: number;
   };
+}
+
+export interface TournamentParticipant {
+  userId: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  username?: string | null;
+  photoUrl?: string | null;
+  level: number;
+  top10Percent: number;
+  status: RegistrationStatus;
+  qrToken: string;
 }
 
 export interface Tournament {
@@ -104,6 +123,7 @@ export interface AdminPlayerListItem {
   lastName?: string | null;
   photoUrl?: string | null;
   isBlocked: boolean;
+  isVerified: boolean;
   xp: number;
   level: number;
   visits: number;

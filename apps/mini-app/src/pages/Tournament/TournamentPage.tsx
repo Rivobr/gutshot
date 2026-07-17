@@ -1,9 +1,12 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
+import { TournamentParticipant } from '@gutshot/types';
 import { Loader } from '@gutshot/ui';
-import { useTournament } from '../../entities/tournament';
+import { useTournament, useTournamentParticipants } from '../../entities/tournament';
 import { useCurrentRegistration, useRegister } from '../../entities/registration';
-import { Divider, InfoCard, SectionLabel, goldButtonStyle } from '../../shared/ui/figma';
+import { Divider, InfoCard, SectionLabel, goldButtonStyle, initialsOf } from '../../shared/ui/figma';
+import { PlayerQrModal } from '../../widgets/PlayerQrModal/PlayerQrModal';
 import { formatDate, formatMoney, formatTime, seatsWord } from '../../shared/lib/format';
 
 const UPCOMING_STATUSES = ['DRAFT', 'REGISTRATION_OPEN', 'REGISTRATION_CLOSED', 'IN_PROGRESS'];
@@ -12,8 +15,10 @@ export function TournamentPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: tournament, isLoading } = useTournament(id ?? '');
+  const { data: participants } = useTournamentParticipants(id ?? '');
   const { data: currentRegistration } = useCurrentRegistration();
   const registerMutation = useRegister();
+  const [selectedPlayer, setSelectedPlayer] = useState<TournamentParticipant | null>(null);
 
   if (isLoading || !tournament) {
     return <Loader />;
@@ -139,6 +144,76 @@ export function TournamentPage(): JSX.Element {
           )}
         </div>
       )}
+
+      <div className="px-5 mt-7">
+        <div className="mb-3 flex items-center justify-between">
+          <SectionLabel>Участники</SectionLabel>
+          <span className="sans num" style={{ fontSize: 10, color: '#6B614E' }}>
+            {participants?.length ?? 0}
+          </span>
+        </div>
+
+        {!participants || participants.length === 0 ? (
+          <div className="vip-card rounded-[18px] py-8 flex flex-col items-center gap-2">
+            <span style={{ fontSize: 26, opacity: 0.25 }}>♠</span>
+            <p className="serif" style={{ fontSize: 14, color: '#6B614E' }}>
+              Пока никто не зарегистрирован
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {participants.map((p, i) => (
+              <motion.button
+                key={p.userId}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, delay: i * 0.04 }}
+                onClick={() => setSelectedPlayer(p)}
+                whileTap={{ scale: 0.985 }}
+                className="vip-card rounded-[16px] p-3 flex items-center gap-3 text-left card-pressed"
+                style={{ border: 'none', cursor: 'pointer' }}
+              >
+                <div
+                  className="w-11 h-11 rounded-full flex items-center justify-center serif font-semibold shrink-0"
+                  style={{
+                    background: 'linear-gradient(135deg,#9C6A1F,#C89A3D,#F7D98A)',
+                    color: '#0A0A0A',
+                    fontSize: 15,
+                    boxShadow: '0 0 0 2px rgba(199,154,61,0.2), 0 0 16px rgba(156,106,31,0.25)',
+                  }}
+                >
+                  {initialsOf(p.firstName, p.lastName)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="serif font-semibold truncate" style={{ fontSize: 15, color: '#F5EDD6' }}>
+                    {`${p.firstName ?? ''} ${p.lastName ?? ''}`.trim() || 'Игрок'}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    {p.username && (
+                      <span className="sans truncate" style={{ fontSize: 11, color: '#6B614E' }}>
+                        @{p.username}
+                      </span>
+                    )}
+                    <span className="sans" style={{ fontSize: 10, color: 'rgba(199,154,61,0.6)' }}>
+                      Уровень {p.level}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="sans num gold-text-sm font-semibold" style={{ fontSize: 12 }}>
+                    ТОП-10: {p.top10Percent}%
+                  </p>
+                  <span className="sans" style={{ fontSize: 15, color: 'rgba(199,154,61,0.4)' }}>
+                    ›
+                  </span>
+                </div>
+              </motion.button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <PlayerQrModal participant={selectedPlayer} onClose={() => setSelectedPlayer(null)} />
     </motion.div>
   );
 }

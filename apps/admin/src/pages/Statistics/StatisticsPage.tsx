@@ -17,9 +17,9 @@ export function StatisticsPage(): JSX.Element {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-medium">Статистика</h1>
+      <h1 className="text-xl font-medium sm:text-2xl">Статистика</h1>
 
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Card>
           <p className="text-sm text-muted-foreground">Игроков</p>
           <p className="text-2xl font-medium">{data.playersCount}</p>
@@ -38,7 +38,7 @@ export function StatisticsPage(): JSX.Element {
         </Card>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Card className="gap-2">
           <p className="text-sm text-muted-foreground">Самые активные игроки</p>
           {data.topPlayers.map((player) => (

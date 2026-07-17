@@ -25,4 +25,9 @@ export class TournamentsController {
   findOne(@Param('id') id: string) {
     return this.tournamentsService.findById(id);
   }
+
+  @Get(':id/participants')
+  getParticipants(@Param('id') id: string) {
+    return this.tournamentsService.getParticipants(id);
+  }
 }

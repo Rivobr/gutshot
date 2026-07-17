@@ -1,21 +1,25 @@
 import { Tournament } from '@gutshot/types';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Divider } from '../../shared/ui/figma';
+import { Divider, SuitWatermark } from '../../shared/ui/figma';
 import { formatDate, formatMoney, seatsWord } from '../../shared/lib/format';
 
 const UPCOMING_STATUSES = ['DRAFT', 'REGISTRATION_OPEN', 'REGISTRATION_CLOSED', 'IN_PROGRESS'];
 
+const SUITS = ['spade', 'diamond', 'club', 'heart'] as const;
+
 export interface TournamentCardProps {
   tournament: Tournament;
+  index?: number;
 }
 
-export function TournamentCard({ tournament }: TournamentCardProps): JSX.Element {
+export function TournamentCard({ tournament, index = 0 }: TournamentCardProps): JSX.Element {
   const navigate = useNavigate();
   const registrationsCount = tournament._count?.registrations ?? 0;
   const seats = Math.max(tournament.maxPlayers - registrationsCount, 0);
   const pct = Math.min(Math.round((registrationsCount / tournament.maxPlayers) * 100), 100);
   const upcoming = UPCOMING_STATUSES.includes(tournament.status);
+  const suit = SUITS[index % SUITS.length];
 
   return (
     <motion.div
@@ -27,10 +31,23 @@ export function TournamentCard({ tournament }: TournamentCardProps): JSX.Element
       whileTap={{ scale: 0.984 }}
     >
       <div className="absolute inset-0 deco-lines opacity-50 pointer-events-none rounded-[22px]" />
+      <SuitWatermark
+        suit={suit}
+        style={{
+          position: 'absolute',
+          right: -14,
+          bottom: -10,
+          width: 128,
+          height: 128,
+          opacity: 0.05,
+          transform: 'rotate(-12deg)',
+          pointerEvents: 'none',
+        }}
+      />
 
-      <div className="flex items-start justify-between mb-3 gap-3">
+      <div className="relative flex items-start justify-between mb-3 gap-3">
         <div className="flex-1 min-w-0">
-          <h3 className="serif font-semibold leading-snug" style={{ fontSize: 16, color: '#F5EDD6' }}>
+          <h3 className="serif font-semibold leading-snug truncate" style={{ fontSize: 17, color: '#F5EDD6' }}>
             {tournament.title}
           </h3>
           {tournament.description && (
@@ -47,14 +64,14 @@ export function TournamentCard({ tournament }: TournamentCardProps): JSX.Element
         </span>
       </div>
 
-      <Divider className="mb-3" />
+      <Divider className="mb-3 relative" />
 
-      <div className="grid grid-cols-3 gap-2 mb-4">
+      <div className="relative grid grid-cols-3 gap-2 mb-4">
         <div>
           <p className="sans uppercase" style={{ fontSize: 8, color: '#6B614E', letterSpacing: '0.14em' }}>
             Взнос
           </p>
-          <p className="gold-text-sm num font-semibold" style={{ fontSize: 13 }}>
+          <p className="gold-text-sm num font-semibold" style={{ fontSize: 14 }}>
             {formatMoney(tournament.buyIn)}
           </p>
         </div>
@@ -70,15 +87,15 @@ export function TournamentCard({ tournament }: TournamentCardProps): JSX.Element
           <p className="sans uppercase" style={{ fontSize: 8, color: '#6B614E', letterSpacing: '0.14em' }}>
             Мест
           </p>
-          <p className="gold-text-sm num font-semibold" style={{ fontSize: 13 }}>
+          <p className="gold-text-sm num font-semibold" style={{ fontSize: 14 }}>
             {tournament.maxPlayers}
           </p>
         </div>
       </div>
 
       {upcoming && (
-        <>
-          <div className="flex justify-between mb-1.5">
+        <div className="relative mb-2">
+          <div className="flex justify-between mb-1.5 items-center">
             <span className="sans num" style={{ fontSize: 10, color: '#6B614E' }}>
               {registrationsCount} зарегистрировано
             </span>
@@ -101,11 +118,14 @@ export function TournamentCard({ tournament }: TournamentCardProps): JSX.Element
               }}
             />
           </div>
-        </>
+        </div>
       )}
 
-      <div className="flex justify-end mt-2">
-        <span style={{ color: 'rgba(199,154,61,0.45)', fontSize: 17 }}>›</span>
+      <div className="relative flex items-center justify-end gap-1 mt-1">
+        <span className="sans num" style={{ fontSize: 10, color: 'rgba(199,154,61,0.55)' }}>
+          Подробнее
+        </span>
+        <span style={{ color: 'rgba(199,154,61,0.5)', fontSize: 16 }}>›</span>
       </div>
     </motion.div>
   );

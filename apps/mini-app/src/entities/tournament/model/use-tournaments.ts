@@ -16,3 +16,11 @@ export function useTournament(id: string) {
 export function useNearestTournament() {
   return useQuery({ queryKey: ['tournaments', 'nearest'], queryFn: tournamentApi.getNearest });
 }
+
+export function useTournamentParticipants(id: string) {
+  return useQuery({
+    queryKey: ['tournaments', id, 'participants'],
+    queryFn: () => tournamentApi.getParticipants(id),
+    enabled: !!id,
+  });
+}

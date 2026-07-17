@@ -18,4 +18,12 @@ export const adminPlayersApi = {
     const { data } = await apiClient.patch(`/admin/players/${id}/unblock`);
     return data.data;
   },
+  async verify(id: string) {
+    const { data } = await apiClient.patch(`/admin/players/${id}/verify`);
+    return data.data;
+  },
+  async unverify(id: string) {
+    const { data } = await apiClient.patch(`/admin/players/${id}/unverify`);
+    return data.data;
+  },
 };
