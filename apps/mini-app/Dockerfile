@@ -17,6 +17,7 @@ COPY . .
 RUN pnpm --filter @gutshot/mini-app build
 
 FROM nginx:1.27-alpine AS runtime
+COPY apps/mini-app/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/apps/mini-app/dist /usr/share/nginx/html
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
