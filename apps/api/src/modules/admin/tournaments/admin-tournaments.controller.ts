@@ -4,8 +4,11 @@ import { AdminAuthGuard } from '../../auth/guards/admin-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { AdminRole } from '../../../common/enums/admin-role.enum';
+import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import { AdminJwtPayload } from '../../../common/interfaces/jwt-payload.interface';
 import { AdminTournamentsService } from './admin-tournaments.service';
-import { RegistrationsService } from '../../registrations/registrations.service';
+import { AttendanceService } from '../attendance/attendance.service';
+import { MarkAttendanceDto } from '../scanner/dto/scanner.dto';
 import { CreateTournamentDto } from './dto/create-tournament.dto';
 import { UpdateTournamentDto } from './dto/update-tournament.dto';
 import { TournamentResultEntryDto } from './dto/finish-tournament.dto';
@@ -17,7 +20,7 @@ import { TournamentResultEntryDto } from './dto/finish-tournament.dto';
 export class AdminTournamentsController {
   constructor(
     private readonly adminTournamentsService: AdminTournamentsService,
-    private readonly registrationsService: RegistrationsService,
+    private readonly attendanceService: AttendanceService,
   ) {}
 
   @Get()
@@ -69,15 +72,26 @@ export class AdminTournamentsController {
   @Roles(AdminRole.OWNER, AdminRole.ADMIN)
   @Post(':id/finish')
   finish(
+    @CurrentUser() admin: AdminJwtPayload,
     @Param('id') id: string,
     @Body(new ParseArrayPipe({ items: TournamentResultEntryDto }))
     results: TournamentResultEntryDto[],
   ) {
-    return this.adminTournamentsService.finish(id, results);
+    return this.adminTournamentsService.finish(id, results, admin.sub);
   }
 
   @Get(':id/registrations')
   getRegistrations(@Param('id') id: string) {
-    return this.registrationsService.findByTournament(id);
+    return this.adminTournamentsService.getRegistrations(id);
+  }
+
+  /** Отметка явки игрока на турнир. XP за посещение начисляется однократно. */
+  @Post(':id/registrations/:registrationId/attendance')
+  markAttendance(
+    @CurrentUser() admin: AdminJwtPayload,
+    @Param('registrationId') registrationId: string,
+    @Body() dto: MarkAttendanceDto,
+  ) {
+    return this.attendanceService.markAttendance(registrationId, dto.arrived, admin.sub);
   }
 }

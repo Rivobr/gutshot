@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Badge, Button, Card, Loader } from '@gutshot/ui';
 import { useAdminTournaments, useTournamentAction } from '../../entities/tournament';
 import { CreateTournamentModal } from './CreateTournamentModal';
 
 export function TournamentsPage(): JSX.Element {
+  const navigate = useNavigate();
   const { data: tournaments, isLoading } = useAdminTournaments();
   const [isCreateOpen, setCreateOpen] = useState(false);
   const openAction = useTournamentAction('open');
@@ -32,7 +34,14 @@ export function TournamentsPage(): JSX.Element {
               {new Date(tournament.date).toLocaleString('ru-RU')} · Бай-ин {tournament.buyIn} ₽ · Мест{' '}
               {tournament.maxPlayers}
             </p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="ghost"
+                className="px-3 py-1.5 text-xs"
+                onClick={() => navigate(`/tournaments/${tournament.id}`)}
+              >
+                Игроки и явка
+              </Button>
               {tournament.status === 'DRAFT' && (
                 <Button
                   className="px-3 py-1.5 text-xs"

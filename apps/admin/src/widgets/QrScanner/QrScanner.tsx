@@ -4,11 +4,15 @@ import { Html5Qrcode } from 'html5-qrcode';
 export interface QrScannerProps {
   onScan: (token: string) => void;
   active: boolean;
+  /** Уникальный id контейнера — позволяет держать несколько сканеров в приложении. */
+  elementId?: string;
 }
 
-const SCANNER_ELEMENT_ID = 'gutshot-qr-scanner';
-
-export function QrScanner({ onScan, active }: QrScannerProps): JSX.Element {
+export function QrScanner({
+  onScan,
+  active,
+  elementId = 'gutshot-qr-scanner',
+}: QrScannerProps): JSX.Element {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -17,7 +21,7 @@ export function QrScanner({ onScan, active }: QrScannerProps): JSX.Element {
       return;
     }
 
-    const scanner = new Html5Qrcode(SCANNER_ELEMENT_ID);
+    const scanner = new Html5Qrcode(elementId);
     scannerRef.current = scanner;
     let stopped = false;
 
@@ -47,11 +51,11 @@ export function QrScanner({ onScan, active }: QrScannerProps): JSX.Element {
           }
         });
     };
-  }, [active, onScan]);
+  }, [active, elementId, onScan]);
 
   return (
     <div className="flex flex-col gap-2">
-      <div id={SCANNER_ELEMENT_ID} className="overflow-hidden rounded-lg" />
+      <div id={elementId} className="overflow-hidden rounded-lg" />
       {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );

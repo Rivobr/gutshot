@@ -1,213 +1,174 @@
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Loader } from '@gutshot/ui';
-import { TournamentCard } from '../../widgets/TournamentCard/TournamentCard';
-import { useNearestTournament, useTournaments } from '../../entities/tournament';
-import { useProfile } from '../../entities/player';
-import { GoldBadge, Logo, SectionLabel, StatPill, initialsOf } from '../../shared/ui/figma';
-import { formatDate, formatMoney, formatTime } from '../../shared/lib/format';
+import { HomeTile } from '../../widgets/HomeTile/HomeTile';
+import { RatingBanner } from '../../widgets/RatingBanner/RatingBanner';
+import { useNearestTournament } from '../../entities/tournament';
+import { useCurrentRegistration } from '../../entities/registration';
+import { Logo, SuitWatermark, goldButtonStyle } from '../../shared/ui/figma';
+import { club } from '../../shared/config/club';
+import { formatDateShort, formatMoney, formatTime, seatsWord } from '../../shared/lib/format';
+
+function Chip({ icon, children }: { icon: string; children: string }): JSX.Element {
+  return (
+    <span
+      className="sans inline-flex items-center gap-1.5 rounded-full px-3"
+      style={{
+        height: 30,
+        fontSize: 11,
+        color: '#E7DCC4',
+        background: 'rgba(9,9,9,0.55)',
+        border: '1px solid rgba(199,154,61,0.3)',
+        backdropFilter: 'blur(8px)',
+      }}
+    >
+      <span style={{ opacity: 0.75 }}>{icon}</span>
+      {children}
+    </span>
+  );
+}
 
 export function HomePage(): JSX.Element {
   const navigate = useNavigate();
-  const { data: nearest, isLoading: isNearestLoading } = useNearestTournament();
-  const { data: tournaments, isLoading } = useTournaments();
-  const { data: profile } = useProfile();
+  const { data: nearest, isLoading } = useNearestTournament();
+  const { data: registration } = useCurrentRegistration();
 
-  const xpPct = profile ? Math.round(profile.progress * 100) : 0;
+  const taken = nearest?._count?.registrations ?? 0;
+  const seatsLeft = nearest ? Math.max(nearest.maxPlayers - taken, 0) : 0;
 
   return (
     <div className="relative min-h-full">
       <div className="absolute inset-0 deco-lines pointer-events-none" style={{ zIndex: 0 }} />
-      <div className="flex flex-col px-5 pb-6 gap-5" style={{ paddingTop: 24, position: 'relative', zIndex: 1 }}>
-        {/* Header */}
+
+      <div
+        className="flex flex-col px-4 pb-6 gap-4"
+        style={{ paddingTop: 18, position: 'relative', zIndex: 1 }}
+      >
+        {/* Логотип-шапка */}
         <motion.div
-          initial={{ opacity: 0, y: -10 }}
+          initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="flex items-start justify-between"
+          className="flex justify-center pb-1"
         >
-          <div>
-            <p className="sans" style={{ fontSize: 11, color: '#6B614E', letterSpacing: '0.06em' }}>
-              Добро пожаловать,
-            </p>
-            <h1
-              className="serif font-semibold"
-              style={{ fontSize: 22, color: '#F5EDD6', lineHeight: 1.25, marginTop: 2 }}
-            >
-              {profile ? `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim() || 'Игрок' : '…'}
-            </h1>
-            {profile && (
-              <div className="mt-2">
-                <GoldBadge>Уровень {profile.level}</GoldBadge>
-              </div>
-            )}
-          </div>
-          <div className="flex flex-col items-center gap-2">
-            <Logo size="sm" />
-            <div
-              className="w-10 h-10 rounded-full flex items-center justify-center serif font-semibold"
-              style={{
-                background: 'linear-gradient(135deg, #9C6A1F, #C89A3D)',
-                color: '#0A0A0A',
-                fontSize: 14,
-                marginTop: 4,
-              }}
-            >
-              {profile ? initialsOf(profile.firstName, profile.lastName) : '♠'}
-            </div>
-          </div>
+          <Logo size="sm" />
         </motion.div>
 
-        {/* Hero — nearest tournament */}
-        <div>
-          <SectionLabel>Ближайший турнир</SectionLabel>
-        </div>
-        {isNearestLoading ? (
+        {/* Ближайший турнир */}
+        {isLoading ? (
           <Loader />
         ) : nearest ? (
           <motion.div
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 22 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
-            onClick={() => navigate(`/tournaments/${nearest.id}`)}
-            className="vip-card-hero relative rounded-[22px] overflow-hidden cursor-pointer"
-            whileTap={{ scale: 0.982 }}
+            transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
+            className="vip-card-hero relative overflow-hidden rounded-[22px]"
           >
             <div className="absolute inset-0 deco-lines opacity-50 pointer-events-none" />
-            <div
-              className="absolute top-0 left-0 right-0 h-px"
-              style={{ background: 'linear-gradient(90deg, transparent, rgba(247,217,138,0.5), transparent)' }}
+            <SuitWatermark
+              suit="spade"
+              style={{
+                position: 'absolute',
+                right: -18,
+                top: -12,
+                width: 172,
+                height: 172,
+                opacity: 0.1,
+                transform: 'rotate(14deg)',
+                pointerEvents: 'none',
+              }}
             />
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <span className="status-upcoming rounded-full px-3 py-1 sans" style={{ fontSize: 9, letterSpacing: '0.1em' }}>
-                  ● ПРЕДСТОЯЩИЙ
-                </span>
-                <span className="sans num" style={{ fontSize: 11, color: '#6B614E' }}>
-                  {formatTime(nearest.date)} · {formatDate(nearest.date)}
-                </span>
+
+            <div className="relative p-5">
+              <div className="flex flex-wrap gap-2 mb-5">
+                <Chip icon="👤">{`${seatsLeft} ${seatsWord(seatsLeft)}`}</Chip>
+                <Chip icon="🕐">{`${formatDateShort(nearest.date)} / ${formatTime(nearest.date)}`}</Chip>
               </div>
-              <h2 className="serif font-semibold mb-1" style={{ fontSize: 23, lineHeight: 1.2, color: '#F5EDD6' }}>
-                {nearest.title}
-              </h2>
-              {nearest.description && (
-                <p className="sans mb-5" style={{ fontSize: 12, color: '#6B614E' }}>
-                  {nearest.description}
-                </p>
-              )}
-              <div className="flex gap-5">
-                <div>
-                  <p className="sans uppercase" style={{ fontSize: 8, color: '#6B614E', letterSpacing: '0.16em' }}>
-                    Взнос
-                  </p>
-                  <p className="gold-text serif font-semibold num" style={{ fontSize: 20 }}>
+
+              <p
+                className="sans uppercase"
+                style={{ fontSize: 9, color: '#8E7A55', letterSpacing: '0.22em' }}
+              >
+                Турнир
+              </p>
+
+              <div className="flex items-end justify-between gap-3 mt-1.5">
+                <div className="min-w-0">
+                  <h2
+                    className="serif font-semibold uppercase"
+                    style={{ fontSize: 28, lineHeight: 1.05, color: '#F5EDD6', letterSpacing: '0.02em' }}
+                  >
+                    {nearest.title}
+                  </h2>
+                  <p className="gold-text-sm num font-semibold mt-2" style={{ fontSize: 15 }}>
                     {formatMoney(nearest.buyIn)}
                   </p>
                 </div>
-                <div className="w-px" style={{ background: 'rgba(199,154,61,0.2)' }} />
-                <div>
-                  <p className="sans uppercase" style={{ fontSize: 8, color: '#6B614E', letterSpacing: '0.16em' }}>
-                    Мест всего
-                  </p>
-                  <p className="serif font-semibold num" style={{ fontSize: 20, color: '#F5EDD6' }}>
-                    {nearest.maxPlayers}
-                  </p>
-                </div>
-                <div className="w-px" style={{ background: 'rgba(199,154,61,0.2)' }} />
-                <div>
-                  <p className="sans uppercase" style={{ fontSize: 8, color: '#6B614E', letterSpacing: '0.16em' }}>
-                    Занято
-                  </p>
-                  <p className="gold-text serif font-semibold num" style={{ fontSize: 20 }}>
-                    {nearest._count?.registrations ?? 0}
-                  </p>
-                </div>
+
+                <motion.button
+                  type="button"
+                  onClick={() => navigate(`/tournaments/${nearest.id}`)}
+                  whileTap={{ scale: 0.96 }}
+                  className="btn-shine sans font-semibold rounded-full shrink-0 px-6"
+                  style={{ ...goldButtonStyle(), height: 44, fontSize: 12, letterSpacing: '0.1em' }}
+                >
+                  Записаться
+                </motion.button>
               </div>
             </div>
           </motion.div>
         ) : (
-          <p className="sans" style={{ fontSize: 12, color: '#6B614E' }}>
-            Нет предстоящих турниров
-          </p>
-        )}
-
-        {/* XP progress */}
-        {profile && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="vip-card rounded-[18px] p-5"
-          >
-            <div className="flex justify-between items-start mb-3">
-              <div>
-                <span className="sans uppercase" style={{ fontSize: 8, color: '#6B614E', letterSpacing: '0.16em' }}>
-                  Прогресс уровня
-                </span>
-                <div className="flex items-baseline gap-1.5 mt-1">
-                  <span className="gold-text serif font-semibold num" style={{ fontSize: 24 }}>
-                    {profile.xp.toLocaleString('ru-RU')}
-                  </span>
-                  <span className="sans num" style={{ fontSize: 12, color: '#6B614E' }}>
-                    / {profile.nextLevelXp.toLocaleString('ru-RU')}
-                  </span>
-                </div>
-              </div>
-              <GoldBadge>Ур. {profile.level}</GoldBadge>
-            </div>
-            <div className="rounded-full overflow-hidden mb-2" style={{ height: 4, background: 'rgba(199,154,61,0.1)' }}>
-              <div
-                className="xp-grow rounded-full"
-                style={{
-                  height: '100%',
-                  width: `${xpPct}%`,
-                  background: 'linear-gradient(90deg, #9C6A1F 0%, #C89A3D 50%, #F7D98A 100%)',
-                }}
-              />
-            </div>
-            <div className="flex justify-between">
-              <span className="sans" style={{ fontSize: 9, color: '#6B614E' }}>
-                Уровень {profile.level}
-              </span>
-              <span className="sans num" style={{ fontSize: 9, color: '#6B614E' }}>
-                {Math.max(profile.nextLevelXp - profile.xp, 0).toLocaleString('ru-RU')} XP до следующего
-              </span>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Stats */}
-        {profile && (
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.4 }}>
-            <div className="mb-3">
-              <SectionLabel>Статистика</SectionLabel>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              <StatPill label="Сыграно" value={profile.stats.tournamentsPlayed.toString()} />
-              <StatPill label="Побед" value={profile.stats.wins.toString()} accent />
-              <StatPill label="Уровень" value={profile.level.toString()} accent />
-            </div>
-          </motion.div>
-        )}
-
-        {/* All tournaments */}
-        <div className="mt-1">
-          <SectionLabel>Все турниры</SectionLabel>
-        </div>
-        {isLoading ? (
-          <Loader />
-        ) : (
-          <div className="flex flex-col gap-3">
-            {tournaments?.map((tournament, i) => (
-              <TournamentCard key={tournament.id} tournament={tournament} index={i} />
-            ))}
+          <div className="vip-card rounded-[22px] p-6 text-center">
+            <p className="sans" style={{ fontSize: 12, color: '#6B614E' }}>
+              Ближайших турниров пока нет
+            </p>
           </div>
         )}
 
-        <div className="flex flex-col items-center gap-2 pt-2 pb-2">
+        {/* Мой билет — если игрок зарегистрирован */}
+        {registration && (
+          <motion.button
+            type="button"
+            onClick={() => navigate('/my-tournament')}
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            whileTap={{ scale: 0.982 }}
+            className="vip-card rounded-[18px] px-5 py-4 flex items-center justify-between"
+          >
+            <span className="flex flex-col items-start">
+              <span
+                className="sans uppercase"
+                style={{ fontSize: 8.5, color: '#6B614E', letterSpacing: '0.18em' }}
+              >
+                Вы зарегистрированы
+              </span>
+              <span className="serif font-semibold" style={{ fontSize: 15, color: '#F5EDD6' }}>
+                Мой билет и QR
+              </span>
+            </span>
+            <span style={{ color: 'rgba(199,154,61,0.6)', fontSize: 20 }}>›</span>
+          </motion.button>
+        )}
+
+        {/* Рейтинг */}
+        <RatingBanner delay={0.15} />
+
+        {/* Плитки */}
+        <div className="grid grid-cols-2 gap-3">
+          <HomeTile title="О клубе" suit="diamond" to="/about" delay={0.2} />
+          <HomeTile title="Support" suit="heart" to="/support" delay={0.25} />
+          <HomeTile title="Q&A" suit="club" to="/faq" wide delay={0.3} />
+        </div>
+
+        {/* Подвал */}
+        <div className="flex flex-col items-center gap-2 pt-3">
           <Logo size="sm" />
-          <p className="sans text-center" style={{ fontSize: 10, color: '#3E3428', letterSpacing: '0.06em' }}>
-            Миллионная улица, 19 · Санкт-Петербург
+          <p
+            className="sans text-center"
+            style={{ fontSize: 10, color: '#3E3428', letterSpacing: '0.06em' }}
+          >
+            {club.address} · {club.city}
           </p>
         </div>
       </div>

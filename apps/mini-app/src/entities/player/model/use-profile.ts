@@ -1,8 +1,25 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { playerApi } from '../api/player.api';
 
 export function useProfile() {
   return useQuery({ queryKey: ['profile'], queryFn: playerApi.getProfile });
+}
+
+/** Постоянный персональный QR-код игрока. Не меняется, поэтому кешируется надолго. */
+export function usePlayerQrCode() {
+  return useQuery({
+    queryKey: ['profile', 'qr'],
+    queryFn: playerApi.getQrCode,
+    staleTime: Infinity,
+  });
+}
+
+export function usePlayerEvents() {
+  return useQuery({ queryKey: ['profile', 'events'], queryFn: playerApi.getEvents });
+}
+
+export function useAchievements() {
+  return useQuery({ queryKey: ['profile', 'achievements'], queryFn: playerApi.getAchievements });
 }
 
 export function useXpHistory() {
@@ -15,4 +32,21 @@ export function useTournamentHistory() {
 
 export function useNotifications() {
   return useQuery({ queryKey: ['notifications'], queryFn: playerApi.getNotifications });
+}
+
+export function useLegalDocuments() {
+  return useQuery({
+    queryKey: ['legal-documents'],
+    queryFn: playerApi.getLegalDocuments,
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useAcceptConsent() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: playerApi.acceptConsent,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['profile'] }),
+  });
 }

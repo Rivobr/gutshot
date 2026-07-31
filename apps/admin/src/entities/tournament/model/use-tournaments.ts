@@ -21,6 +21,20 @@ export function useTournamentRegistrations(id: string) {
   });
 }
 
+export function useMarkAttendance(tournamentId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ registrationId, arrived }: { registrationId: string; arrived: boolean }) =>
+      adminTournamentsApi.markAttendance(tournamentId, registrationId, arrived),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments', tournamentId] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'players'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'history'] });
+    },
+  });
+}
+
 export function useCreateTournament() {
   const queryClient = useQueryClient();
   return useMutation({

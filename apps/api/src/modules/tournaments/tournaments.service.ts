@@ -41,7 +41,9 @@ export class TournamentsService {
         level: calculateLevel(reg.user.playerProfile?.xp ?? 0),
         top10Percent,
         status: reg.status,
-        qrToken: `gutshot:player:${reg.user.id}`,
+        // Постоянный QR игрока; для профилей, созданных до его появления,
+        // остается прежний формат до первого входа в Mini App.
+        qrToken: reg.user.qrCode ?? `gutshot:player:${reg.user.id}`,
       };
     });
   }

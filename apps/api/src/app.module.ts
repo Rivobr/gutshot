@@ -10,6 +10,8 @@ import { RatingModule } from './modules/rating/rating.module';
 import { QrModule } from './modules/qr/qr.module';
 import { HistoryModule } from './modules/history/history.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { ProgressionModule } from './modules/progression/progression.module';
+import { LegalModule } from './modules/legal/legal.module';
 import { RemindersModule } from './modules/reminders/reminders.module';
 import { CommonModule } from './modules/common/common.module';
 import { ConfigurationModule } from './modules/config/config.module';
@@ -27,6 +29,8 @@ import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
     DatabaseModule,
     RedisModule,
     AuthModule,
+    ProgressionModule,
+    LegalModule,
     UsersModule,
     TournamentsModule,
     RegistrationsModule,

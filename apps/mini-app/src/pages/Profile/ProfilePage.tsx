@@ -1,8 +1,23 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Loader } from '@gutshot/ui';
-import { useProfile, useTournamentHistory } from '../../entities/player';
+import type { AchievementCode } from '@gutshot/types';
+import {
+  useAchievements,
+  usePlayerEvents,
+  useProfile,
+  useTournamentHistory,
+} from '../../entities/player';
+import { MyQrModal } from '../../widgets/MyQrModal/MyQrModal';
 import { GoldBadge, Logo, SectionLabel, initialsOf } from '../../shared/ui/figma';
 import { formatDate } from '../../shared/lib/format';
+import { PLAYER_EVENT_LABELS, formatEventDate } from '../../shared/lib/event-labels';
+
+const RARE_ACHIEVEMENTS: { code: AchievementCode; icon: string; title: string }[] = [
+  { code: 'FOUR_OF_A_KIND', icon: '🃏', title: 'Каре' },
+  { code: 'STRAIGHT_FLUSH', icon: '🔥', title: 'Стрит-флеш' },
+  { code: 'ROYAL_FLUSH', icon: '👑', title: 'Роял-флеш' },
+];
 
 interface StatItem {
   icon: string;
@@ -20,10 +35,15 @@ interface Achievement {
 export function ProfilePage(): JSX.Element {
   const { data: profile, isLoading } = useProfile();
   const { data: history } = useTournamentHistory();
+  const { data: events } = usePlayerEvents();
+  const { data: unlockedAchievements } = useAchievements();
+  const [isQrOpen, setQrOpen] = useState(false);
 
   if (isLoading || !profile) {
     return <Loader />;
   }
+
+  const unlockedCodes = new Set((unlockedAchievements ?? []).map((item) => item.code));
 
   const xpPct = Math.round(profile.progress * 100);
   const s = profile.stats;
@@ -62,6 +82,35 @@ export function ProfilePage(): JSX.Element {
         }}
       >
         <div className="absolute inset-0 deco-lines opacity-45 pointer-events-none" />
+
+        {/* Постоянный QR-код игрока */}
+        <motion.button
+          type="button"
+          onClick={() => setQrOpen(true)}
+          whileTap={{ scale: 0.92 }}
+          aria-label="Мой QR-код"
+          className="absolute flex items-center justify-center rounded-[14px]"
+          style={{
+            top: 20,
+            left: 18,
+            width: 42,
+            height: 42,
+            zIndex: 2,
+            background: 'linear-gradient(145deg, rgba(199,154,61,0.16), rgba(156,106,31,0.06))',
+            border: '1px solid rgba(199,154,61,0.32)',
+            cursor: 'pointer',
+          }}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M4 4h6v6H4V4Zm0 10h6v6H4v-6ZM14 4h6v6h-6V4Zm0 10h2v2h-2v-2Zm4 0h2v2h-2v-2Zm-4 4h2v2h-2v-2Zm4 0h2v2h-2v-2Z"
+              stroke="#C89A3D"
+              strokeWidth="1.6"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </motion.button>
+
         <Logo size="md" />
 
         <div className="relative mt-3">
@@ -207,6 +256,38 @@ export function ProfilePage(): JSX.Element {
             ))}
           </div>
 
+          {/* Редкие комбинации — отмечаются администратором по QR-коду */}
+          <div className="mt-3 grid grid-cols-3 gap-3">
+            {RARE_ACHIEVEMENTS.map((achievement) => {
+              const unlocked = unlockedCodes.has(achievement.code);
+
+              return (
+                <div
+                  key={achievement.code}
+                  className="flex flex-col items-center gap-2 p-3 rounded-[16px] vip-card"
+                  style={{ opacity: unlocked ? 1 : 0.45 }}
+                >
+                  <span
+                    style={{
+                      fontSize: 24,
+                      filter: unlocked
+                        ? 'drop-shadow(0 0 8px rgba(199,154,61,0.5))'
+                        : 'grayscale(1)',
+                    }}
+                  >
+                    {unlocked ? achievement.icon : '🔒'}
+                  </span>
+                  <span
+                    className="sans text-center"
+                    style={{ fontSize: 9.5, color: '#D8CEBC', lineHeight: 1.25 }}
+                  >
+                    {achievement.title}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
           {/* Rare milestone */}
           <div
             className="mt-3 rounded-[18px] p-4 relative overflow-hidden"
@@ -230,6 +311,41 @@ export function ProfilePage(): JSX.Element {
             </div>
           </div>
         </div>
+
+        {/* Активность: все события клуба по игроку */}
+        {events && events.length > 0 && (
+          <div>
+            <div className="mb-3">
+              <SectionLabel>Активность</SectionLabel>
+            </div>
+            {events.map((event, i) => (
+              <div
+                key={event.id}
+                className={`flex items-center justify-between gap-3 py-3 ${i > 0 ? 'border-t' : ''}`}
+                style={{ borderColor: 'rgba(199,154,61,0.1)' }}
+              >
+                <div className="min-w-0">
+                  <p
+                    className="serif truncate"
+                    style={{ fontSize: 13.5, color: '#F5EDD6', lineHeight: 1.35 }}
+                  >
+                    {PLAYER_EVENT_LABELS[event.type]}
+                  </p>
+                  <p className="sans num truncate" style={{ fontSize: 10, color: '#6B614E' }}>
+                    {formatEventDate(event.createdAt)}
+                    {event.tournament ? ` · ${event.tournament.title}` : ''}
+                  </p>
+                </div>
+                {event.xpAmount !== 0 && (
+                  <span className="sans num shrink-0" style={{ fontSize: 11.5, color: '#C89A3D' }}>
+                    {event.xpAmount > 0 ? '+' : ''}
+                    {event.xpAmount} XP
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* History */}
         {history && history.length > 0 && (
@@ -268,6 +384,8 @@ export function ProfilePage(): JSX.Element {
           </p>
         </div>
       </div>
+
+      <MyQrModal open={isQrOpen} onClose={() => setQrOpen(false)} />
     </div>
   );
 }

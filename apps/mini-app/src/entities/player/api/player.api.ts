@@ -1,4 +1,11 @@
-import { PlayerProfileDto, NotificationDto, Registration } from '@gutshot/types';
+import {
+  AchievementDto,
+  LegalDocumentDto,
+  NotificationDto,
+  PlayerEventDto,
+  PlayerProfileDto,
+  Registration,
+} from '@gutshot/types';
 import { apiClient } from '../../../shared/api/client';
 
 export interface XPHistoryDto {
@@ -11,6 +18,26 @@ export interface XPHistoryDto {
 export const playerApi = {
   async getProfile(): Promise<PlayerProfileDto> {
     const { data } = await apiClient.get('/profile');
+    return data.data;
+  },
+  async getQrCode(): Promise<{ qrCode: string }> {
+    const { data } = await apiClient.get('/profile/qr');
+    return data.data;
+  },
+  async getEvents(): Promise<PlayerEventDto[]> {
+    const { data } = await apiClient.get('/profile/events', { params: { take: 50 } });
+    return data.data;
+  },
+  async getAchievements(): Promise<AchievementDto[]> {
+    const { data } = await apiClient.get('/profile/achievements');
+    return data.data;
+  },
+  async acceptConsent(): Promise<{ consentAcceptedAt: string }> {
+    const { data } = await apiClient.post('/profile/consent');
+    return data.data;
+  },
+  async getLegalDocuments(): Promise<LegalDocumentDto[]> {
+    const { data } = await apiClient.get('/legal-documents');
     return data.data;
   },
   async getXpHistory(): Promise<XPHistoryDto[]> {

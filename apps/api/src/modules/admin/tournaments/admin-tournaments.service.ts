@@ -1,10 +1,19 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { NotificationType, RegistrationStatus, TournamentStatus, XPReason } from '@prisma/client';
+import {
+  NotificationType,
+  PlayerEventType,
+  RegistrationStatus,
+  TournamentStatus,
+  XPReason,
+} from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { TelegramService } from '../../telegram/telegram.service';
 import { NotificationsService } from '../../telegram/notifications.service';
 import { getXpForPlace } from '../../../common/constants/xp.constants';
-import { calculateLevelProgress } from '../../../common/utils/level.util';
+import { xpSettingKeyForPlace } from '../../../common/constants/xp-defaults.constants';
+import { XpService } from '../../progression/xp.service';
+import { XpSettingsService } from '../../progression/xp-settings.service';
+import { LevelsService } from '../../progression/levels.service';
 import { CreateTournamentDto } from './dto/create-tournament.dto';
 import { UpdateTournamentDto } from './dto/update-tournament.dto';
 import { TournamentResultEntryDto } from './dto/finish-tournament.dto';
@@ -15,6 +24,9 @@ export class AdminTournamentsService {
     private readonly prisma: PrismaService,
     private readonly telegramService: TelegramService,
     private readonly notificationsService: NotificationsService,
+    private readonly xpService: XpService,
+    private readonly xpSettingsService: XpSettingsService,
+    private readonly levelsService: LevelsService,
   ) {}
 
   async findAll() {
@@ -105,12 +117,52 @@ export class AdminTournamentsService {
     });
   }
 
-  async finish(id: string, results: TournamentResultEntryDto[]) {
+  /** Список зарегистрированных игроков с уровнем, XP и статусом явки. */
+  async getRegistrations(tournamentId: string) {
+    await this.findById(tournamentId);
+
+    const [registrations, thresholds] = await Promise.all([
+      this.prisma.registration.findMany({
+        where: { tournamentId },
+        include: { user: { include: { playerProfile: true } } },
+        orderBy: { registeredAt: 'asc' },
+      }),
+      this.levelsService.getThresholds(),
+    ]);
+
+    return registrations.map((registration) => {
+      const xp = registration.user.playerProfile?.xp ?? 0;
+
+      return {
+        id: registration.id,
+        status: registration.status,
+        registeredAt: registration.registeredAt,
+        arrivedAt: registration.arrivedAt,
+        attendanceXpGiven: registration.attendanceXpGiven,
+        reEntries: registration.reEntries,
+        bounties: registration.bounties,
+        user: {
+          id: registration.user.id,
+          telegramId: registration.user.telegramId,
+          username: registration.user.username,
+          firstName: registration.user.firstName,
+          lastName: registration.user.lastName,
+          photoUrl: registration.user.photoUrl,
+          xp,
+          level: this.levelsService.computeProgress(thresholds, xp).level,
+        },
+      };
+    });
+  }
+
+  async finish(id: string, results: TournamentResultEntryDto[], adminId: string) {
     const tournament = await this.findById(id);
 
     if (tournament.status !== TournamentStatus.IN_PROGRESS) {
       throw new BadRequestException('Турнир не находится в процессе игры');
     }
+
+    const xpSettings = await this.xpSettingsService.getAll();
 
     const finishedPlayers = await this.prisma.$transaction(async (tx) => {
       const processed: {
@@ -125,14 +177,17 @@ export class AdminTournamentsService {
       for (const entry of results) {
         const registration = await tx.registration.findUnique({
           where: { id: entry.registrationId },
-          include: { user: { include: { playerProfile: true } } },
+          include: { user: true },
         });
 
         if (!registration || registration.tournamentId !== id) {
           throw new BadRequestException(`Регистрация ${entry.registrationId} не найдена в этом турнире`);
         }
 
-        const xpEarned = getXpForPlace(entry.place);
+        // Места 1–10 берутся из настраиваемой таблицы XP,
+        // для остальных сохраняется историческое значение.
+        const settingKey = xpSettingKeyForPlace(entry.place);
+        const xpEarned = settingKey ? xpSettings[settingKey] : getXpForPlace(entry.place);
 
         const result = await tx.tournamentResult.upsert({
           where: { userId_tournamentId: { userId: registration.userId, tournamentId: id } },
@@ -150,25 +205,16 @@ export class AdminTournamentsService {
           data: { status: RegistrationStatus.FINISHED },
         });
 
-        await tx.xPHistory.create({
-          data: {
-            userId: registration.userId,
-            tournamentResultId: result.id,
-            reason: entry.place === 1 ? XPReason.TOURNAMENT_WIN : XPReason.TOURNAMENT_PLACE,
-            amount: xpEarned,
-          },
+        const award = await this.xpService.award(tx, {
+          userId: registration.userId,
+          amount: xpEarned,
+          reason: entry.place === 1 ? XPReason.TOURNAMENT_WIN : XPReason.TOURNAMENT_PLACE,
+          eventType: PlayerEventType.TOURNAMENT_RESULT,
+          tournamentId: id,
+          tournamentResultId: result.id,
+          performedById: adminId,
+          metadata: { place: entry.place, title: tournament.title },
         });
-
-        const profile = registration.user.playerProfile;
-        const newXp = (profile?.xp ?? 0) + xpEarned;
-
-        if (profile) {
-          await tx.playerProfile.update({ where: { userId: registration.userId }, data: { xp: newXp } });
-        } else {
-          await tx.playerProfile.create({ data: { userId: registration.userId, xp: newXp } });
-        }
-
-        const { level } = calculateLevelProgress(newXp);
 
         processed.push({
           userId: registration.userId,
@@ -176,7 +222,7 @@ export class AdminTournamentsService {
           title: tournament.title,
           place: entry.place,
           xp: xpEarned,
-          newLevel: level,
+          newLevel: award.level,
         });
       }
 

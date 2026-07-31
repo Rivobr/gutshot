@@ -1,11 +1,10 @@
 import { NavLink } from 'react-router-dom';
 
-type NavId = 'home' | 'tournaments' | 'myTournament' | 'rating' | 'profile';
+type NavId = 'home' | 'tournaments' | 'rating' | 'profile';
 
 const NAV_ITEMS: { to: string; label: string; id: NavId }[] = [
   { to: '/', label: 'Главная', id: 'home' },
   { to: '/tournaments', label: 'Турниры', id: 'tournaments' },
-  { to: '/my-tournament', label: 'Мой турнир', id: 'myTournament' },
   { to: '/rating', label: 'Рейтинг', id: 'rating' },
   { to: '/profile', label: 'Профиль', id: 'profile' },
 ];
@@ -46,14 +45,6 @@ function NavIcon({ id, active }: { id: NavId; active: boolean }): JSX.Element {
           <rect x="17" y="4" width="5" height="18" rx="1" fill={active ? 'url(#navGrad)' : 'none'} stroke={active ? 'none' : c} strokeWidth={w} />
         </>
       )}
-      {id === 'myTournament' && (
-        <path
-          d="M12 2L15.5 9L23 10.3L17.5 15.6L18.9 23L12 19.3L5.1 23L6.5 15.6L1 10.3L8.5 9L12 2Z"
-          fill={active ? 'url(#navGrad)' : 'none'}
-          stroke={active ? 'none' : c}
-          strokeWidth={w}
-        />
-      )}
       {id === 'profile' && (
         <>
           <circle cx="12" cy="8" r="4" stroke={c} strokeWidth={w} fill="none" />
@@ -67,7 +58,7 @@ function NavIcon({ id, active }: { id: NavId; active: boolean }): JSX.Element {
 export function BottomNavigation(): JSX.Element {
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 mx-auto flex items-center justify-around px-1"
+      className="fixed bottom-0 left-0 right-0 z-50 mx-auto flex items-center justify-around px-2"
       style={{
         maxWidth: 430,
         height: 68,
@@ -78,14 +69,24 @@ export function BottomNavigation(): JSX.Element {
       }}
     >
       {NAV_ITEMS.map((item) => (
-        <NavLink key={item.to} to={item.to} end={item.to === '/'} className="flex flex-col items-center gap-1 py-2 px-2" style={{ minWidth: 52 }}>
+        <NavLink key={item.to} to={item.to} end={item.to === '/'} className="flex-1 flex justify-center">
           {({ isActive }) => (
-            <>
+            <span
+              className="flex flex-col items-center gap-1 rounded-2xl py-2"
+              style={{
+                minWidth: 72,
+                background: isActive
+                  ? 'linear-gradient(145deg, rgba(199,154,61,0.16), rgba(156,106,31,0.06))'
+                  : 'transparent',
+                border: isActive ? '1px solid rgba(199,154,61,0.28)' : '1px solid transparent',
+                transition: 'background 0.25s ease, border-color 0.25s ease',
+              }}
+            >
               <NavIcon id={item.id} active={isActive} />
               <span
                 className="sans"
                 style={{
-                  fontSize: 9,
+                  fontSize: 9.5,
                   color: isActive ? '#C89A3D' : '#3E3428',
                   fontWeight: isActive ? 600 : 400,
                   letterSpacing: '0.04em',
@@ -94,7 +95,7 @@ export function BottomNavigation(): JSX.Element {
               >
                 {item.label}
               </span>
-            </>
+            </span>
           )}
         </NavLink>
       ))}

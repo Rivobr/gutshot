@@ -7,6 +7,14 @@ export function formatDate(iso: string): string {
   });
 }
 
+export function formatDateShort(iso: string): string {
+  return new Date(iso).toLocaleDateString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: '2-digit',
+  });
+}
+
 export function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString('ru-RU', {
     hour: '2-digit',

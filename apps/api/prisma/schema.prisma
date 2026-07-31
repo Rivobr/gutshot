@@ -40,6 +40,64 @@ enum XPReason {
   BONUS
   PENALTY
   MANUAL
+  ATTENDANCE
+  ELIMINATION
+  RE_ENTRY
+  BOUNTY
+  ACHIEVEMENT
+}
+
+/// Типы событий, фиксируемых в истории активности игрока.
+enum PlayerEventType {
+  TOURNAMENT_REGISTRATION
+  TOURNAMENT_CANCELLED
+  ARRIVED
+  ELIMINATED
+  RE_ENTRY
+  BOUNTY
+  FOUR_OF_A_KIND
+  STRAIGHT_FLUSH
+  ROYAL_FLUSH
+  XP_CHANGE
+  LEVEL_UP
+  TOURNAMENT_RESULT
+  ACHIEVEMENT_UNLOCKED
+}
+
+/// Достижения, выдаваемые за редкие комбинации.
+enum AchievementCode {
+  FOUR_OF_A_KIND
+  STRAIGHT_FLUSH
+  ROYAL_FLUSH
+}
+
+/// Ключи настраиваемых значений XP.
+enum XpSettingKey {
+  ATTENDANCE
+  ELIMINATION
+  RE_ENTRY
+  BOUNTY
+  FOUR_OF_A_KIND
+  STRAIGHT_FLUSH
+  ROYAL_FLUSH
+  TOURNAMENT_WIN
+  PLACE_2
+  PLACE_3
+  PLACE_4
+  PLACE_5
+  PLACE_6
+  PLACE_7
+  PLACE_8
+  PLACE_9
+  PLACE_10
+}
+
+/// Типы юридических документов клуба.
+enum LegalDocumentType {
+  CLUB_RULES
+  USER_AGREEMENT
+  PERSONAL_DATA_CONSENT
+  MEDIA_CONSENT
 }
 
 enum NotificationType {
@@ -72,19 +130,32 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  /// Постоянный персональный QR-код игрока. Выдается один раз при создании
+  /// пользователя и никогда не меняется при обновлении профиля.
+  qrCode String? @unique
+
+  /// Принятие пользовательских соглашений при первом входе в Mini App.
+  consentAcceptedAt DateTime?
+
   playerProfile     PlayerProfile?
   registrations     Registration[]
   tournamentResults TournamentResult[]
   xpHistory         XPHistory[]
   notifications     Notification[]
+  achievements      Achievement[]
+  events            PlayerEvent[]
 
   @@index([telegramId])
+  @@index([qrCode])
 }
 
 model PlayerProfile {
   id        String   @id @default(cuid())
   userId    String   @unique
   xp        Int      @default(0)
+  /// Суммарные счетчики за все время участия в турнирах.
+  reEntries Int      @default(0)
+  bounties  Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -107,6 +178,7 @@ model Tournament {
 
   registrations     Registration[]
   tournamentResults TournamentResult[]
+  events            PlayerEvent[]
 
   @@index([date])
   @@index([status])
@@ -122,6 +194,14 @@ model Registration {
   cancelledAt    DateTime?
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
+
+  /// Отметка о явке игрока на турнир. Заполняется один раз — по ней
+  /// гарантируется, что XP за посещение начисляется не более одного раза.
+  arrivedAt          DateTime?
+  attendanceXpGiven  Boolean   @default(false)
+  eliminatedAt       DateTime?
+  reEntries          Int       @default(0)
+  bounties           Int       @default(0)
 
   user       User        @relation(fields: [userId], references: [id])
   tournament Tournament  @relation(fields: [tournamentId], references: [id])
@@ -204,5 +284,78 @@ model AdminUser {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
+  performedEvents   PlayerEvent[]
+  updatedDocuments  LegalDocument[]
+
   @@index([email])
+}
+
+/// Полная история активности игрока: регистрации, явка, вылеты,
+/// ре-энтри, баунти, комбинации, изменения XP и повышения уровня.
+model PlayerEvent {
+  id           String          @id @default(cuid())
+  userId       String
+  tournamentId String?
+  type         PlayerEventType
+  /// Начисленный за событие XP. 0 — если событие не влияет на опыт.
+  xpAmount     Int             @default(0)
+  /// Произвольные детали события (место, уровень, код достижения).
+  metadata     Json?
+  /// Сотрудник клуба, выполнивший действие. NULL — системное событие.
+  performedById String?
+  createdAt    DateTime        @default(now())
+
+  user        User        @relation(fields: [userId], references: [id])
+  tournament  Tournament? @relation(fields: [tournamentId], references: [id])
+  performedBy AdminUser?  @relation(fields: [performedById], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([tournamentId])
+  @@index([type])
+}
+
+/// Разблокированное достижение игрока. Уникальность пары
+/// (игрок, достижение) гарантирует отсутствие дублей.
+model Achievement {
+  id           String          @id @default(cuid())
+  userId       String
+  code         AchievementCode
+  tournamentId String?
+  unlockedAt   DateTime        @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, code])
+  @@index([userId])
+}
+
+/// Настраиваемые значения XP. Редактируются из админ-панели без изменения кода.
+model XpSetting {
+  key       XpSettingKey @id
+  value     Int
+  updatedAt DateTime     @updatedAt @default(now())
+}
+
+/// Настраиваемая таблица уровней: сколько XP требуется для каждого уровня.
+model LevelThreshold {
+  level      Int      @id
+  requiredXp Int
+  title      String?
+  updatedAt  DateTime @updatedAt @default(now())
+
+  @@index([requiredXp])
+}
+
+/// Юридические документы клуба. Тексты хранятся в БД и сразу
+/// отображаются в Mini App после сохранения.
+model LegalDocument {
+  type        LegalDocumentType @id
+  title       String
+  content     String
+  version     Int               @default(1)
+  updatedById String?
+  updatedAt   DateTime          @updatedAt @default(now())
+  createdAt   DateTime          @default(now())
+
+  updatedBy AdminUser? @relation(fields: [updatedById], references: [id])
 }

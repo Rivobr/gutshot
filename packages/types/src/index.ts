@@ -41,6 +41,9 @@ export interface PlayerProfileDto {
   progress: number;
   memberSince: string;
   isVerified: boolean;
+  /** Постоянный персональный QR-код игрока. */
+  qrCode: string;
+  consentAcceptedAt?: string | null;
   stats: {
     tournamentsPlayed: number;
     wins: number;
@@ -49,6 +52,8 @@ export interface PlayerProfileDto {
     top10Percent: number;
     averagePlace: number | null;
     daysInClub: number;
+    reEntries: number;
+    bounties: number;
   };
 }
 
@@ -167,6 +172,158 @@ export interface AdminStatistics {
   averageAttendance: number;
   topPlayers: AdminTopPlayer[];
   topTournaments: AdminTopTournament[];
+}
+
+export type PlayerEventType =
+  | 'TOURNAMENT_REGISTRATION'
+  | 'TOURNAMENT_CANCELLED'
+  | 'ARRIVED'
+  | 'ELIMINATED'
+  | 'RE_ENTRY'
+  | 'BOUNTY'
+  | 'FOUR_OF_A_KIND'
+  | 'STRAIGHT_FLUSH'
+  | 'ROYAL_FLUSH'
+  | 'XP_CHANGE'
+  | 'LEVEL_UP'
+  | 'TOURNAMENT_RESULT'
+  | 'ACHIEVEMENT_UNLOCKED';
+
+/** События, которые сотрудник клуба может отметить после сканирования QR. */
+export type ScannerEventType =
+  | 'ARRIVED'
+  | 'ELIMINATED'
+  | 'RE_ENTRY'
+  | 'BOUNTY'
+  | 'FOUR_OF_A_KIND'
+  | 'STRAIGHT_FLUSH'
+  | 'ROYAL_FLUSH';
+
+export type AchievementCode = 'FOUR_OF_A_KIND' | 'STRAIGHT_FLUSH' | 'ROYAL_FLUSH';
+
+export type XpSettingKey =
+  | 'ATTENDANCE'
+  | 'ELIMINATION'
+  | 'RE_ENTRY'
+  | 'BOUNTY'
+  | 'FOUR_OF_A_KIND'
+  | 'STRAIGHT_FLUSH'
+  | 'ROYAL_FLUSH'
+  | 'TOURNAMENT_WIN'
+  | 'PLACE_2'
+  | 'PLACE_3'
+  | 'PLACE_4'
+  | 'PLACE_5'
+  | 'PLACE_6'
+  | 'PLACE_7'
+  | 'PLACE_8'
+  | 'PLACE_9'
+  | 'PLACE_10';
+
+export type LegalDocumentType =
+  | 'CLUB_RULES'
+  | 'USER_AGREEMENT'
+  | 'PERSONAL_DATA_CONSENT'
+  | 'MEDIA_CONSENT';
+
+export interface PlayerEventDto {
+  id: string;
+  type: PlayerEventType;
+  xpAmount: number;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+  tournament?: Pick<Tournament, 'id' | 'title'> | null;
+  performedBy?: { id: string; name: string } | null;
+  user?: Pick<User, 'id' | 'firstName' | 'lastName' | 'photoUrl'> | null;
+}
+
+export interface AchievementDto {
+  id: string;
+  code: AchievementCode;
+  tournamentId?: string | null;
+  unlockedAt: string;
+}
+
+export interface XpSettingDto {
+  key: XpSettingKey;
+  value: number;
+}
+
+export interface LevelThresholdDto {
+  level: number;
+  requiredXp: number;
+  title?: string | null;
+}
+
+export interface XpConfigDto {
+  settings: XpSettingDto[];
+  levels: LevelThresholdDto[];
+}
+
+export interface LegalDocumentDto {
+  type: LegalDocumentType;
+  title: string;
+  content: string;
+  version: number;
+  updatedAt: string;
+}
+
+/** Карточка игрока, показываемая сотруднику после сканирования QR. */
+export interface ScannedPlayerDto {
+  userId: string;
+  telegramId: string;
+  username?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  photoUrl?: string | null;
+  isBlocked: boolean;
+  level: number;
+  xp: number;
+  currentLevelXp: number;
+  nextLevelXp: number;
+  progress: number;
+  achievements: AchievementDto[];
+  registration: {
+    id: string;
+    tournamentId: string;
+    tournamentTitle: string;
+    status: RegistrationStatus;
+    registeredAt: string;
+    arrivedAt?: string | null;
+    attendanceXpGiven: boolean;
+    reEntries: number;
+    bounties: number;
+  } | null;
+  recentEvents: PlayerEventDto[];
+}
+
+export interface ScannerEventResultDto {
+  event: PlayerEventDto;
+  xpAwarded: number;
+  totalXp: number;
+  level: number;
+  levelUp: boolean;
+  achievementUnlocked: AchievementCode | null;
+}
+
+export interface AdminTournamentRegistration {
+  id: string;
+  status: RegistrationStatus;
+  registeredAt: string;
+  arrivedAt?: string | null;
+  attendanceXpGiven: boolean;
+  reEntries: number;
+  bounties: number;
+  user: {
+    id: string;
+    telegramId: string;
+    username?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+    photoUrl?: string | null;
+    xp: number;
+    level: number;
+  };
 }
 
 export interface ApiSuccessResponse<T> {

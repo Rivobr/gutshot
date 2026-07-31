@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import {
   NotificationType,
+  PlayerEventType,
   Registration,
   RegistrationStatus,
   TournamentStatus,
@@ -14,6 +15,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { QrService } from '../qr/qr.service';
 import { TelegramService } from '../telegram/telegram.service';
 import { NotificationsService } from '../telegram/notifications.service';
+import { PlayerEventsService } from '../progression/player-events.service';
 
 @Injectable()
 export class RegistrationsService {
@@ -22,6 +24,7 @@ export class RegistrationsService {
     private readonly qrService: QrService,
     private readonly telegramService: TelegramService,
     private readonly notificationsService: NotificationsService,
+    private readonly playerEventsService: PlayerEventsService,
   ) {}
 
   async register(userId: string, tournamentId: string): Promise<Registration> {
@@ -67,6 +70,13 @@ export class RegistrationsService {
       where: { userId_tournamentId: { userId, tournamentId } },
       update: { status, cancelledAt: null, registeredAt: new Date() },
       create: { userId, tournamentId, status },
+    });
+
+    await this.playerEventsService.record({
+      userId,
+      type: PlayerEventType.TOURNAMENT_REGISTRATION,
+      tournamentId,
+      metadata: { status, title: tournament.title },
     });
 
     if (status === RegistrationStatus.REGISTERED) {
@@ -153,6 +163,13 @@ export class RegistrationsService {
         message: this.telegramService.templates.movedFromWaiting(registration.tournament.title),
       });
     }
+
+    await this.playerEventsService.record({
+      userId: registration.userId,
+      type: PlayerEventType.TOURNAMENT_CANCELLED,
+      tournamentId: registration.tournamentId,
+      metadata: { title: registration.tournament.title },
+    });
 
     await this.notificationsService.notify({
       userId: registration.userId,

@@ -56,6 +56,37 @@
     text-shadow: 0 0 20px rgba(247, 217, 138, 0.75);
   }
 }
+@keyframes aurora-drift {
+  0% {
+    transform: translate3d(-8%, -6%, 0) scale(1.1) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(8%, 6%, 0) scale(1.25) rotate(8deg);
+  }
+  100% {
+    transform: translate3d(-8%, -6%, 0) scale(1.1) rotate(0deg);
+  }
+}
+@keyframes aurora-drift-alt {
+  0% {
+    transform: translate3d(6%, 8%, 0) scale(1.2) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(-6%, -10%, 0) scale(1.05) rotate(-10deg);
+  }
+  100% {
+    transform: translate3d(6%, 8%, 0) scale(1.2) rotate(0deg);
+  }
+}
+@keyframes logo-breathe {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 18px rgba(199, 154, 61, 0.25));
+  }
+  50% {
+    filter: drop-shadow(0 0 34px rgba(247, 217, 138, 0.5));
+  }
+}
 @keyframes nav-glow {
   0%,
   100% {
@@ -84,6 +115,15 @@
 }
 .nav-active-glow {
   animation: nav-glow 3s ease-in-out infinite;
+}
+.aurora-a {
+  animation: aurora-drift 16s ease-in-out infinite;
+}
+.aurora-b {
+  animation: aurora-drift-alt 22s ease-in-out infinite;
+}
+.logo-breathe {
+  animation: logo-breathe 4.5s ease-in-out infinite;
 }
 
 /* ── Shine button ──────────────────────────────────────────── */

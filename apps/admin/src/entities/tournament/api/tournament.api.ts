@@ -1,4 +1,4 @@
-import type { Tournament } from '@gutshot/types';
+import type { AdminTournamentRegistration, Tournament } from '@gutshot/types';
 import { apiClient } from '../../../shared/api/client';
 
 export type AdminTournament = Tournament & { _count?: { registrations: number } };
@@ -49,8 +49,15 @@ export const adminTournamentsApi = {
     const { data } = await apiClient.post(`/admin/tournaments/${id}/finish`, results);
     return data.data;
   },
-  async getRegistrations(id: string) {
+  async getRegistrations(id: string): Promise<AdminTournamentRegistration[]> {
     const { data } = await apiClient.get(`/admin/tournaments/${id}/registrations`);
+    return data.data;
+  },
+  async markAttendance(id: string, registrationId: string, arrived: boolean) {
+    const { data } = await apiClient.post(
+      `/admin/tournaments/${id}/registrations/${registrationId}/attendance`,
+      { arrived },
+    );
     return data.data;
   },
 };

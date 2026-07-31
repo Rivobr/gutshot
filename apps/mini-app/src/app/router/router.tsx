@@ -6,6 +6,9 @@ import { TournamentPage } from '../../pages/Tournament/TournamentPage';
 import { MyTournamentPage } from '../../pages/MyTournament/MyTournamentPage';
 import { RatingPage } from '../../pages/Rating/RatingPage';
 import { ProfilePage } from '../../pages/Profile/ProfilePage';
+import { AboutPage } from '../../pages/About/AboutPage';
+import { SupportPage } from '../../pages/Support/SupportPage';
+import { FaqPage } from '../../pages/Faq/FaqPage';
 import { NotFoundPage } from '../../pages/NotFound/NotFoundPage';
 
 export const router = createBrowserRouter([
@@ -18,6 +21,9 @@ export const router = createBrowserRouter([
       { path: '/my-tournament', element: <MyTournamentPage /> },
       { path: '/rating', element: <RatingPage /> },
       { path: '/profile', element: <ProfilePage /> },
+      { path: '/about', element: <AboutPage /> },
+      { path: '/support', element: <SupportPage /> },
+      { path: '/faq', element: <FaqPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

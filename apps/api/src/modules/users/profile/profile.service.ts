@@ -1,10 +1,19 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { calculateLevelProgress } from '../../../common/utils/level.util';
+import { LevelsService } from '../../progression/levels.service';
+import { PlayerEventsService } from '../../progression/player-events.service';
+import { AchievementsService } from '../../progression/achievements.service';
+import { UsersService } from '../users.service';
 
 @Injectable()
 export class ProfileService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly usersService: UsersService,
+    private readonly levelsService: LevelsService,
+    private readonly playerEventsService: PlayerEventsService,
+    private readonly achievementsService: AchievementsService,
+  ) {}
 
   async getProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
@@ -15,6 +24,10 @@ export class ProfileService {
     if (!user || !user.playerProfile) {
       throw new NotFoundException('Профиль не найден');
     }
+
+    // Постоянный QR выдается один раз; для игроков, созданных до его появления,
+    // код дозаполняется здесь и далее уже не меняется.
+    const qrCode = user.qrCode ?? (await this.usersService.ensureQrCode(user.id)).qrCode;
 
     const [tournamentsPlayed, results] = await Promise.all([
       this.prisma.registration.count({
@@ -41,7 +54,7 @@ export class ProfileService {
       Math.floor((Date.now() - user.createdAt.getTime()) / 86_400_000),
     );
 
-    const levelProgress = calculateLevelProgress(user.playerProfile.xp);
+    const levelProgress = await this.levelsService.getProgress(user.playerProfile.xp);
 
     return {
       id: user.id,
@@ -53,6 +66,8 @@ export class ProfileService {
       xp: user.playerProfile.xp,
       memberSince: user.createdAt.toISOString(),
       isVerified: user.isVerified,
+      qrCode,
+      consentAcceptedAt: user.consentAcceptedAt,
       ...levelProgress,
       stats: {
         tournamentsPlayed,
@@ -62,8 +77,16 @@ export class ProfileService {
         top10Percent,
         averagePlace,
         daysInClub,
+        reEntries: user.playerProfile.reEntries,
+        bounties: user.playerProfile.bounties,
       },
     };
+  }
+
+  /** Постоянный персональный QR-код игрока. */
+  async getQrCode(userId: string) {
+    const user = await this.usersService.ensureQrCode(userId);
+    return { qrCode: user.qrCode };
   }
 
   async getXpHistory(userId: string) {
@@ -72,6 +95,15 @@ export class ProfileService {
       orderBy: { createdAt: 'desc' },
       include: { tournamentResult: { include: { tournament: true } } },
     });
+  }
+
+  /** Полная история активности игрока. */
+  async getEvents(userId: string, take?: number, skip?: number) {
+    return this.playerEventsService.findMany({ userId, take, skip });
+  }
+
+  async getAchievements(userId: string) {
+    return this.achievementsService.findByUser(userId);
   }
 
   async getTournamentHistory(userId: string) {

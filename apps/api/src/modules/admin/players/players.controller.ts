@@ -39,4 +39,10 @@ export class AdminPlayersController {
   unverify(@Param('id') id: string) {
     return this.playersService.setVerified(id, false);
   }
+
+  /** Сброс принятия соглашений — приветственный экран покажется снова. */
+  @Patch(':id/reset-consent')
+  resetConsent(@Param('id') id: string) {
+    return this.playersService.resetConsent(id);
+  }
 }
