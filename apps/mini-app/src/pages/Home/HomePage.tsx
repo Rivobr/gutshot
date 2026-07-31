@@ -7,7 +7,7 @@ import { useNearestTournament } from '../../entities/tournament';
 import { useCurrentRegistration } from '../../entities/registration';
 import { Logo, SuitWatermark, goldButtonStyle } from '../../shared/ui/figma';
 import { club } from '../../shared/config/club';
-import { formatDateShort, formatMoney, formatTime, seatsWord } from '../../shared/lib/format';
+import { formatDateShort, formatTime, seatsWord } from '../../shared/lib/format';
 
 function Chip({ icon, children }: { icon: string; children: string }): JSX.Element {
   return (
@@ -100,9 +100,6 @@ export function HomePage(): JSX.Element {
                   >
                     {nearest.title}
                   </h2>
-                  <p className="gold-text-sm num font-semibold mt-2" style={{ fontSize: 15 }}>
-                    {formatMoney(nearest.buyIn)}
-                  </p>
                 </div>
 
                 <motion.button

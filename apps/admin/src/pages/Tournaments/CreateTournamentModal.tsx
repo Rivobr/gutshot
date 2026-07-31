@@ -7,7 +7,6 @@ interface FormValues {
   title: string;
   description?: string;
   date: string;
-  buyIn: number;
   maxPlayers: number;
 }
 
@@ -24,7 +23,7 @@ export function CreateTournamentModal({ open, onClose }: CreateTournamentModalPr
     createTournament.mutate(
       {
         ...values,
-        buyIn: Number(values.buyIn),
+        buyIn: 0,
         maxPlayers: Number(values.maxPlayers),
         date: new Date(values.date).toISOString(),
       },
@@ -70,12 +69,6 @@ export function CreateTournamentModal({ open, onClose }: CreateTournamentModalPr
                 type="datetime-local"
                 className="rounded-md border border-border bg-secondary px-3 py-2.5"
                 {...register('date', { required: true })}
-              />
-              <input
-                type="number"
-                className="rounded-md border border-border bg-secondary px-3 py-2.5"
-                placeholder="Бай-ин"
-                {...register('buyIn', { required: true })}
               />
               <input
                 type="number"

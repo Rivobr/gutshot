@@ -109,7 +109,7 @@ async function main(): Promise<void> {
       title: 'Пятничный турнир GUTSHOT',
       description: 'Еженедельный турнир по покеру в клубе GUTSHOT',
       date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      buyIn: 3000,
+      buyIn: 0,
       maxPlayers: 24,
       status: TournamentStatus.REGISTRATION_OPEN,
       registrationOpen: new Date(),

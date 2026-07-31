@@ -22,10 +22,6 @@ export function formatTime(iso: string): string {
   });
 }
 
-export function formatMoney(value: number): string {
-  return `₽${value.toLocaleString('ru-RU')}`;
-}
-
 export function seatsWord(n: number): string {
   const mod10 = n % 10;
   const mod100 = n % 100;

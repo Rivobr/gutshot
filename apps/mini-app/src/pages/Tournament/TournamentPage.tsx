@@ -7,7 +7,7 @@ import { useTournament, useTournamentParticipants } from '../../entities/tournam
 import { useCurrentRegistration, useRegister } from '../../entities/registration';
 import { Divider, InfoCard, SectionLabel, goldButtonStyle, initialsOf } from '../../shared/ui/figma';
 import { PlayerQrModal } from '../../widgets/PlayerQrModal/PlayerQrModal';
-import { formatDate, formatMoney, formatTime, seatsWord } from '../../shared/lib/format';
+import { formatDate, formatTime, seatsWord } from '../../shared/lib/format';
 
 const UPCOMING_STATUSES = ['DRAFT', 'REGISTRATION_OPEN', 'REGISTRATION_CLOSED', 'IN_PROGRESS'];
 
@@ -71,10 +71,10 @@ export function TournamentPage(): JSX.Element {
       <Divider className="mx-5" />
 
       <div className="px-5 pt-5 grid grid-cols-2 gap-3">
-        <InfoCard label="Взнос" value={formatMoney(tournament.buyIn)} icon="💎" />
         <InfoCard label="Игроки" value={`${registrationsCount} / ${tournament.maxPlayers}`} icon="👥" />
         <InfoCard label="Мест осталось" value={seats.toString()} icon={seats <= 3 ? '🔴' : '🟢'} />
         <InfoCard label="Дата" value={formatDate(tournament.date)} icon="📅" />
+        <InfoCard label="Время" value={formatTime(tournament.date)} icon="🕐" />
       </div>
 
       {upcoming && (
@@ -123,9 +123,7 @@ export function TournamentPage(): JSX.Element {
             className="btn-shine w-full py-4 rounded-[18px] serif font-semibold tracking-widest disabled:opacity-50"
             style={goldButtonStyle()}
           >
-            {tournament.status === 'REGISTRATION_OPEN'
-              ? `ЗАРЕГИСТРИРОВАТЬСЯ — ${formatMoney(tournament.buyIn)}`
-              : 'РЕГИСТРАЦИЯ ЗАКРЫТА'}
+            {tournament.status === 'REGISTRATION_OPEN' ? 'ЗАРЕГИСТРИРОВАТЬСЯ' : 'РЕГИСТРАЦИЯ ЗАКРЫТА'}
           </button>
           {tournament.status === 'REGISTRATION_OPEN' && (
             <p className="sans text-center mt-2.5" style={{ fontSize: 10, color: '#6B614E' }}>

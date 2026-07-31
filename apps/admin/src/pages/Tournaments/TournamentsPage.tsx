@@ -31,8 +31,7 @@ export function TournamentsPage(): JSX.Element {
               <Badge>{tournament.status}</Badge>
             </div>
             <p className="text-sm text-muted-foreground">
-              {new Date(tournament.date).toLocaleString('ru-RU')} · Бай-ин {tournament.buyIn} ₽ · Мест{' '}
-              {tournament.maxPlayers}
+              {new Date(tournament.date).toLocaleString('ru-RU')} · Мест {tournament.maxPlayers}
             </p>
             <div className="flex flex-wrap gap-2">
               <Button

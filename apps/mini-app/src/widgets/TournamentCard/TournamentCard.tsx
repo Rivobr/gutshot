@@ -2,7 +2,7 @@ import { Tournament } from '@gutshot/types';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Divider, SuitWatermark } from '../../shared/ui/figma';
-import { formatDate, formatMoney, seatsWord } from '../../shared/lib/format';
+import { formatDate, formatTime, seatsWord } from '../../shared/lib/format';
 
 const UPCOMING_STATUSES = ['DRAFT', 'REGISTRATION_OPEN', 'REGISTRATION_CLOSED', 'IN_PROGRESS'];
 
@@ -69,18 +69,18 @@ export function TournamentCard({ tournament, index = 0 }: TournamentCardProps): 
       <div className="relative grid grid-cols-3 gap-2 mb-4">
         <div>
           <p className="sans uppercase" style={{ fontSize: 8, color: '#6B614E', letterSpacing: '0.14em' }}>
-            Взнос
-          </p>
-          <p className="gold-text-sm num font-semibold" style={{ fontSize: 14 }}>
-            {formatMoney(tournament.buyIn)}
-          </p>
-        </div>
-        <div>
-          <p className="sans uppercase" style={{ fontSize: 8, color: '#6B614E', letterSpacing: '0.14em' }}>
             Дата
           </p>
           <p className="sans" style={{ fontSize: 11, color: '#D8CEBC' }}>
             {formatDate(tournament.date)}
+          </p>
+        </div>
+        <div>
+          <p className="sans uppercase" style={{ fontSize: 8, color: '#6B614E', letterSpacing: '0.14em' }}>
+            Время
+          </p>
+          <p className="sans" style={{ fontSize: 11, color: '#D8CEBC' }}>
+            {formatTime(tournament.date)}
           </p>
         </div>
         <div>
