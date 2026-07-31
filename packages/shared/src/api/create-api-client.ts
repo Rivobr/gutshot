@@ -6,10 +6,20 @@ export interface CreateApiClientOptions {
   onUnauthorized?: () => void;
 }
 
+/** Эндпоинты логина: 401 здесь — ошибка входа, а не «сессия истекла». */
+function isAuthLoginRequest(url?: string): boolean {
+  if (!url) {
+    return false;
+  }
+
+  return url.includes('/auth/telegram') || url.includes('/auth/admin/login');
+}
+
 export function createApiClient(options: CreateApiClientOptions): AxiosInstance {
   const client = axios.create({
     baseURL: options.baseURL,
     headers: { 'Content-Type': 'application/json' },
+    timeout: 20_000,
   });
 
   client.interceptors.request.use((config) => {
@@ -23,9 +33,15 @@ export function createApiClient(options: CreateApiClientOptions): AxiosInstance 
   client.interceptors.response.use(
     (response) => response,
     (error) => {
-      if (error.response?.status === 401) {
+      const status = error.response?.status;
+      const requestUrl = String(error.config?.url ?? '');
+
+      // Нельзя делать reload на 401 логина — иначе новые пользователи
+      // попадают в бесконечный цикл загрузки.
+      if (status === 401 && !isAuthLoginRequest(requestUrl)) {
         options.onUnauthorized?.();
       }
+
       return Promise.reject(error);
     },
   );

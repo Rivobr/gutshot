@@ -6,7 +6,13 @@ export const apiClient = createApiClient({
   baseURL: env.apiUrl,
   getToken: () => tokenStorage.get(),
   onUnauthorized: () => {
+    const hadToken = Boolean(tokenStorage.get());
     tokenStorage.clear();
-    window.location.reload();
+
+    // Reload только если сессия реально была — иначе логин с 401
+    // зацикливает экран загрузки у новых пользователей.
+    if (hadToken) {
+      window.location.reload();
+    }
   },
 });
