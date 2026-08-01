@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Loader } from '@gutshot/ui';
 import type { AchievementCode } from '@gutshot/types';
@@ -415,88 +416,96 @@ export function ProfilePage(): JSX.Element {
 
       <MyQrModal open={isQrOpen} onClose={() => setQrOpen(false)} />
 
-      <AnimatePresence>
-        {isEditingName && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end justify-center px-4 pb-8"
-            style={{ background: 'rgba(0,0,0,0.72)' }}
-            onClick={() => setEditingName(false)}
-          >
-            <motion.form
-              initial={{ y: 40, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 24, opacity: 0 }}
-              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-              onClick={(event) => event.stopPropagation()}
-              onSubmit={handleSaveNickname}
-              className="w-full max-w-md rounded-[22px] p-5"
+      {createPortal(
+        <AnimatePresence>
+          {isEditingName && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 flex items-center justify-center px-4"
               style={{
-                background: 'linear-gradient(180deg, #1A1610 0%, #0E0C09 100%)',
-                border: '1px solid rgba(199,154,61,0.28)',
+                zIndex: 1000,
+                background: 'rgba(0,0,0,0.72)',
+                paddingTop: 'max(16px, env(safe-area-inset-top))',
+                paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
               }}
+              onClick={() => setEditingName(false)}
             >
-              <h3 className="serif font-semibold" style={{ fontSize: 20, color: '#F5EDD6' }}>
-                Никнейм
-              </h3>
-              <p className="sans mt-1 mb-4" style={{ fontSize: 12, color: '#6B614E', lineHeight: 1.5 }}>
-                Так вас будут видеть другие игроки в клубе
-              </p>
-              <input
-                value={nicknameDraft}
-                onChange={(event) => setNicknameDraft(event.target.value)}
-                maxLength={32}
-                autoFocus
-                className="w-full rounded-[14px] px-4 py-3 sans"
+              <motion.form
+                initial={{ y: 40, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 24, opacity: 0 }}
+                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                onClick={(event) => event.stopPropagation()}
+                onSubmit={handleSaveNickname}
+                className="w-full max-w-md rounded-[22px] p-5"
                 style={{
-                  background: 'rgba(255,255,255,0.04)',
+                  background: 'linear-gradient(180deg, #1A1610 0%, #0E0C09 100%)',
                   border: '1px solid rgba(199,154,61,0.28)',
-                  color: '#F5EDD6',
-                  fontSize: 15,
-                  outline: 'none',
                 }}
-              />
-              {updateNickname.isError && (
-                <p className="sans mt-2" style={{ fontSize: 12, color: '#E07A6E' }}>
-                  Не удалось сохранить никнейм. Проверьте длину (2–32) и символы.
+              >
+                <h3 className="serif font-semibold" style={{ fontSize: 20, color: '#F5EDD6' }}>
+                  Никнейм
+                </h3>
+                <p className="sans mt-1 mb-4" style={{ fontSize: 12, color: '#6B614E', lineHeight: 1.5 }}>
+                  Так вас будут видеть другие игроки в клубе
                 </p>
-              )}
-              <div className="mt-4 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setEditingName(false)}
-                  className="flex-1 py-3 rounded-[14px] sans"
+                <input
+                  value={nicknameDraft}
+                  onChange={(event) => setNicknameDraft(event.target.value)}
+                  maxLength={32}
+                  autoFocus
+                  className="w-full rounded-[14px] px-4 py-3 sans"
                   style={{
                     background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(120,110,90,0.3)',
-                    color: '#C0B49A',
-                    fontSize: 13,
-                    cursor: 'pointer',
+                    border: '1px solid rgba(199,154,61,0.28)',
+                    color: '#F5EDD6',
+                    fontSize: 15,
+                    outline: 'none',
                   }}
-                >
-                  Отмена
-                </button>
-                <button
-                  type="submit"
-                  disabled={updateNickname.isPending || nicknameDraft.trim().length < 2}
-                  className="flex-1 py-3 rounded-[14px] sans font-semibold disabled:opacity-50"
-                  style={{
-                    background: 'linear-gradient(135deg,#9C6A1F,#C89A3D)',
-                    border: 'none',
-                    color: '#0A0A0A',
-                    fontSize: 13,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Сохранить
-                </button>
-              </div>
-            </motion.form>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                />
+                {updateNickname.isError && (
+                  <p className="sans mt-2" style={{ fontSize: 12, color: '#E07A6E' }}>
+                    Не удалось сохранить никнейм. Проверьте длину (2–32) и символы.
+                  </p>
+                )}
+                <div className="mt-4 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingName(false)}
+                    className="flex-1 py-3 rounded-[14px] sans"
+                    style={{
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(120,110,90,0.3)',
+                      color: '#C0B49A',
+                      fontSize: 13,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Отмена
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={updateNickname.isPending || nicknameDraft.trim().length < 2}
+                    className="flex-1 py-3 rounded-[14px] sans font-semibold disabled:opacity-50"
+                    style={{
+                      background: 'linear-gradient(135deg,#9C6A1F,#C89A3D)',
+                      border: 'none',
+                      color: '#0A0A0A',
+                      fontSize: 13,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Сохранить
+                  </button>
+                </div>
+              </motion.form>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body,
+      )}
     </div>
   );
 }

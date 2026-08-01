@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import QRCode from 'qrcode';
 import { usePlayerQrCode } from '../../entities/player';
@@ -10,8 +11,8 @@ export interface MyQrModalProps {
 }
 
 /**
- * Постоянный QR-код игрока. Код выдается один раз при регистрации
- * и не меняется при изменении профиля, поэтому изображение можно кешировать.
+ * Постоянный QR-код игрока. Рендерится в document.body,
+ * чтобы не ломаться из-за transform/overflow страницы и нижней навигации.
  */
 export function MyQrModal({ open, onClose }: MyQrModalProps): JSX.Element {
   const { data, isLoading } = usePlayerQrCode();
@@ -33,7 +34,28 @@ export function MyQrModal({ open, onClose }: MyQrModalProps): JSX.Element {
     };
   }, [data?.qrCode]);
 
-  return (
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      document.body.style.overflow = previous;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open, onClose]);
+
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
@@ -41,26 +63,53 @@ export function MyQrModal({ open, onClose }: MyQrModalProps): JSX.Element {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="fixed inset-0 z-[100] flex items-end justify-center"
-          style={{ background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(6px)' }}
+          className="fixed inset-0 flex items-center justify-center px-4"
+          style={{
+            zIndex: 1000,
+            background: 'rgba(0,0,0,0.78)',
+            backdropFilter: 'blur(6px)',
+            paddingTop: 'max(16px, env(safe-area-inset-top))',
+            paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
+          }}
         >
           <motion.div
-            initial={{ y: 60, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 60, opacity: 0 }}
-            transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+            initial={{ y: 28, opacity: 0, scale: 0.98 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            exit={{ y: 20, opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
             onClick={(event) => event.stopPropagation()}
-            className="vip-card-hero w-full rounded-t-[28px] px-6 pt-6 pb-9 relative overflow-hidden"
-            style={{ maxWidth: 430 }}
+            className="vip-card-hero w-full rounded-[28px] px-6 pt-5 pb-5 relative"
+            style={{
+              maxWidth: 390,
+              maxHeight: 'min(92dvh, 720px)',
+              overflowY: 'auto',
+            }}
           >
-            <div className="absolute inset-0 deco-lines opacity-40 pointer-events-none" />
-            <div
-              className="mx-auto mb-5 rounded-full"
-              style={{ width: 42, height: 4, background: 'rgba(199,154,61,0.35)' }}
-            />
+            <div className="absolute inset-0 deco-lines opacity-40 pointer-events-none rounded-[28px]" />
 
-            <div className="relative flex justify-center mb-5">
+            <div className="relative flex items-center justify-between mb-4">
+              <div className="flex-1" />
               <Logo size="sm" />
+              <div className="flex-1 flex justify-end">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label="Закрыть"
+                  className="flex items-center justify-center rounded-full"
+                  style={{
+                    width: 36,
+                    height: 36,
+                    border: '1px solid rgba(199,154,61,0.35)',
+                    background: 'rgba(199,154,61,0.1)',
+                    color: '#C89A3D',
+                    fontSize: 18,
+                    lineHeight: 1,
+                    cursor: 'pointer',
+                  }}
+                >
+                  ×
+                </button>
+              </div>
             </div>
 
             <div className="relative flex justify-center">
@@ -100,6 +149,7 @@ export function MyQrModal({ open, onClose }: MyQrModalProps): JSX.Element {
             </p>
 
             <button
+              type="button"
               onClick={onClose}
               className="relative w-full mt-5 py-3.5 rounded-[16px] sans font-medium"
               style={{
@@ -115,6 +165,7 @@ export function MyQrModal({ open, onClose }: MyQrModalProps): JSX.Element {
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }

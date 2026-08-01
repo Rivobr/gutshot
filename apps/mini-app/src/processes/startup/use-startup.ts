@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { isAxiosError } from 'axios';
 import { authApi } from '../../features/auth/api/auth.api';
-import { getTelegramInitData, getTelegramWebApp } from '../../shared/lib/telegram';
+import { configureTelegramChrome, getTelegramInitData } from '../../shared/lib/telegram';
 import { tokenStorage } from '../../shared/lib/token-storage';
 
 export type StartupStatus = 'loading' | 'ready' | 'error';
@@ -49,9 +49,7 @@ export function useStartup(): { status: StartupStatus; errorMessage?: string } {
     let cancelled = false;
 
     const start = async (): Promise<void> => {
-      const webApp = getTelegramWebApp();
-      webApp?.ready();
-      webApp?.expand();
+      configureTelegramChrome();
 
       const existingToken = tokenStorage.get();
       if (existingToken) {
