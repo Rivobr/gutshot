@@ -54,13 +54,14 @@ export function configureTelegramChrome(): void {
     // optional
   }
 
+  const requestFullscreen = webApp.requestFullscreen;
   const canFullscreen =
-    typeof webApp.requestFullscreen === 'function' &&
+    typeof requestFullscreen === 'function' &&
     (webApp.isVersionAtLeast?.('8.0') ?? true);
 
   if (canFullscreen && !webApp.isFullscreen) {
     try {
-      webApp.requestFullscreen();
+      requestFullscreen.call(webApp);
     } catch {
       // Пользователь/клиент может отклонить fullscreen — остаётся тёмная шапка.
     }
