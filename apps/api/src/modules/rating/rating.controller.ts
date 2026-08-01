@@ -20,6 +20,11 @@ export class RatingController {
     return this.ratingService.getWeeklyRating();
   }
 
+  @Get('final')
+  getFinal() {
+    return this.ratingService.getMonthlyFinalRating();
+  }
+
   @Get('scale')
   getScale() {
     return this.ratingService.getPlaceScale();

@@ -10,7 +10,7 @@ export interface GutshotChipProps {
   loop?: boolean;
 }
 
-/** Лицо фишки — SVG */
+/** Лицо фишки — SVG один-в-один с физической фишкой клуба */
 function ChipFace({ id, mirrored = false }: { id: string; mirrored?: boolean }): JSX.Element {
   return (
     <svg
@@ -21,53 +21,47 @@ function ChipFace({ id, mirrored = false }: { id: string; mirrored?: boolean }):
       aria-hidden
     >
       <defs>
-        <radialGradient id={`${id}-face`} cx="38%" cy="32%" r="70%">
-          <stop offset="0%" stopColor="#FFFFFF" />
-          <stop offset="55%" stopColor="#F7F4EE" />
-          <stop offset="100%" stopColor="#E8E0D2" />
-        </radialGradient>
         <linearGradient id={`${id}-gold`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#D4B06A" />
-          <stop offset="45%" stopColor="#8B6914" />
-          <stop offset="100%" stopColor="#5C4010" />
+          <stop offset="40%" stopColor="#A07828" />
+          <stop offset="100%" stopColor="#6B4A12" />
         </linearGradient>
         <linearGradient id={`${id}-red`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#FF5A6A" />
-          <stop offset="50%" stopColor="#E0112F" />
+          <stop offset="0%" stopColor="#FF4D5E" />
+          <stop offset="45%" stopColor="#E0112F" />
           <stop offset="100%" stopColor="#8A0A1C" />
         </linearGradient>
       </defs>
 
-      <circle cx="100" cy="100" r="98" fill="#111111" />
-      <circle cx="100" cy="100" r="94" fill="#2FBF3A" />
+      <circle cx="100" cy="100" r="99.5" fill="#0B0B0B" />
+      <circle cx="100" cy="100" r="97" fill="#2FBF3A" />
 
       {[0, 60, 120, 180, 240, 300].map((deg) => (
         <path
           key={deg}
-          d="M100 8
-             C118 8 132 14 140 24
-             C128 30 118 40 112 52
-             C108 42 104 34 100 28
-             C96 34 92 42 88 52
-             C82 40 72 30 60 24
-             C68 14 82 8 100 8 Z"
+          d="M100 8.5
+             C117.2 9.4 132 16.4 137.5 26.6
+             C128.1 32 119.5 40.6 116.4 51.6
+             C111.7 40.6 107 33.6 100 29.7
+             C93 33.6 88.3 40.6 83.6 51.6
+             C80.5 40.6 71.9 32 62.5 26.6
+             C68 16.4 82.8 9.4 100 8.5 Z"
           fill="#0A0A0A"
           transform={`rotate(${deg} 100 100)`}
         />
       ))}
 
-      <circle cx="100" cy="100" r="68" fill="none" stroke="#C89A3D" strokeWidth="1.4" opacity="0.55" />
-      <circle cx="100" cy="100" r="66" fill="#1A1A1A" />
-      <circle cx="100" cy="100" r="63" fill={`url(#${id}-face)`} />
-      <circle cx="100" cy="100" r="63" fill="none" stroke="#D8CFBE" strokeWidth="1" />
+      <circle cx="100" cy="100" r="68" fill="none" stroke="#C89A3D" strokeWidth="0.8" opacity="0.5" />
+      <circle cx="100" cy="100" r="66.5" fill="#121212" />
+      <circle cx="100" cy="100" r="63.5" fill="#FFFFFF" />
 
-      {[82, 90, 98, 106, 114].map((x, i) => (
+      {[82.5, 90.5, 98.5, 106.5, 114.5].map((x, i) => (
         <rect
           key={x}
           x={x}
-          y="42"
-          width="4.2"
-          height="16"
+          y="47.5"
+          width="4.4"
+          height="15.5"
           rx="1.1"
           fill={i === 2 ? `url(#${id}-red)` : `url(#${id}-gold)`}
         />
@@ -75,40 +69,40 @@ function ChipFace({ id, mirrored = false }: { id: string; mirrored?: boolean }):
 
       <text
         x="100"
-        y="78"
+        y="80"
         textAnchor="middle"
-        fill={`url(#${id}-gold)`}
+        fill="#8B6914"
         style={{
           fontFamily: 'Georgia, "Times New Roman", serif',
-          fontSize: 18,
+          fontSize: 17.5,
           fontWeight: 700,
-          letterSpacing: '0.12em',
+          letterSpacing: '0.16em',
         }}
       >
         GUTSHOT
       </text>
       <text
         x="100"
-        y="94"
+        y="91.5"
         textAnchor="middle"
         fill="#8B6914"
         style={{
-          fontFamily: 'system-ui, sans-serif',
-          fontSize: 7.5,
-          fontWeight: 500,
-          letterSpacing: '0.18em',
+          fontFamily: 'Arial, Helvetica, sans-serif',
+          fontSize: 5.2,
+          fontWeight: 600,
+          letterSpacing: '0.24em',
         }}
       >
         — POKER CLUB —
       </text>
       <text
         x="100"
-        y="132"
+        y="124"
         textAnchor="middle"
         fill="#111111"
         style={{
           fontFamily: 'Georgia, "Times New Roman", serif',
-          fontSize: 22,
+          fontSize: 22.5,
           fontWeight: 700,
           letterSpacing: '0.04em',
         }}

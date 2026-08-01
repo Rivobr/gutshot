@@ -9,7 +9,7 @@ const ITEMS = [
   { to: '/tournaments', label: 'Турниры', icon: '🏆' },
   { to: '/players', label: 'Игроки', icon: '👥' },
   { to: '/history', label: 'История', icon: '🕘' },
-  { to: '/xp-settings', label: 'Настройки XP', icon: '⭐' },
+  { to: '/xp-settings', label: 'Очки и XP', icon: '⭐' },
   { to: '/legal-documents', label: 'Документы', icon: '📄' },
   { to: '/statistics', label: 'Статистика', icon: '📈' },
   { to: '/settings', label: 'Настройки', icon: '⚙️' },

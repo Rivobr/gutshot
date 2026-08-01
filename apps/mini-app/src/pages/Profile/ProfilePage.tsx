@@ -1,8 +1,8 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { Loader } from '@gutshot/ui';
-import type { AchievementCode } from '@gutshot/types';
 import {
   useAchievements,
   usePlayerEvents,
@@ -16,12 +16,10 @@ import { PlayerAvatar } from '../../shared/ui/PlayerAvatar';
 import { displayNameOf } from '../../shared/lib/display-name';
 import { formatDate } from '../../shared/lib/format';
 import { PLAYER_EVENT_LABELS, formatEventDate } from '../../shared/lib/event-labels';
-
-const RARE_ACHIEVEMENTS: { code: AchievementCode; icon: string; title: string }[] = [
-  { code: 'FOUR_OF_A_KIND', icon: '🃏', title: 'Каре' },
-  { code: 'STRAIGHT_FLUSH', icon: '🔥', title: 'Стрит-флеш' },
-  { code: 'ROYAL_FLUSH', icon: '👑', title: 'Роял-флеш' },
-];
+import {
+  ACHIEVEMENTS_CATALOG,
+  type AchievementContext,
+} from '../../shared/lib/achievements-catalog';
 
 interface StatItem {
   icon: string;
@@ -29,14 +27,8 @@ interface StatItem {
   label: string;
 }
 
-interface Achievement {
-  icon: string;
-  title: string;
-  unlocked: boolean;
-  progress?: string;
-}
-
 export function ProfilePage(): JSX.Element {
+  const navigate = useNavigate();
   const { data: profile, isLoading } = useProfile();
   const { data: history } = useTournamentHistory();
   const { data: events } = usePlayerEvents();
@@ -79,18 +71,27 @@ export function ProfilePage(): JSX.Element {
     { icon: '📅', value: `${s.daysInClub}`, label: 'Дней в клубе' },
   ];
 
-  const achievements: Achievement[] = [
-    { icon: '🏆', title: 'Первая игра', unlocked: s.tournamentsPlayed > 0 },
-    { icon: '🃏', title: 'Первая пара', unlocked: s.tournamentsPlayed >= 2 },
-    { icon: '🪙', title: 'Первый ITM', unlocked: s.itm > 0 },
-    { icon: '👑', title: 'Первый финальный стол', unlocked: s.top10Percent > 0 },
-    {
-      icon: '🔒',
-      title: 'Первая победа',
-      unlocked: s.wins > 0,
-      progress: `${Math.min(s.wins, 1)}/1`,
-    },
-  ];
+  const achievementCtx: AchievementContext = {
+    tournamentsPlayed: s.tournamentsPlayed,
+    wins: s.wins,
+    itm: s.itm,
+    firstPlaces: s.firstPlaces,
+    bounties: s.bounties ?? 0,
+    daysInClub: s.daysInClub,
+    unlockedCodes,
+  };
+
+  const previewAchievements = ACHIEVEMENTS_CATALOG.slice(0, 5).map((item) => {
+    const progress = item.getProgress(achievementCtx);
+    const unlocked = progress >= item.target;
+    return {
+      id: item.id,
+      icon: item.icon,
+      title: item.title,
+      unlocked,
+      progress: unlocked ? 'Получено' : `${progress}/${item.target}`,
+    };
+  });
 
   return (
     <div className="flex flex-col">
@@ -251,92 +252,61 @@ export function ProfilePage(): JSX.Element {
           </div>
         </div>
 
-        {/* Achievements */}
+        {/* Достижения — превью + переход на полную страницу */}
         <div>
-          <div className="mb-3 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => navigate('/achievements')}
+            className="mb-3 w-full flex items-center justify-between"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+          >
             <SectionLabel>Достижения</SectionLabel>
-          </div>
+            <span className="sans" style={{ fontSize: 11, color: '#C89A3D' }}>
+              Все →
+            </span>
+          </button>
           <div className="flex gap-3 overflow-x-auto hs pb-1 -mx-5 px-5">
-            {achievements.map((a) => (
-              <div
-                key={a.title}
+            {previewAchievements.map((a) => (
+              <button
+                key={a.id}
+                type="button"
+                onClick={() => navigate('/achievements')}
                 className="shrink-0 flex flex-col items-center gap-2 p-3 rounded-[16px] vip-card"
-                style={{ width: 96, opacity: a.unlocked ? 1 : 0.45 }}
+                style={{
+                  width: 96,
+                  opacity: a.unlocked ? 1 : 0.45,
+                  cursor: 'pointer',
+                  border: '1px solid rgba(199,154,61,0.16)',
+                }}
               >
                 <span
                   style={{
                     fontSize: 26,
-                    filter: a.unlocked ? 'drop-shadow(0 0 8px rgba(199,154,61,0.5))' : 'grayscale(1)',
+                    filter: a.unlocked
+                      ? 'drop-shadow(0 0 8px rgba(199,154,61,0.5))'
+                      : 'grayscale(1)',
                   }}
                 >
                   {a.unlocked ? a.icon : '🔒'}
                 </span>
-                <span className="sans text-center" style={{ fontSize: 9.5, color: '#D8CEBC', lineHeight: 1.25 }}>
+                <span
+                  className="sans text-center"
+                  style={{ fontSize: 9.5, color: '#D8CEBC', lineHeight: 1.25 }}
+                >
                   {a.title}
                 </span>
                 <span
                   className="sans"
-                  style={{ fontSize: 8.5, color: a.unlocked ? '#C89A3D' : '#6B614E', letterSpacing: '0.06em' }}
+                  style={{
+                    fontSize: 8.5,
+                    color: a.unlocked ? '#C89A3D' : '#6B614E',
+                    letterSpacing: '0.06em',
+                  }}
                 >
-                  {a.unlocked ? 'Получено' : a.progress ?? 'Закрыто'}
+                  {a.progress}
                 </span>
-              </div>
+              </button>
             ))}
-          </div>
-
-          {/* Редкие комбинации — отмечаются администратором по QR-коду */}
-          <div className="mt-3 grid grid-cols-3 gap-3">
-            {RARE_ACHIEVEMENTS.map((achievement) => {
-              const unlocked = unlockedCodes.has(achievement.code);
-
-              return (
-                <div
-                  key={achievement.code}
-                  className="flex flex-col items-center gap-2 p-3 rounded-[16px] vip-card"
-                  style={{ opacity: unlocked ? 1 : 0.45 }}
-                >
-                  <span
-                    style={{
-                      fontSize: 24,
-                      filter: unlocked
-                        ? 'drop-shadow(0 0 8px rgba(199,154,61,0.5))'
-                        : 'grayscale(1)',
-                    }}
-                  >
-                    {unlocked ? achievement.icon : '🔒'}
-                  </span>
-                  <span
-                    className="sans text-center"
-                    style={{ fontSize: 9.5, color: '#D8CEBC', lineHeight: 1.25 }}
-                  >
-                    {achievement.title}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Rare milestone */}
-          <div
-            className="mt-3 rounded-[18px] p-4 relative overflow-hidden"
-            style={{
-              background: 'linear-gradient(145deg, #14110b 0%, #0d0b07 100%)',
-              border: '1px solid rgba(120,110,90,0.25)',
-            }}
-          >
-            <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.35)' }} />
-            <div className="relative flex items-start gap-3">
-              <span style={{ fontSize: 26, filter: 'grayscale(0.6)', opacity: 0.7 }}>👑</span>
-              <div className="min-w-0">
-                <p className="serif font-semibold" style={{ fontSize: 14, color: '#C0B49A', lineHeight: 1.3 }}>
-                  💎 Самое редкое достижение клуба: Легенда Gutshot
-                </p>
-                <p className="sans mt-1.5" style={{ fontSize: 10, color: '#6B614E', lineHeight: 1.5 }}>
-                  Выдаётся при одновременном выполнении: 100 побед, 100 уровень, хотя бы один
-                  роял-флеш, 100 нокаутов, 1 победа в финале месяца.
-                </p>
-              </div>
-            </div>
           </div>
         </div>
 

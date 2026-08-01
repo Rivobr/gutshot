@@ -80,7 +80,7 @@ export function FinishTournamentModal({
           >
             <h2 className="mb-1 text-lg font-medium">Завершить турнир</h2>
             <p className="mb-4 text-sm text-muted-foreground">
-              Укажите места игроков — XP начислится по таблице настроек.
+              Укажите места игроков — очки рейтинга начислятся по шкале настроек.
             </p>
 
             {players.length === 0 ? (
@@ -123,7 +123,7 @@ export function FinishTournamentModal({
                 disabled={players.length === 0}
                 onClick={onSubmit}
               >
-                Завершить и начислить XP
+                Завершить и начислить очки
               </Button>
             </div>
           </motion.div>

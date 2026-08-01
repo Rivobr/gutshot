@@ -279,8 +279,8 @@ export class TelegramService {
     reminder: (tournamentTitle: string): string =>
       `⏰ Напоминаем: турнир «${tournamentTitle}» начнется через 2 часа.`,
     checkedIn: (): string => '✅ Вы успешно отметились. Удачи за столом!',
-    tournamentFinished: (tournamentTitle: string, place: number, xp: number): string =>
-      `🏁 Турнир «${tournamentTitle}» завершен. Ваше место: ${place}. Начислено XP: +${xp}.`,
+    tournamentFinished: (tournamentTitle: string, place: number, points: number): string =>
+      `🏁 Турнир «${tournamentTitle}» завершен. Ваше место: ${place}. Начислено очков: +${points}.`,
     xpAwarded: (amount: number): string => `⭐ Начислено ${amount} XP.`,
     levelUp: (level: number): string => `🚀 Новый уровень: ${level}!`,
   };

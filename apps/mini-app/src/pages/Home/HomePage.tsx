@@ -5,7 +5,7 @@ import { HomeTile } from '../../widgets/HomeTile/HomeTile';
 import { RatingBanner } from '../../widgets/RatingBanner/RatingBanner';
 import { useNearestTournament } from '../../entities/tournament';
 import { useCurrentRegistration } from '../../entities/registration';
-import { Logo, SuitWatermark, goldButtonStyle } from '../../shared/ui/figma';
+import { SuitWatermark, goldButtonStyle } from '../../shared/ui/figma';
 import { club } from '../../shared/config/club';
 import { formatDateShort, formatTime, seatsWord } from '../../shared/lib/format';
 
@@ -44,15 +44,18 @@ export function HomePage(): JSX.Element {
         className="flex flex-col px-4 pb-6 gap-4"
         style={{ paddingTop: 8, position: 'relative', zIndex: 1 }}
       >
-        {/* Ближайший турнир */}
         {isLoading ? (
           <Loader />
         ) : nearest ? (
-          <motion.div
+          <motion.button
+            type="button"
+            onClick={() => navigate(`/tournaments/${nearest.id}`)}
             initial={{ opacity: 0, y: 22 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
-            className="vip-card-hero relative overflow-hidden rounded-[22px]"
+            whileTap={{ scale: 0.985 }}
+            className="vip-card-hero relative overflow-hidden rounded-[22px] w-full text-left"
+            style={{ border: 'none', cursor: 'pointer', padding: 0 }}
           >
             <div className="absolute inset-0 deco-lines opacity-50 pointer-events-none" />
             <SuitWatermark
@@ -86,24 +89,26 @@ export function HomePage(): JSX.Element {
                 <div className="min-w-0">
                   <h2
                     className="serif font-semibold uppercase"
-                    style={{ fontSize: 28, lineHeight: 1.05, color: '#F5EDD6', letterSpacing: '0.02em' }}
+                    style={{
+                      fontSize: 28,
+                      lineHeight: 1.05,
+                      color: '#F5EDD6',
+                      letterSpacing: '0.02em',
+                    }}
                   >
                     {nearest.title}
                   </h2>
                 </div>
 
-                <motion.button
-                  type="button"
-                  onClick={() => navigate(`/tournaments/${nearest.id}`)}
-                  whileTap={{ scale: 0.96 }}
-                  className="btn-shine sans font-semibold rounded-full shrink-0 px-6"
+                <span
+                  className="btn-shine sans font-semibold rounded-full shrink-0 px-6 inline-flex items-center justify-center"
                   style={{ ...goldButtonStyle(), height: 44, fontSize: 12, letterSpacing: '0.1em' }}
                 >
                   {registration?.tournamentId === nearest.id ? 'Вы записаны' : 'Записаться'}
-                </motion.button>
+                </span>
               </div>
             </div>
-          </motion.div>
+          </motion.button>
         ) : (
           <div className="vip-card rounded-[22px] p-6 text-center">
             <p className="sans" style={{ fontSize: 12, color: '#6B614E' }}>
@@ -112,19 +117,15 @@ export function HomePage(): JSX.Element {
           </div>
         )}
 
-        {/* Рейтинг */}
         <RatingBanner delay={0.15} />
 
-        {/* Плитки */}
         <div className="grid grid-cols-2 gap-3">
           <HomeTile title="О клубе" suit="diamond" to="/about" delay={0.2} />
-          <HomeTile title="Support" suit="heart" to="/support" delay={0.25} />
+          <HomeTile title="Поддержка" suit="heart" to="/support" delay={0.25} />
           <HomeTile title="Q&A" suit="club" to="/faq" wide delay={0.3} />
         </div>
 
-        {/* Подвал */}
         <div className="flex flex-col items-center gap-2 pt-3">
-          <Logo size="sm" />
           <p
             className="sans text-center"
             style={{ fontSize: 10, color: '#3E3428', letterSpacing: '0.06em' }}

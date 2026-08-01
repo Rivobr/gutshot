@@ -9,16 +9,16 @@ import { SectionLabel } from '../../shared/ui/figma';
 import { PlayerAvatar } from '../../shared/ui/PlayerAvatar';
 import { displayNameOf } from '../../shared/lib/display-name';
 
-type Tab = 'overall' | 'weekly';
+type Tab = 'weekly' | 'final';
 
 async function fetchRating(tab: Tab): Promise<RatingEntry[]> {
-  const { data } = await apiClient.get(tab === 'overall' ? '/ratings' : '/ratings/weekly');
+  const { data } = await apiClient.get(tab === 'weekly' ? '/ratings/weekly' : '/ratings/final');
   const payload = data?.data ?? data;
   return Array.isArray(payload) ? payload : [];
 }
 
-function xpOf(entry: RatingEntry): number {
-  return entry.xp ?? entry.weeklyXp ?? 0;
+function pointsOf(entry: RatingEntry): number {
+  return entry.points ?? entry.weeklyXp ?? entry.xp ?? 0;
 }
 
 function formatPoints(value: number): string {
@@ -26,12 +26,12 @@ function formatPoints(value: number): string {
 }
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: 'overall', label: 'Общий' },
   { id: 'weekly', label: 'Недельный' },
+  { id: 'final', label: 'Финал' },
 ];
 
 export function RatingPage(): JSX.Element {
-  const [tab, setTab] = useState<Tab>('overall');
+  const [tab, setTab] = useState<Tab>('weekly');
   const { data: profile } = useProfile();
 
   const ratingQuery = useQuery({
@@ -52,31 +52,31 @@ export function RatingPage(): JSX.Element {
       return null;
     }
 
-    const myXp = me ? xpOf(me) : 0;
+    const myPoints = me ? pointsOf(me) : 0;
     const myRank = me?.rank;
     const third = rating[2];
     const first = rating[0];
-    const thirdXp = third ? xpOf(third) : 0;
-    const firstXp = first ? xpOf(first) : 0;
+    const thirdPoints = third ? pointsOf(third) : 0;
+    const firstPoints = first ? pointsOf(first) : 0;
 
     if (!me) {
       return {
         rank: null as number | null,
-        xp: 0,
+        points: 0,
         inTop3: false,
         title: 'Вас пока нет в таблице',
         subtitle:
           tab === 'weekly'
             ? 'Сыграйте турнир на этой неделе — и появитесь в рейтинге'
-            : 'Наберите первые очки, чтобы попасть в таблицу',
+            : 'Наберите очки в этом месяце, чтобы попасть в финал',
       };
     }
 
     if (myRank != null && myRank <= 3) {
-      const toFirst = Math.max(0, firstXp - myXp);
+      const toFirst = Math.max(0, firstPoints - myPoints);
       return {
         rank: myRank,
-        xp: myXp,
+        points: myPoints,
         inTop3: true,
         title: myRank === 1 ? 'Вы лидируете' : 'Вы в топ-3',
         subtitle:
@@ -88,10 +88,10 @@ export function RatingPage(): JSX.Element {
       };
     }
 
-    const toTop3 = Math.max(0, thirdXp - myXp);
+    const toTop3 = Math.max(0, thirdPoints - myPoints);
     return {
       rank: myRank ?? null,
-      xp: myXp,
+      points: myPoints,
       inTop3: false,
       title: `Вы на ${myRank} месте`,
       subtitle:
@@ -103,7 +103,9 @@ export function RatingPage(): JSX.Element {
   const rest = rating.slice(3);
   const medalColors = ['#C89A3D', '#9A9A9A', '#B87040'];
   const medals = ['🥇', '🥈', '🥉'];
+  // Порядок на пьедестале: 2 — 1 — 3; высоты: 1 выше всех
   const order = [1, 0, 2];
+  const heights = [108, 84, 64];
 
   return (
     <div className="flex flex-col">
@@ -112,7 +114,7 @@ export function RatingPage(): JSX.Element {
           Рейтинг клуба
         </h2>
         <p className="sans mt-1" style={{ fontSize: 12, color: '#6B614E' }}>
-          Таблица лидеров сезона
+          Очки за места в турнирах · XP качает уровень отдельно
         </p>
 
         <div
@@ -122,6 +124,7 @@ export function RatingPage(): JSX.Element {
           {TABS.map((option) => (
             <button
               key={option.id}
+              type="button"
               onClick={() => setTab(option.id)}
               className="flex-1 py-2.5 rounded-[10px] sans font-medium transition-all duration-300"
               style={{
@@ -149,7 +152,7 @@ export function RatingPage(): JSX.Element {
                 title={youHere.title}
                 subtitle={youHere.subtitle}
                 rank={youHere.rank}
-                xp={youHere.xp}
+                points={youHere.points}
                 inTop3={youHere.inTop3}
               />
             </div>
@@ -164,7 +167,6 @@ export function RatingPage(): JSX.Element {
                     .filter((idx) => top3[idx])
                     .map((idx) => {
                       const p = top3[idx];
-                      const heights = [72, 96, 56];
                       const isMe = p.userId === myUserId;
                       return (
                         <motion.div
@@ -216,7 +218,7 @@ export function RatingPage(): JSX.Element {
                             {isMe ? 'Вы' : displayNameOf(p)}
                           </p>
                           <p className="gold-text-sm num sans font-semibold" style={{ fontSize: 12 }}>
-                            {xpOf(p).toLocaleString('ru-RU')}
+                            {formatPoints(pointsOf(p))}
                           </p>
                           <div
                             className="w-full rounded-t-lg mt-2 flex items-center justify-center"
@@ -258,16 +260,15 @@ export function RatingPage(): JSX.Element {
                   style={{
                     background: isMe
                       ? 'linear-gradient(135deg, rgba(199,154,61,0.16), rgba(20,18,16,0.95))'
-                      : '#141210',
+                      : 'rgba(20,18,16,0.85)',
                     border: isMe
-                      ? '1px solid rgba(247,217,138,0.45)'
+                      ? '1px solid rgba(247,217,138,0.35)'
                       : '1px solid rgba(199,154,61,0.12)',
-                    boxShadow: isMe ? '0 0 24px rgba(156,106,31,0.18)' : undefined,
                   }}
                 >
                   <span
-                    className="num serif font-bold w-6 text-center"
-                    style={{ fontSize: 14, color: isMe ? '#C89A3D' : '#3E3428' }}
+                    className="sans num shrink-0"
+                    style={{ width: 28, fontSize: 13, color: '#6B614E' }}
                   >
                     {p.rank}
                   </span>
@@ -276,40 +277,19 @@ export function RatingPage(): JSX.Element {
                     firstName={p.firstName}
                     lastName={p.lastName}
                     nickname={p.nickname}
-                    size={36}
+                    size={40}
                   />
                   <div className="flex-1 min-w-0">
-                    <p
-                      className="serif font-medium flex items-center gap-2"
-                      style={{ fontSize: 14, color: '#F5EDD6', lineHeight: 1.3 }}
-                    >
-                      <span className="truncate">{displayNameOf(p)}</span>
-                      {isMe && (
-                        <span
-                          className="sans shrink-0 rounded-full px-1.5 py-0.5"
-                          style={{
-                            fontSize: 9,
-                            background: 'rgba(199,154,61,0.22)',
-                            color: '#C89A3D',
-                            letterSpacing: '0.06em',
-                          }}
-                        >
-                          ВЫ
-                        </span>
-                      )}
+                    <p className="serif truncate" style={{ fontSize: 14, color: '#F5EDD6' }}>
+                      {isMe ? 'Вы' : displayNameOf(p)}
                     </p>
-                    {p.level != null && (
-                      <p className="sans" style={{ fontSize: 10, color: '#6B614E' }}>
-                        Уровень {p.level}
-                      </p>
-                    )}
                   </div>
                   <div className="text-right">
                     <p className="gold-text-sm num sans font-semibold" style={{ fontSize: 13 }}>
-                      {xpOf(p).toLocaleString('ru-RU')}
+                      {formatPoints(pointsOf(p))}
                     </p>
                     <p className="sans num" style={{ fontSize: 9, color: '#6B614E' }}>
-                      XP
+                      очки
                     </p>
                   </div>
                 </motion.div>
@@ -334,13 +314,13 @@ function YouHereCard({
   title,
   subtitle,
   rank,
-  xp,
+  points,
   inTop3,
 }: {
   title: string;
   subtitle: string;
   rank: number | null;
-  xp: number;
+  points: number;
   inTop3: boolean;
 }): JSX.Element {
   return (
@@ -387,10 +367,10 @@ function YouHereCard({
         </div>
         <div className="text-right shrink-0">
           <p className="gold-text-sm num sans font-semibold" style={{ fontSize: 15 }}>
-            {formatPoints(xp)}
+            {formatPoints(points)}
           </p>
           <p className="sans" style={{ fontSize: 9, color: '#6B614E' }}>
-            XP
+            очки
           </p>
         </div>
       </div>

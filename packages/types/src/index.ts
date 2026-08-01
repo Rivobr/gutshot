@@ -96,6 +96,8 @@ export interface Registration {
 }
 
 export interface RatingEntry {
+  /** Очки рейтинга (места в турнирах). */
+  points?: number;
   rank: number;
   userId: string;
   firstName?: string | null;

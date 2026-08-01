@@ -97,15 +97,16 @@ export function XpSettingsPage(): JSX.Element {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-medium">Настройки XP</h1>
+        <h1 className="text-2xl font-medium">Очки и XP</h1>
         <p className="text-sm text-muted-foreground">
-          Значения применяются ко всем новым начислениям. Ранее начисленный опыт не пересчитывается.
+          Очки — рейтинг (места в турнирах). XP — уровень игрока (явка, комбо и т.д.). Новые значения
+          не пересчитывают уже начисленное.
         </p>
       </div>
 
       <Card className="gap-4">
         <div>
-          <h2 className="font-medium">Шкала рейтинга (места 1–20)</h2>
+          <h2 className="font-medium">Шкала рейтинга — очки (места 1–20)</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Очки за место в турнире. 1 место — премия за победу; со 2 по 20 — плавное снижение.
             Всего за турнир при полной таблице:{' '}
@@ -118,7 +119,7 @@ export function XpSettingsPage(): JSX.Element {
             <thead>
               <tr className="border-b border-border bg-secondary/40 text-left text-muted-foreground">
                 <th className="px-3 py-2.5 font-medium">Место</th>
-                <th className="px-3 py-2.5 font-medium">Рейтинг</th>
+                <th className="px-3 py-2.5 font-medium">Очки</th>
                 <th className="px-3 py-2.5 font-medium">Разница с предыдущим</th>
               </tr>
             </thead>
@@ -148,7 +149,7 @@ export function XpSettingsPage(): JSX.Element {
       </Card>
 
       <Card className="gap-4">
-        <h2 className="font-medium">Прочие начисления</h2>
+        <h2 className="font-medium">Прочие начисления (XP уровня)</h2>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {XP_EVENT_SETTING_ORDER.map((key: XpSettingKey) => (
