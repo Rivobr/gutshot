@@ -109,7 +109,7 @@ export function HomePage(): JSX.Element {
                   className="btn-shine sans font-semibold rounded-full shrink-0 px-6"
                   style={{ ...goldButtonStyle(), height: 44, fontSize: 12, letterSpacing: '0.1em' }}
                 >
-                  Записаться
+                  {registration?.tournamentId === nearest.id ? 'Вы записаны' : 'Записаться'}
                 </motion.button>
               </div>
             </div>
@@ -120,32 +120,6 @@ export function HomePage(): JSX.Element {
               Ближайших турниров пока нет
             </p>
           </div>
-        )}
-
-        {/* Мой билет — если игрок зарегистрирован */}
-        {registration && (
-          <motion.button
-            type="button"
-            onClick={() => navigate('/my-tournament')}
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            whileTap={{ scale: 0.982 }}
-            className="vip-card rounded-[18px] px-5 py-4 flex items-center justify-between"
-          >
-            <span className="flex flex-col items-start">
-              <span
-                className="sans uppercase"
-                style={{ fontSize: 8.5, color: '#6B614E', letterSpacing: '0.18em' }}
-              >
-                Вы зарегистрированы
-              </span>
-              <span className="serif font-semibold" style={{ fontSize: 15, color: '#F5EDD6' }}>
-                Мой билет
-              </span>
-            </span>
-            <span style={{ color: 'rgba(199,154,61,0.6)', fontSize: 20 }}>›</span>
-          </motion.button>
         )}
 
         {/* Рейтинг */}

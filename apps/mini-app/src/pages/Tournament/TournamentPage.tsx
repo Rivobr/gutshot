@@ -2,7 +2,11 @@ import { motion } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Loader } from '@gutshot/ui';
 import { useTournament, useTournamentParticipants } from '../../entities/tournament';
-import { useCurrentRegistration, useRegister } from '../../entities/registration';
+import {
+  useCancelRegistration,
+  useCurrentRegistration,
+  useRegister,
+} from '../../entities/registration';
 import { Divider, InfoCard, SectionLabel, goldButtonStyle } from '../../shared/ui/figma';
 import { PlayerAvatar } from '../../shared/ui/PlayerAvatar';
 import { displayNameOf } from '../../shared/lib/display-name';
@@ -17,6 +21,7 @@ export function TournamentPage(): JSX.Element {
   const { data: participants } = useTournamentParticipants(id ?? '');
   const { data: currentRegistration } = useCurrentRegistration();
   const registerMutation = useRegister();
+  const cancelMutation = useCancelRegistration();
 
   if (isLoading || !tournament) {
     return <Loader />;
@@ -104,14 +109,34 @@ export function TournamentPage(): JSX.Element {
       )}
 
       {isMine ? (
-        <div className="px-5 mt-6">
-          <button
-            onClick={() => navigate('/my-tournament')}
-            className="btn-shine w-full py-4 rounded-[18px] serif font-semibold tracking-widest"
-            style={goldButtonStyle()}
+        <div className="px-5 mt-6 flex flex-col gap-3">
+          <div
+            className="w-full py-4 rounded-[18px] serif font-semibold tracking-widest text-center"
+            style={{
+              ...goldButtonStyle(),
+              opacity: 0.92,
+            }}
           >
-            МОЙ БИЛЕТ
-          </button>
+            {currentRegistration?.status === 'WAITING' ? 'В ЛИСТЕ ОЖИДАНИЯ' : 'ВЫ ЗАПИСАНЫ'}
+          </div>
+          {(currentRegistration?.status === 'REGISTERED' ||
+            currentRegistration?.status === 'WAITING') && (
+            <button
+              type="button"
+              disabled={cancelMutation.isPending}
+              onClick={() => cancelMutation.mutate(currentRegistration.id)}
+              className="w-full py-3.5 rounded-[18px] sans font-medium disabled:opacity-50"
+              style={{
+                background: 'rgba(192,57,43,0.12)',
+                border: '1px solid rgba(192,57,43,0.4)',
+                color: '#E07A6E',
+                fontSize: 13,
+                cursor: 'pointer',
+              }}
+            >
+              Отменить регистрацию
+            </button>
+          )}
         </div>
       ) : (
         <div className="px-5 mt-6">

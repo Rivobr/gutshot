@@ -2,23 +2,19 @@ import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { Loader } from '@gutshot/ui';
-import type { PlaceRatingScaleDto, RatingEntry } from '@gutshot/types';
+import type { RatingEntry } from '@gutshot/types';
 import { apiClient } from '../../shared/api/client';
 import { useProfile } from '../../entities/player';
 import { Logo, SectionLabel } from '../../shared/ui/figma';
 import { PlayerAvatar } from '../../shared/ui/PlayerAvatar';
 import { displayNameOf } from '../../shared/lib/display-name';
 
-type Tab = 'overall' | 'weekly' | 'scale';
+type Tab = 'overall' | 'weekly';
 
-async function fetchRating(tab: 'overall' | 'weekly'): Promise<RatingEntry[]> {
+async function fetchRating(tab: Tab): Promise<RatingEntry[]> {
   const { data } = await apiClient.get(tab === 'overall' ? '/ratings' : '/ratings/weekly');
-  return data.data;
-}
-
-async function fetchScale(): Promise<PlaceRatingScaleDto> {
-  const { data } = await apiClient.get('/ratings/scale');
-  return data.data;
+  const payload = data?.data ?? data;
+  return Array.isArray(payload) ? payload : [];
 }
 
 function xpOf(entry: RatingEntry): number {
@@ -32,7 +28,6 @@ function formatPoints(value: number): string {
 const TABS: { id: Tab; label: string }[] = [
   { id: 'overall', label: 'Общий' },
   { id: 'weekly', label: 'Недельный' },
-  { id: 'scale', label: 'Шкала' },
 ];
 
 export function RatingPage(): JSX.Element {
@@ -41,19 +36,12 @@ export function RatingPage(): JSX.Element {
 
   const ratingQuery = useQuery({
     queryKey: ['ratings', tab],
-    queryFn: () => fetchRating(tab as 'overall' | 'weekly'),
-    enabled: tab !== 'scale',
+    queryFn: () => fetchRating(tab),
   });
 
-  const scaleQuery = useQuery({
-    queryKey: ['ratings', 'scale'],
-    queryFn: fetchScale,
-    enabled: tab === 'scale',
-    staleTime: 60_000,
-  });
-
-  const rating = ratingQuery.data ?? [];
+  const rating = Array.isArray(ratingQuery.data) ? ratingQuery.data : [];
   const myUserId = profile?.id;
+
   const me = useMemo(
     () => (myUserId ? rating.find((entry) => entry.userId === myUserId) : undefined),
     [rating, myUserId],
@@ -107,9 +95,7 @@ export function RatingPage(): JSX.Element {
       inTop3: false,
       title: `Вы на ${myRank} месте`,
       subtitle:
-        toTop3 > 0
-          ? `До топ-3: ${formatPoints(toTop3)} очков`
-          : 'Ещё немного — и вы в тройке',
+        toTop3 > 0 ? `До топ-3: ${formatPoints(toTop3)} очков` : 'Ещё немного — и вы в тройке',
     };
   }, [me, myUserId, rating, tab]);
 
@@ -118,7 +104,6 @@ export function RatingPage(): JSX.Element {
   const medalColors = ['#C89A3D', '#9A9A9A', '#B87040'];
   const medals = ['🥇', '🥈', '🥉'];
   const order = [1, 0, 2];
-  const isLoading = tab === 'scale' ? scaleQuery.isLoading : ratingQuery.isLoading;
 
   return (
     <div className="flex flex-col">
@@ -128,7 +113,7 @@ export function RatingPage(): JSX.Element {
           Рейтинг клуба
         </h2>
         <p className="sans mt-1" style={{ fontSize: 12, color: '#6B614E' }}>
-          Таблица лидеров и очки за места в турнире
+          Таблица лидеров сезона
         </p>
 
         <div
@@ -155,10 +140,8 @@ export function RatingPage(): JSX.Element {
         </div>
       </div>
 
-      {isLoading ? (
+      {ratingQuery.isLoading ? (
         <Loader />
-      ) : tab === 'scale' ? (
-        <ScaleSection scale={scaleQuery.data} />
       ) : (
         <>
           {youHere && (
@@ -413,85 +396,5 @@ function YouHereCard({
         </div>
       </div>
     </motion.div>
-  );
-}
-
-function ScaleSection({ scale }: { scale?: PlaceRatingScaleDto }): JSX.Element {
-  if (!scale) {
-    return (
-      <div className="px-5 py-16 flex flex-col items-center gap-3">
-        <p className="serif" style={{ fontSize: 16, color: '#6B614E' }}>
-          Не удалось загрузить шкалу
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="px-5 pb-6 flex flex-col gap-4">
-      <div className="vip-card rounded-[18px] p-4">
-        <p
-          className="sans uppercase"
-          style={{ fontSize: 8.5, color: '#6B614E', letterSpacing: '0.18em' }}
-        >
-          Как считаются очки
-        </p>
-        <p className="serif mt-2" style={{ fontSize: 14, color: '#C0B49A', lineHeight: 1.55 }}>
-          1 место — премия за победу. Со 2 по 20 место очки снижаются плавно: чем выше позиция, тем
-          ценнее каждый шаг. За полную таблицу турнира разыгрывается{' '}
-          <span style={{ color: '#C89A3D' }}>{formatPoints(scale.totalPoints)}</span> очков.
-        </p>
-      </div>
-
-      <div>
-        <div className="mb-2">
-          <SectionLabel>Места и рейтинг</SectionLabel>
-        </div>
-        <div
-          className="rounded-[18px] overflow-hidden"
-          style={{ border: '1px solid rgba(199,154,61,0.14)', background: '#141210' }}
-        >
-          <div
-            className="grid grid-cols-3 px-4 py-2.5 sans"
-            style={{
-              fontSize: 10,
-              color: '#6B614E',
-              borderBottom: '1px solid rgba(199,154,61,0.1)',
-              letterSpacing: '0.06em',
-            }}
-          >
-            <span>Место</span>
-            <span className="text-right">Рейтинг</span>
-            <span className="text-right">Разница</span>
-          </div>
-          {scale.rows.map((row, index) => (
-            <motion.div
-              key={row.place}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.02 }}
-              className="grid grid-cols-3 px-4 py-2.5 items-center"
-              style={{
-                borderBottom:
-                  index < scale.rows.length - 1 ? '1px solid rgba(199,154,61,0.08)' : 'none',
-              }}
-            >
-              <span className="serif font-semibold" style={{ fontSize: 15, color: '#F5EDD6' }}>
-                {row.place}
-              </span>
-              <span
-                className="sans num text-right font-semibold"
-                style={{ fontSize: 14, color: '#C89A3D' }}
-              >
-                {formatPoints(row.points)}
-              </span>
-              <span className="sans num text-right" style={{ fontSize: 13, color: '#6B614E' }}>
-                {row.diff === null ? '—' : formatPoints(row.diff)}
-              </span>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-    </div>
   );
 }
