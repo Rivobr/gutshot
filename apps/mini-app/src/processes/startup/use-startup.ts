@@ -6,8 +6,11 @@ import { tokenStorage } from '../../shared/lib/token-storage';
 
 export type StartupStatus = 'loading' | 'ready' | 'error';
 
+const INIT_WAIT_MS = 5_000;
+const HARD_TIMEOUT_MS = 12_000;
+
 /** Telegram иногда отдаёт initData не в первый тик после открытия WebApp. */
-async function waitForInitData(timeoutMs = 4000): Promise<string> {
+async function waitForInitData(timeoutMs = INIT_WAIT_MS): Promise<string> {
   const startedAt = Date.now();
 
   while (Date.now() - startedAt < timeoutMs) {
@@ -47,52 +50,81 @@ export function useStartup(): { status: StartupStatus; errorMessage?: string } {
 
   useEffect(() => {
     let cancelled = false;
+    let finished = false;
 
-    const start = async (): Promise<void> => {
-      configureTelegramChrome();
-
-      const existingToken = tokenStorage.get();
-      if (existingToken) {
-        if (!cancelled) {
-          setStatus('ready');
-        }
+    const finish = (next: StartupStatus, message?: string) => {
+      if (cancelled || finished) {
         return;
       }
+      finished = true;
+      if (message) {
+        setErrorMessage(message);
+      }
+      setStatus(next);
+    };
 
+    // Жёсткий таймаут — экран загрузки не должен висеть вечно (часто у 1 клиента).
+    const watchdog = window.setTimeout(() => {
+      finish(
+        'error',
+        'Загрузка занимает слишком много времени. Закройте мини-приложение и откройте снова через кнопку бота.',
+      );
+    }, HARD_TIMEOUT_MS);
+
+    const start = async (): Promise<void> => {
+      try {
+        configureTelegramChrome();
+      } catch {
+        // chrome API не должен ломать вход
+      }
+
+      // Всегда пробуем свежий initData — старый JWT у одного пользователя
+      // иначе оставляет «вечную» загрузку профиля.
       const initData = await waitForInitData();
 
       if (cancelled) {
         return;
       }
 
-      if (!initData) {
-        setErrorMessage('Приложение должно быть открыто через кнопку в Telegram-боте');
-        setStatus('error');
+      if (initData) {
+        try {
+          const response = await authApi.loginWithTelegram(initData);
+          if (cancelled) {
+            return;
+          }
+          tokenStorage.set(response.accessToken);
+          finish('ready');
+          return;
+        } catch (error) {
+          if (cancelled) {
+            return;
+          }
+          // Если логин не прошёл, но есть старый токен — попробуем с ним.
+          if (!tokenStorage.get()) {
+            finish('error', extractAuthError(error));
+            return;
+          }
+        }
+      }
+
+      if (tokenStorage.get()) {
+        finish('ready');
         return;
       }
 
-      try {
-        const response = await authApi.loginWithTelegram(initData);
-        if (cancelled) {
-          return;
-        }
-
-        tokenStorage.set(response.accessToken);
-        setStatus('ready');
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-
-        setErrorMessage(extractAuthError(error));
-        setStatus('error');
-      }
+      finish(
+        'error',
+        'Приложение должно быть открыто через кнопку меню в Telegram-боте',
+      );
     };
 
-    void start();
+    void start().finally(() => {
+      window.clearTimeout(watchdog);
+    });
 
     return () => {
       cancelled = true;
+      window.clearTimeout(watchdog);
     };
   }, []);
 

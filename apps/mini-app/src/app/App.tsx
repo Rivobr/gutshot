@@ -4,18 +4,15 @@ import { router } from './router/router';
 import { useStartup } from '../processes/startup/use-startup';
 import { ConsentScreen } from '../pages/Onboarding/ConsentScreen';
 import { useProfile } from '../entities/player';
-import { Loader, EmptyState, Button } from '@gutshot/ui';
+import { EmptyState, Button } from '@gutshot/ui';
 import { tokenStorage } from '../shared/lib/token-storage';
+import { SplashScreen } from '../widgets/SplashScreen/SplashScreen';
 
 export function App(): JSX.Element {
   const { status, errorMessage } = useStartup();
 
   if (status === 'loading') {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader />
-      </div>
-    );
+    return <SplashScreen subtitle="Открываем клуб…" />;
   }
 
   if (status === 'error') {
@@ -49,14 +46,10 @@ export function App(): JSX.Element {
  * на других устройствах — и появляется снова, если админ сбросил согласие.
  */
 function ConsentGate({ children }: { children: JSX.Element }): JSX.Element {
-  const { data: profile, isPending, isError, refetch } = useProfile();
+  const { data: profile, isPending, isError, refetch, failureCount } = useProfile();
 
   if (isPending) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader />
-      </div>
-    );
+    return <SplashScreen subtitle="Загружаем профиль…" />;
   }
 
   if (isError || !profile) {
@@ -65,9 +58,24 @@ function ConsentGate({ children }: { children: JSX.Element }): JSX.Element {
         <EmptyState
           icon="⚠️"
           title="Не удалось загрузить профиль"
-          description="Проверьте соединение и попробуйте снова"
+          description={
+            failureCount > 1
+              ? 'Сессия могла устареть. Нажмите «Повторить» или откройте бота заново.'
+              : 'Проверьте соединение и попробуйте снова'
+          }
         />
-        <Button onClick={() => void refetch()}>Повторить</Button>
+        <Button
+          onClick={() => {
+            tokenStorage.clear();
+            void refetch().then((result) => {
+              if (result.isError) {
+                window.location.reload();
+              }
+            });
+          }}
+        >
+          Повторить
+        </Button>
       </div>
     );
   }

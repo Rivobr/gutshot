@@ -2,7 +2,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { playerApi } from '../api/player.api';
 
 export function useProfile() {
-  return useQuery({ queryKey: ['profile'], queryFn: playerApi.getProfile });
+  return useQuery({
+    queryKey: ['profile'],
+    queryFn: playerApi.getProfile,
+    retry: 1,
+    staleTime: 30_000,
+  });
 }
 
 /** Постоянный персональный QR-код игрока. Не меняется, поэтому кешируется надолго. */
