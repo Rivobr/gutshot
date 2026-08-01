@@ -5,4 +5,5 @@ export default registerAs('telegram', () => ({
   botUsername: process.env.TELEGRAM_BOT_USERNAME,
   miniAppUrl: process.env.MINI_APP_URL ?? 'https://app.gutshotapp.ru',
   webhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET?.trim() || undefined,
+  webhookUrl: process.env.TELEGRAM_WEBHOOK_URL?.trim() || undefined,
 }));

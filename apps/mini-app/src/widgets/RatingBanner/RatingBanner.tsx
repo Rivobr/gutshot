@@ -53,6 +53,8 @@ export function RatingBanner({ delay = 0 }: { delay?: number }): JSX.Element {
             style={{ fontSize: 27, lineHeight: 1.05, letterSpacing: '0.04em', marginTop: 4 }}
           >
             Рейтинг
+            <br />
+            GUTSHOT
           </h2>
         </div>
 

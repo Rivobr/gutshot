@@ -2,6 +2,9 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TelegramService } from './telegram.service';
 
+const PRODUCTION_WEBHOOK =
+  'https://api.gutshotapp.ru/api/v1/telegram/webhook';
+
 @Injectable()
 export class TelegramBotBootstrap implements OnModuleInit {
   private readonly logger = new Logger(TelegramBotBootstrap.name);
@@ -12,19 +15,46 @@ export class TelegramBotBootstrap implements OnModuleInit {
   ) {}
 
   async onModuleInit(): Promise<void> {
-    const apiUrl = this.configService.get<string>('app.url')?.replace(/\/$/, '');
     const botToken = this.configService.get<string>('telegram.botToken');
-
-    if (!botToken || !apiUrl) {
-      this.logger.warn('Webhook не установлен: нужны TELEGRAM_BOT_TOKEN и API_URL');
+    if (!botToken) {
+      this.logger.warn('Webhook не установлен: нет TELEGRAM_BOT_TOKEN');
       return;
     }
 
-    if (!apiUrl.startsWith('https://')) {
-      this.logger.warn(`Webhook пропущен: API_URL должен быть https (${apiUrl})`);
+    const webhookUrl = this.resolveWebhookUrl();
+    if (!webhookUrl) {
+      this.logger.warn(
+        'Webhook не установлен: задайте API_URL=https://... или TELEGRAM_WEBHOOK_URL',
+      );
       return;
     }
 
-    await this.telegramService.setWebhook(`${apiUrl}/api/v1/telegram/webhook`);
+    const ok = await this.telegramService.setWebhook(webhookUrl);
+    if (!ok) {
+      this.logger.error(`Не удалось установить webhook: ${webhookUrl}`);
+    }
+  }
+
+  private resolveWebhookUrl(): string | undefined {
+    const explicit = this.configService.get<string>('telegram.webhookUrl')?.replace(/\/$/, '');
+    if (explicit?.startsWith('https://')) {
+      return explicit;
+    }
+
+    const apiUrl = this.configService.get<string>('app.url')?.replace(/\/$/, '');
+    if (apiUrl?.startsWith('https://')) {
+      return `${apiUrl}/api/v1/telegram/webhook`;
+    }
+
+    // На сервере часто оставляют API_URL=http://localhost из примера —
+    // исходящие уведомления работают, а /start нет, т.к. webhook не ставится.
+    if (process.env.NODE_ENV === 'production') {
+      this.logger.warn(
+        `API_URL не https (${apiUrl ?? 'не задан'}) — fallback webhook: ${PRODUCTION_WEBHOOK}`,
+      );
+      return PRODUCTION_WEBHOOK;
+    }
+
+    return undefined;
   }
 }
