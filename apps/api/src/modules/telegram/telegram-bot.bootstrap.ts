@@ -33,6 +33,29 @@ export class TelegramBotBootstrap implements OnModuleInit {
     if (!ok) {
       this.logger.error(`Не удалось установить webhook: ${webhookUrl}`);
     }
+
+    const miniAppUrl = this.resolveMiniAppUrl();
+    if (!miniAppUrl) {
+      this.logger.error(
+        'Menu button не установлен: задайте MINI_APP_URL=https://app.gutshotapp.ru (не admin!)',
+      );
+      return;
+    }
+
+    const menuOk = await this.telegramService.setChatMenuButton(miniAppUrl);
+    if (!menuOk) {
+      this.logger.error(`Не удалось установить menu button: ${miniAppUrl}`);
+    }
+  }
+
+  private resolveMiniAppUrl(): string | undefined {
+    const raw = this.configService.get<string>('telegram.miniAppUrl')?.trim();
+    const url = (raw || 'https://app.gutshotapp.ru').replace(/\/$/, '');
+    if (!url.startsWith('https://') || /admin/i.test(url)) {
+      this.logger.error(`Некорректный MINI_APP_URL: ${raw ?? '—'}`);
+      return undefined;
+    }
+    return url;
   }
 
   private resolveWebhookUrl(): string | undefined {

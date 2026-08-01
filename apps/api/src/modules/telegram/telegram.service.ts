@@ -225,6 +225,56 @@ export class TelegramService {
     }
   }
 
+  /**
+   * Кнопка меню слева от поля ввода. Должна открывать Mini App,
+   * а не админ-панель — иначе игроки видят CRM-логин.
+   */
+  async setChatMenuButton(miniAppUrl: string, text = 'Открыть'): Promise<boolean> {
+    if (!this.botToken) {
+      this.logger.warn('TELEGRAM_BOT_TOKEN не задан — menu button не установлен');
+      return false;
+    }
+
+    const url = miniAppUrl.replace(/\/$/, '');
+    if (!url.startsWith('https://')) {
+      this.logger.error(`Menu button: нужен https URL, получено: ${miniAppUrl}`);
+      return false;
+    }
+    if (/admin/i.test(url)) {
+      this.logger.error(`Menu button: отказ — URL похож на админку: ${url}`);
+      return false;
+    }
+
+    try {
+      const response = await fetch(
+        `https://api.telegram.org/bot${this.botToken}/setChatMenuButton`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            menu_button: {
+              type: 'web_app',
+              text,
+              web_app: { url },
+            },
+          }),
+        },
+      );
+
+      const result = (await response.json()) as { ok?: boolean; description?: string };
+      if (!response.ok || !result.ok) {
+        this.logger.error(`setChatMenuButton failed: ${result.description ?? response.status}`);
+        return false;
+      }
+
+      this.logger.log(`Telegram menu button → Mini App: ${url}`);
+      return true;
+    } catch (error) {
+      this.logger.error('Ошибка setChatMenuButton', error as Error);
+      return false;
+    }
+  }
+
   async setWebhook(webhookUrl: string): Promise<boolean> {
     if (!this.botToken) {
       this.logger.warn('TELEGRAM_BOT_TOKEN не задан — webhook не установлен');
