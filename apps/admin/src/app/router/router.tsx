@@ -9,6 +9,7 @@ import { TournamentDetailsPage } from '../../pages/Tournaments/TournamentDetails
 import { ScannerPage } from '../../pages/Scanner/ScannerPage';
 import { XpSettingsPage } from '../../pages/XpSettings/XpSettingsPage';
 import { LegalDocumentsPage } from '../../pages/LegalDocuments/LegalDocumentsPage';
+import { AchievementsAdminPage } from '../../pages/Achievements/AchievementsPage';
 import { HistoryPage } from '../../pages/History/HistoryPage';
 import { StatisticsPage } from '../../pages/Statistics/StatisticsPage';
 import { SettingsPage } from '../../pages/Settings/SettingsPage';
@@ -29,6 +30,7 @@ export const router = createBrowserRouter([
           { path: '/history', element: <HistoryPage /> },
           { path: '/xp-settings', element: <XpSettingsPage /> },
           { path: '/legal-documents', element: <LegalDocumentsPage /> },
+          { path: '/achievements', element: <AchievementsAdminPage /> },
           { path: '/statistics', element: <StatisticsPage /> },
           { path: '/settings', element: <SettingsPage /> },
         ],

@@ -11,6 +11,7 @@ const ITEMS = [
   { to: '/history', label: 'История', icon: '🕘' },
   { to: '/xp-settings', label: 'Очки и XP', icon: '⭐' },
   { to: '/legal-documents', label: 'Документы', icon: '📄' },
+  { to: '/achievements', label: 'Достижения', icon: '🏅' },
   { to: '/statistics', label: 'Статистика', icon: '📈' },
   { to: '/settings', label: 'Настройки', icon: '⚙️' },
 ];

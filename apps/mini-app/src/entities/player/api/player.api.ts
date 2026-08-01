@@ -1,5 +1,6 @@
 import {
   AchievementDto,
+  AchievementTextDto,
   LegalDocumentDto,
   NotificationDto,
   PlayerEventDto,
@@ -42,6 +43,10 @@ export const playerApi = {
   },
   async getLegalDocuments(): Promise<LegalDocumentDto[]> {
     const { data } = await apiClient.get('/legal-documents');
+    return data.data;
+  },
+  async getAchievementTexts(): Promise<AchievementTextDto[]> {
+    const { data } = await apiClient.get('/achievement-texts');
     return data.data;
   },
   async getXpHistory(): Promise<XPHistoryDto[]> {

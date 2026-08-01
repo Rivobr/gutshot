@@ -47,6 +47,14 @@ export function useLegalDocuments() {
   });
 }
 
+export function useAchievementTexts() {
+  return useQuery({
+    queryKey: ['achievement-texts'],
+    queryFn: playerApi.getAchievementTexts,
+    staleTime: 60_000,
+  });
+}
+
 export function useAcceptConsent() {
   const queryClient = useQueryClient();
 

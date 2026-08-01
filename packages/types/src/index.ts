@@ -344,6 +344,28 @@ export interface LegalDocumentDto {
   updatedAt: string;
 }
 
+/** Редактируемый текст достижения (отображение в Mini App). */
+export type AchievementTextId =
+  | 'first_game'
+  | 'regular'
+  | 'first_itm'
+  | 'first_win'
+  | 'three_wins'
+  | 'bounty_hunter'
+  | 'club_week'
+  | 'four_kind'
+  | 'straight_flush'
+  | 'royal_flush';
+
+export interface AchievementTextDto {
+  id: AchievementTextId;
+  icon: string;
+  title: string;
+  description: string;
+  howTo: string;
+  updatedAt: string;
+}
+
 /** Карточка игрока, показываемая сотруднику после сканирования QR. */
 export interface ScannedPlayerDto {
   userId: string;

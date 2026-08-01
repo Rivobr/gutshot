@@ -1,9 +1,10 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Loader } from '@gutshot/ui';
 import {
+  useAchievementTexts,
   useAchievements,
   usePlayerEvents,
   useProfile,
@@ -17,7 +18,7 @@ import { displayNameOf } from '../../shared/lib/display-name';
 import { formatDate } from '../../shared/lib/format';
 import { PLAYER_EVENT_LABELS, formatEventDate } from '../../shared/lib/event-labels';
 import {
-  ACHIEVEMENTS_CATALOG,
+  mergeAchievementTexts,
   type AchievementContext,
 } from '../../shared/lib/achievements-catalog';
 
@@ -33,11 +34,16 @@ export function ProfilePage(): JSX.Element {
   const { data: history } = useTournamentHistory();
   const { data: events } = usePlayerEvents();
   const { data: unlockedAchievements } = useAchievements();
+  const { data: achievementTexts } = useAchievementTexts();
   const updateNickname = useUpdateNickname();
   const [isQrOpen, setQrOpen] = useState(false);
   const [isEditingName, setEditingName] = useState(false);
   const [isActivityOpen, setActivityOpen] = useState(false);
   const [nicknameDraft, setNicknameDraft] = useState('');
+  const catalog = useMemo(
+    () => mergeAchievementTexts(achievementTexts),
+    [achievementTexts],
+  );
 
   useEffect(() => {
     if (profile) {
@@ -81,7 +87,7 @@ export function ProfilePage(): JSX.Element {
     unlockedCodes,
   };
 
-  const previewAchievements = ACHIEVEMENTS_CATALOG.slice(0, 5).map((item) => {
+  const previewAchievements = catalog.slice(0, 5).map((item) => {
     const progress = item.getProgress(achievementCtx);
     const unlocked = progress >= item.target;
     return {
@@ -133,6 +139,31 @@ export function ProfilePage(): JSX.Element {
           </svg>
         </motion.button>
 
+        <motion.button
+          type="button"
+          onClick={() => {
+            setNicknameDraft(name);
+            setEditingName(true);
+          }}
+          whileTap={{ scale: 0.92 }}
+          aria-label="Изменить никнейм"
+          className="absolute flex items-center justify-center rounded-[16px]"
+          style={{
+            top: 24,
+            right: 16,
+            width: 52,
+            height: 52,
+            zIndex: 2,
+            background: 'linear-gradient(145deg, rgba(199,154,61,0.16), rgba(156,106,31,0.06))',
+            border: '1px solid rgba(199,154,61,0.32)',
+            cursor: 'pointer',
+            color: '#C89A3D',
+            fontSize: 22,
+          }}
+        >
+          ✎
+        </motion.button>
+
         <div className="relative mt-3">
           <PlayerAvatar
             photoUrl={profile.photoUrl}
@@ -144,33 +175,9 @@ export function ProfilePage(): JSX.Element {
         </div>
 
         <div className="text-center w-full">
-          <button
-            type="button"
-            onClick={() => {
-              setNicknameDraft(name);
-              setEditingName(true);
-            }}
-            className="inline-flex items-center gap-3"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-            aria-label="Изменить никнейм"
-          >
-            <h2 className="serif font-semibold" style={{ fontSize: 24, color: '#F5EDD6', lineHeight: 1.2 }}>
-              {name}
-            </h2>
-            <span
-              className="flex items-center justify-center rounded-full shrink-0"
-              style={{
-                width: 40,
-                height: 40,
-                fontSize: 22,
-                color: '#C89A3D',
-                background: 'rgba(199,154,61,0.12)',
-                border: '1px solid rgba(199,154,61,0.35)',
-              }}
-            >
-              ✎
-            </span>
-          </button>
+          <h2 className="serif font-semibold" style={{ fontSize: 24, color: '#F5EDD6', lineHeight: 1.2 }}>
+            {name}
+          </h2>
           {profile.username && (
             <p className="sans mt-2" style={{ fontSize: 13, color: '#6B614E' }}>
               @{profile.username}
@@ -269,55 +276,100 @@ export function ProfilePage(): JSX.Element {
         </div>
       </div>
 
-      <div className="px-5 py-5 flex flex-col gap-6">
-        {/* Statistics */}
-        <div>
-          <div className="mb-3 flex items-baseline gap-2">
+      <div className="px-5 py-5 flex flex-col gap-4">
+        {/* Статистика */}
+        <motion.section
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
+          className="vip-card relative overflow-hidden rounded-[22px] p-4"
+        >
+          <div className="absolute inset-0 deco-lines opacity-35 pointer-events-none" />
+          <div className="relative mb-3.5 flex items-baseline gap-2">
             <SectionLabel>Статистика</SectionLabel>
-            <span className="sans uppercase" style={{ fontSize: 8, color: 'rgba(199,154,61,0.45)', letterSpacing: '0.18em' }}>
+            <span
+              className="sans uppercase"
+              style={{ fontSize: 8, color: 'rgba(199,154,61,0.45)', letterSpacing: '0.18em' }}
+            >
               · Общая
             </span>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            {stats.map((stat) => (
-              <div key={stat.label} className="flex flex-col gap-1.5 p-4 rounded-[18px] vip-card">
+          <div className="relative grid grid-cols-2 gap-2.5">
+            {stats.map((stat, index) => (
+              <motion.div
+                key={stat.label}
+                initial={{ opacity: 0, y: 10, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{
+                  duration: 0.4,
+                  ease: [0.22, 1, 0.36, 1],
+                  delay: 0.1 + index * 0.05,
+                }}
+                className="flex flex-col gap-1.5 rounded-[16px] p-3.5"
+                style={{
+                  background: 'rgba(9,9,9,0.45)',
+                  border: '1px solid rgba(199,154,61,0.14)',
+                }}
+              >
                 <span style={{ fontSize: 18 }}>{stat.icon}</span>
-                <span className="sans font-semibold" style={{ fontSize: 14, color: '#F5EDD6', lineHeight: 1.3 }}>
+                <span
+                  className="sans font-semibold"
+                  style={{ fontSize: 14, color: '#F5EDD6', lineHeight: 1.3 }}
+                >
                   {stat.value}
                 </span>
-                <span className="sans uppercase" style={{ fontSize: 9, color: '#6B614E', letterSpacing: '0.12em' }}>
+                <span
+                  className="sans uppercase"
+                  style={{ fontSize: 9, color: '#6B614E', letterSpacing: '0.12em' }}
+                >
                   {stat.label}
                 </span>
-              </div>
+              </motion.div>
             ))}
           </div>
-        </div>
+        </motion.section>
 
-        {/* Достижения — превью + переход на полную страницу */}
-        <div>
+        {/* Достижения */}
+        <motion.section
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: 0.12 }}
+          className="vip-card relative overflow-hidden rounded-[22px] p-4"
+        >
+          <div className="absolute inset-0 deco-lines opacity-35 pointer-events-none" />
           <button
             type="button"
             onClick={() => navigate('/achievements')}
-            className="mb-3 w-full flex items-center justify-between"
+            className="relative mb-3.5 w-full flex items-center justify-between"
             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
           >
             <SectionLabel>Достижения</SectionLabel>
-            <span className="sans" style={{ fontSize: 11, color: '#C89A3D' }}>
+            <span className="sans" style={{ fontSize: 12, color: '#C89A3D' }}>
               Все →
             </span>
           </button>
-          <div className="flex gap-3 overflow-x-auto hs pb-1 -mx-5 px-5">
-            {previewAchievements.map((a) => (
-              <button
+          <div className="relative flex gap-2.5 overflow-x-auto hs pb-0.5 -mx-1 px-1">
+            {previewAchievements.map((a, index) => (
+              <motion.button
                 key={a.id}
                 type="button"
                 onClick={() => navigate('/achievements')}
-                className="shrink-0 flex flex-col items-center gap-2 p-3 rounded-[16px] vip-card"
+                initial={{ opacity: 0, x: 16 }}
+                animate={{ opacity: a.unlocked ? 1 : 0.5, x: 0 }}
+                transition={{
+                  duration: 0.4,
+                  ease: [0.22, 1, 0.36, 1],
+                  delay: 0.18 + index * 0.06,
+                }}
+                whileTap={{ scale: 0.96 }}
+                className="shrink-0 flex flex-col items-center gap-2 p-3 rounded-[16px]"
                 style={{
-                  width: 96,
-                  opacity: a.unlocked ? 1 : 0.45,
+                  width: 100,
                   cursor: 'pointer',
-                  border: '1px solid rgba(199,154,61,0.16)',
+                  background: 'rgba(9,9,9,0.45)',
+                  border: a.unlocked
+                    ? '1px solid rgba(199,154,61,0.32)'
+                    : '1px solid rgba(199,154,61,0.12)',
                 }}
               >
                 <span
@@ -332,32 +384,38 @@ export function ProfilePage(): JSX.Element {
                 </span>
                 <span
                   className="sans text-center"
-                  style={{ fontSize: 9.5, color: '#D8CEBC', lineHeight: 1.25 }}
+                  style={{ fontSize: 10, color: '#D8CEBC', lineHeight: 1.25 }}
                 >
                   {a.title}
                 </span>
                 <span
                   className="sans"
                   style={{
-                    fontSize: 8.5,
+                    fontSize: 9,
                     color: a.unlocked ? '#C89A3D' : '#6B614E',
                     letterSpacing: '0.06em',
                   }}
                 >
                   {a.progress}
                 </span>
-              </button>
+              </motion.button>
             ))}
           </div>
-        </div>
+        </motion.section>
 
-        {/* Активность: свёрнута по умолчанию, раскрывается по нажатию */}
+        {/* Активность */}
         {events && events.length > 0 && (
-          <div>
+          <motion.section
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
+            className="vip-card relative overflow-hidden rounded-[22px] p-4"
+          >
+            <div className="absolute inset-0 deco-lines opacity-35 pointer-events-none" />
             <button
               type="button"
               onClick={() => setActivityOpen((open) => !open)}
-              className="w-full flex items-center justify-between mb-1"
+              className="relative w-full flex items-center justify-between"
               style={{
                 background: 'none',
                 border: 'none',
@@ -366,16 +424,18 @@ export function ProfilePage(): JSX.Element {
               }}
             >
               <SectionLabel>Активность</SectionLabel>
-              <span
+              <motion.span
                 className="sans"
+                animate={{ opacity: [0.7, 1, 0.7] }}
+                transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
                 style={{
-                  fontSize: 11,
+                  fontSize: 12,
                   color: '#C89A3D',
                   letterSpacing: '0.04em',
                 }}
               >
                 {isActivityOpen ? 'Свернуть ▲' : `Показать (${events.length}) ▼`}
-              </span>
+              </motion.span>
             </button>
             <AnimatePresence initial={false}>
               {isActivityOpen && (
@@ -383,69 +443,89 @@ export function ProfilePage(): JSX.Element {
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                  transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+                  className="relative"
                   style={{ overflow: 'hidden' }}
                 >
-                  {events.map((event, i) => (
-                    <div
-                      key={event.id}
-                      className={`flex items-center justify-between gap-3 py-3 ${i > 0 ? 'border-t' : ''}`}
-                      style={{ borderColor: 'rgba(199,154,61,0.1)' }}
-                    >
-                      <div className="min-w-0">
-                        <p
-                          className="serif truncate"
-                          style={{ fontSize: 13.5, color: '#F5EDD6', lineHeight: 1.35 }}
-                        >
-                          {PLAYER_EVENT_LABELS[event.type]}
-                        </p>
-                        <p className="sans num truncate" style={{ fontSize: 10, color: '#6B614E' }}>
-                          {formatEventDate(event.createdAt)}
-                          {event.tournament ? ` · ${event.tournament.title}` : ''}
-                        </p>
-                      </div>
-                      {event.xpAmount !== 0 && (
-                        <span className="sans num shrink-0" style={{ fontSize: 11.5, color: '#C89A3D' }}>
-                          {event.xpAmount > 0 ? '+' : ''}
-                          {event.xpAmount} XP
-                        </span>
-                      )}
-                    </div>
-                  ))}
+                  <div className="mt-3 flex flex-col">
+                    {events.map((event, i) => (
+                      <motion.div
+                        key={event.id}
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.3, delay: i * 0.03 }}
+                        className={`flex items-center justify-between gap-3 py-3 ${i > 0 ? 'border-t' : ''}`}
+                        style={{ borderColor: 'rgba(199,154,61,0.1)' }}
+                      >
+                        <div className="min-w-0">
+                          <p
+                            className="serif truncate"
+                            style={{ fontSize: 13.5, color: '#F5EDD6', lineHeight: 1.35 }}
+                          >
+                            {PLAYER_EVENT_LABELS[event.type]}
+                          </p>
+                          <p className="sans num truncate" style={{ fontSize: 10, color: '#6B614E' }}>
+                            {formatEventDate(event.createdAt)}
+                            {event.tournament ? ` · ${event.tournament.title}` : ''}
+                          </p>
+                        </div>
+                        {event.xpAmount !== 0 && (
+                          <span
+                            className="sans num shrink-0"
+                            style={{ fontSize: 11.5, color: '#C89A3D' }}
+                          >
+                            {event.xpAmount > 0 ? '+' : ''}
+                            {event.xpAmount} XP
+                          </span>
+                        )}
+                      </motion.div>
+                    ))}
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
-          </div>
+          </motion.section>
         )}
 
-        {/* History */}
+        {/* История */}
         {history && history.length > 0 && (
-          <div>
-            <div className="mb-3">
+          <motion.section
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: 0.28 }}
+            className="vip-card relative overflow-hidden rounded-[22px] p-4"
+          >
+            <div className="absolute inset-0 deco-lines opacity-35 pointer-events-none" />
+            <div className="relative mb-2">
               <SectionLabel>История</SectionLabel>
             </div>
-            {history.map((registration, i) => (
-              <div
-                key={registration.id}
-                className={`flex items-center justify-between py-3 ${i > 0 ? 'border-t' : ''}`}
-                style={{ borderColor: 'rgba(199,154,61,0.1)' }}
-              >
-                <div>
-                  <p className="serif" style={{ fontSize: 14, color: '#F5EDD6', lineHeight: 1.35 }}>
-                    {registration.tournament?.title ?? 'Турнир'}
-                  </p>
-                  {registration.tournament && (
-                    <p className="sans num" style={{ fontSize: 10, color: '#6B614E' }}>
-                      {formatDate(registration.tournament.date)}
+            <div className="relative">
+              {history.map((registration, i) => (
+                <motion.div
+                  key={registration.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, delay: 0.32 + i * 0.04 }}
+                  className={`flex items-center justify-between py-3 ${i > 0 ? 'border-t' : ''}`}
+                  style={{ borderColor: 'rgba(199,154,61,0.1)' }}
+                >
+                  <div>
+                    <p className="serif" style={{ fontSize: 14, color: '#F5EDD6', lineHeight: 1.35 }}>
+                      {registration.tournament?.title ?? 'Турнир'}
                     </p>
-                  )}
-                </div>
-                <span className="sans" style={{ fontSize: 11, color: '#C89A3D' }}>
-                  {registration.status === 'FINISHED' ? 'Завершён' : 'Участие'}
-                </span>
-              </div>
-            ))}
-          </div>
+                    {registration.tournament && (
+                      <p className="sans num" style={{ fontSize: 10, color: '#6B614E' }}>
+                        {formatDate(registration.tournament.date)}
+                      </p>
+                    )}
+                  </div>
+                  <span className="sans" style={{ fontSize: 11, color: '#C89A3D' }}>
+                    {registration.status === 'FINISHED' ? 'Завершён' : 'Участие'}
+                  </span>
+                </motion.div>
+              ))}
+            </div>
+          </motion.section>
         )}
 
         <div className="flex flex-col items-center gap-2 py-4">

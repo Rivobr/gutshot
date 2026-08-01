@@ -1,9 +1,14 @@
+import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Loader } from '@gutshot/ui';
-import { useAchievements, useProfile } from '../../entities/player';
 import {
-  ACHIEVEMENTS_CATALOG,
+  useAchievementTexts,
+  useAchievements,
+  useProfile,
+} from '../../entities/player';
+import {
+  mergeAchievementTexts,
   type AchievementContext,
 } from '../../shared/lib/achievements-catalog';
 
@@ -11,6 +16,11 @@ export function AchievementsPage(): JSX.Element {
   const navigate = useNavigate();
   const { data: profile, isLoading } = useProfile();
   const { data: unlockedAchievements } = useAchievements();
+  const { data: achievementTexts } = useAchievementTexts();
+  const catalog = useMemo(
+    () => mergeAchievementTexts(achievementTexts),
+    [achievementTexts],
+  );
 
   if (isLoading || !profile) {
     return <Loader />;
@@ -26,7 +36,7 @@ export function AchievementsPage(): JSX.Element {
     unlockedCodes: new Set((unlockedAchievements ?? []).map((item) => item.code)),
   };
 
-  const unlockedCount = ACHIEVEMENTS_CATALOG.filter(
+  const unlockedCount = catalog.filter(
     (item) => item.getProgress(ctx) >= item.target,
   ).length;
 
@@ -52,12 +62,12 @@ export function AchievementsPage(): JSX.Element {
           Достижения
         </h2>
         <p className="sans mt-1" style={{ fontSize: 14, color: '#6B614E' }}>
-          Получено {unlockedCount} из {ACHIEVEMENTS_CATALOG.length} · связаны с XP и уровнем
+          Получено {unlockedCount} из {catalog.length} · связаны с XP и уровнем
         </p>
       </div>
 
       <div className="px-5 flex flex-col gap-3">
-        {ACHIEVEMENTS_CATALOG.map((item, index) => {
+        {catalog.map((item, index) => {
           const progress = item.getProgress(ctx);
           const done = progress >= item.target;
           const pct = Math.min(100, Math.round((progress / item.target) * 100));
