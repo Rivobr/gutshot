@@ -4,20 +4,15 @@ import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { WELCOME_CAPTION } from './welcome-message';
 
-/** Короткий caption к фото (лимит Telegram — 1024). Полный текст уходит отдельным сообщением. */
-const WELCOME_PHOTO_CAPTION = '🏆 <b>Добро пожаловать в GUTSHOT POKER CLUB!</b>';
-
 @Injectable()
 export class TelegramService {
   private readonly logger = new Logger(TelegramService.name);
   private readonly botToken: string | undefined;
-  private readonly miniAppUrl: string | undefined;
   private readonly webhookSecret: string | undefined;
   private welcomePhotoFileId: string | undefined;
 
   constructor(private readonly configService: ConfigService) {
     this.botToken = this.configService.get<string>('telegram.botToken');
-    this.miniAppUrl = this.configService.get<string>('telegram.miniAppUrl');
     this.webhookSecret = this.configService.get<string>('telegram.webhookSecret');
   }
 
@@ -27,24 +22,6 @@ export class TelegramService {
 
   private getWelcomePhotoPath(): string {
     return join(process.cwd(), 'assets', 'welcome-club.png');
-  }
-
-  private webAppKeyboard() {
-    if (!this.miniAppUrl) {
-      return undefined;
-    }
-
-    return {
-      keyboard: [
-        [
-          {
-            text: '♠️ Открыть клуб',
-            web_app: { url: this.miniAppUrl },
-          },
-        ],
-      ],
-      resize_keyboard: true,
-    };
   }
 
   async sendMessage(
@@ -91,7 +68,8 @@ export class TelegramService {
       return false;
     }
 
-    const replyMarkup = this.webAppKeyboard();
+    // Снимаем старую reply-клавиатуру («Открыть клуб»), если она уже была у пользователя.
+    const removeKeyboard = { remove_keyboard: true };
 
     try {
       const photoSent = await this.sendWelcomePhoto(chatId);
@@ -99,7 +77,7 @@ export class TelegramService {
         this.logger.warn(`Welcome photo не отправлено в chat ${chatId}, шлём только текст`);
       }
 
-      const textOk = await this.sendMessage(chatId, WELCOME_CAPTION, replyMarkup);
+      const textOk = await this.sendMessage(chatId, WELCOME_CAPTION, removeKeyboard);
       if (!textOk) {
         this.logger.error(`Welcome text не отправлен в chat ${chatId}`);
         return false;
@@ -109,13 +87,13 @@ export class TelegramService {
       return true;
     } catch (error) {
       this.logger.error(`Ошибка отправки welcome в chat ${chatId}`, error as Error);
-      return this.sendMessage(chatId, WELCOME_CAPTION, replyMarkup);
+      return this.sendMessage(chatId, WELCOME_CAPTION, removeKeyboard);
     }
   }
 
   private async sendWelcomePhoto(chatId: string): Promise<boolean> {
     if (this.welcomePhotoFileId) {
-      const ok = await this.sendPhotoByFileId(chatId, this.welcomePhotoFileId, WELCOME_PHOTO_CAPTION);
+      const ok = await this.sendPhotoByFileId(chatId, this.welcomePhotoFileId);
       if (ok) {
         return true;
       }
@@ -126,8 +104,6 @@ export class TelegramService {
       const photoBuffer = await readFile(this.getWelcomePhotoPath());
       const form = new FormData();
       form.append('chat_id', chatId);
-      form.append('caption', WELCOME_PHOTO_CAPTION);
-      form.append('parse_mode', 'HTML');
       form.append(
         'photo',
         new Blob([new Uint8Array(photoBuffer)], { type: 'image/png' }),
@@ -160,19 +136,13 @@ export class TelegramService {
     }
   }
 
-  private async sendPhotoByFileId(
-    chatId: string,
-    fileId: string,
-    caption: string,
-  ): Promise<boolean> {
+  private async sendPhotoByFileId(chatId: string, fileId: string): Promise<boolean> {
     const response = await fetch(`https://api.telegram.org/bot${this.botToken}/sendPhoto`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: chatId,
         photo: fileId,
-        caption,
-        parse_mode: 'HTML',
       }),
     });
 
