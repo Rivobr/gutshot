@@ -24,8 +24,11 @@ export function RatingBanner({ delay = 0 }: { delay?: number }): JSX.Element {
       />
       <div className="absolute inset-0 deco-lines opacity-50 pointer-events-none rounded-[22px] overflow-hidden" />
 
-      <div className="relative flex flex-col justify-between h-full p-5" style={{ zIndex: 3 }}>
-        <div>
+      <div
+        className="relative flex items-center justify-between h-full p-5 gap-4"
+        style={{ zIndex: 3 }}
+      >
+        <div className="min-w-0 flex-1">
           <p
             className="sans uppercase"
             style={{ fontSize: 8.5, color: '#6B614E', letterSpacing: '0.2em' }}
@@ -42,21 +45,24 @@ export function RatingBanner({ delay = 0 }: { delay?: number }): JSX.Element {
           </h2>
         </div>
 
-        <div className="flex items-center">
-          <span
-            className="flex items-center justify-center rounded-full"
-            style={{
-              width: 34,
-              height: 34,
-              border: '1px solid rgba(199,154,61,0.4)',
-              background: 'rgba(199,154,61,0.1)',
-              color: '#C89A3D',
-              fontSize: 16,
-            }}
-          >
-            →
-          </span>
-        </div>
+        <motion.span
+          aria-hidden
+          animate={{ x: [0, 6, 0] }}
+          transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+          className="flex items-center justify-center rounded-full shrink-0"
+          style={{
+            width: 56,
+            height: 56,
+            border: '1px solid rgba(199,154,61,0.45)',
+            background:
+              'linear-gradient(145deg, rgba(199,154,61,0.22), rgba(156,106,31,0.08))',
+            color: '#C89A3D',
+            fontSize: 26,
+            boxShadow: '0 0 24px rgba(199,154,61,0.18)',
+          }}
+        >
+          →
+        </motion.span>
       </div>
     </motion.button>
   );

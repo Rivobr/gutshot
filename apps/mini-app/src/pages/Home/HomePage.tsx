@@ -35,6 +35,7 @@ export function HomePage(): JSX.Element {
 
   const taken = nearest?._count?.registrations ?? 0;
   const seatsLeft = nearest ? Math.max(nearest.maxPlayers - taken, 0) : 0;
+  const isRegistered = registration?.tournamentId === nearest?.id;
 
   return (
     <div className="relative min-h-full">
@@ -51,12 +52,38 @@ export function HomePage(): JSX.Element {
             type="button"
             onClick={() => navigate(`/tournaments/${nearest.id}`)}
             initial={{ opacity: 0, y: 22 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
+            animate={{
+              opacity: 1,
+              y: 0,
+              boxShadow: [
+                '0 0 0 1px rgba(199,154,61,0.22), 0 0 0 rgba(199,154,61,0)',
+                '0 0 0 1px rgba(199,154,61,0.55), 0 0 28px rgba(199,154,61,0.28)',
+                '0 0 0 1px rgba(199,154,61,0.22), 0 0 0 rgba(199,154,61,0)',
+              ],
+            }}
+            transition={{
+              opacity: { duration: 0.75, ease: [0.22, 1, 0.36, 1] },
+              y: { duration: 0.75, ease: [0.22, 1, 0.36, 1] },
+              boxShadow: { duration: 2.8, repeat: Infinity, ease: 'easeInOut' },
+            }}
             whileTap={{ scale: 0.985 }}
             className="vip-card-hero relative overflow-hidden rounded-[22px] w-full text-left"
             style={{ border: 'none', cursor: 'pointer', padding: 0 }}
           >
+            {/* Бегущий блик */}
+            <motion.div
+              aria-hidden
+              className="pointer-events-none absolute inset-y-0 w-1/3"
+              initial={{ x: '-120%', opacity: 0 }}
+              animate={{ x: ['-120%', '220%'], opacity: [0, 0.55, 0] }}
+              transition={{ duration: 2.6, repeat: Infinity, repeatDelay: 1.8, ease: 'easeInOut' }}
+              style={{
+                background:
+                  'linear-gradient(105deg, transparent 0%, rgba(247,217,138,0.16) 45%, transparent 70%)',
+                zIndex: 2,
+              }}
+            />
+
             <div className="absolute inset-0 deco-lines opacity-50 pointer-events-none" />
             <SuitWatermark
               suit="spade"
@@ -72,8 +99,23 @@ export function HomePage(): JSX.Element {
               }}
             />
 
-            <div className="relative p-5">
-              <div className="flex flex-wrap gap-2 mb-5">
+            <div className="relative p-5" style={{ zIndex: 3 }}>
+              <div className="flex flex-wrap items-center gap-2 mb-5">
+                <motion.span
+                  className="sans inline-flex items-center gap-1.5 rounded-full px-3"
+                  animate={{ opacity: [0.75, 1, 0.75] }}
+                  transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+                  style={{
+                    height: 30,
+                    fontSize: 11,
+                    color: '#0A0A0A',
+                    background: 'linear-gradient(135deg, #C89A3D, #F7D98A)',
+                    fontWeight: 600,
+                    letterSpacing: '0.06em',
+                  }}
+                >
+                  ● Скоро
+                </motion.span>
                 <Chip icon="👤">{`${seatsLeft} ${seatsWord(seatsLeft)}`}</Chip>
                 <Chip icon="🕐">{`${formatDateShort(nearest.date)} / ${formatTime(nearest.date)}`}</Chip>
               </div>
@@ -100,12 +142,14 @@ export function HomePage(): JSX.Element {
                   </h2>
                 </div>
 
-                <span
+                <motion.span
                   className="btn-shine sans font-semibold rounded-full shrink-0 px-6 inline-flex items-center justify-center"
+                  animate={{ scale: [1, 1.03, 1] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                   style={{ ...goldButtonStyle(), height: 44, fontSize: 12, letterSpacing: '0.1em' }}
                 >
-                  {registration?.tournamentId === nearest.id ? 'Вы записаны' : 'Записаться'}
-                </span>
+                  {isRegistered ? 'Вы записаны' : 'Записаться'}
+                </motion.span>
               </div>
             </div>
           </motion.button>
