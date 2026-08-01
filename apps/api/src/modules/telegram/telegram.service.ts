@@ -4,6 +4,9 @@ import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { WELCOME_CAPTION } from './welcome-message';
 
+/** Короткий caption к фото (лимит Telegram — 1024). Полный текст уходит отдельным сообщением. */
+const WELCOME_PHOTO_CAPTION = '🏆 <b>Добро пожаловать в GUTSHOT POKER CLUB!</b>';
+
 @Injectable()
 export class TelegramService {
   private readonly logger = new Logger(TelegramService.name);
@@ -44,21 +47,30 @@ export class TelegramService {
     };
   }
 
-  async sendMessage(telegramId: string, text: string): Promise<boolean> {
+  async sendMessage(
+    telegramId: string,
+    text: string,
+    replyMarkup?: object,
+  ): Promise<boolean> {
     if (!this.botToken) {
       this.logger.warn('TELEGRAM_BOT_TOKEN не задан — сообщение не отправлено');
       return false;
     }
 
     try {
+      const body: Record<string, unknown> = {
+        chat_id: telegramId,
+        text,
+        parse_mode: 'HTML',
+      };
+      if (replyMarkup) {
+        body.reply_markup = replyMarkup;
+      }
+
       const response = await fetch(`https://api.telegram.org/bot${this.botToken}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: telegramId,
-          text,
-          parse_mode: 'HTML',
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {
@@ -82,27 +94,45 @@ export class TelegramService {
     const replyMarkup = this.webAppKeyboard();
 
     try {
-      if (this.welcomePhotoFileId) {
-        const ok = await this.sendPhotoByFileId(chatId, this.welcomePhotoFileId, WELCOME_CAPTION, replyMarkup);
-        if (ok) {
-          return true;
-        }
-        this.welcomePhotoFileId = undefined;
+      const photoSent = await this.sendWelcomePhoto(chatId);
+      if (!photoSent) {
+        this.logger.warn(`Welcome photo не отправлено в chat ${chatId}, шлём только текст`);
       }
 
+      const textOk = await this.sendMessage(chatId, WELCOME_CAPTION, replyMarkup);
+      if (!textOk) {
+        this.logger.error(`Welcome text не отправлен в chat ${chatId}`);
+        return false;
+      }
+
+      this.logger.log(`Welcome отправлен в chat ${chatId}`);
+      return true;
+    } catch (error) {
+      this.logger.error(`Ошибка отправки welcome в chat ${chatId}`, error as Error);
+      return this.sendMessage(chatId, WELCOME_CAPTION, replyMarkup);
+    }
+  }
+
+  private async sendWelcomePhoto(chatId: string): Promise<boolean> {
+    if (this.welcomePhotoFileId) {
+      const ok = await this.sendPhotoByFileId(chatId, this.welcomePhotoFileId, WELCOME_PHOTO_CAPTION);
+      if (ok) {
+        return true;
+      }
+      this.welcomePhotoFileId = undefined;
+    }
+
+    try {
       const photoBuffer = await readFile(this.getWelcomePhotoPath());
       const form = new FormData();
       form.append('chat_id', chatId);
-      form.append('caption', WELCOME_CAPTION);
+      form.append('caption', WELCOME_PHOTO_CAPTION);
       form.append('parse_mode', 'HTML');
       form.append(
         'photo',
         new Blob([new Uint8Array(photoBuffer)], { type: 'image/png' }),
         'welcome-club.png',
       );
-      if (replyMarkup) {
-        form.append('reply_markup', JSON.stringify(replyMarkup));
-      }
 
       const response = await fetch(`https://api.telegram.org/bot${this.botToken}/sendPhoto`, {
         method: 'POST',
@@ -111,7 +141,7 @@ export class TelegramService {
 
       if (!response.ok) {
         this.logger.error(`Telegram sendPhoto error: ${response.status} ${await response.text()}`);
-        return this.sendMessage(chatId, WELCOME_CAPTION);
+        return false;
       }
 
       const payload = (await response.json()) as {
@@ -125,8 +155,8 @@ export class TelegramService {
 
       return true;
     } catch (error) {
-      this.logger.error('Ошибка отправки welcome-сообщения', error as Error);
-      return this.sendMessage(chatId, WELCOME_CAPTION);
+      this.logger.error(`Не удалось прочитать/отправить welcome photo: ${(error as Error).message}`);
+      return false;
     }
   }
 
@@ -134,7 +164,6 @@ export class TelegramService {
     chatId: string,
     fileId: string,
     caption: string,
-    replyMarkup?: object,
   ): Promise<boolean> {
     const response = await fetch(`https://api.telegram.org/bot${this.botToken}/sendPhoto`, {
       method: 'POST',
@@ -144,7 +173,6 @@ export class TelegramService {
         photo: fileId,
         caption,
         parse_mode: 'HTML',
-        reply_markup: replyMarkup,
       }),
     });
 
@@ -199,6 +227,34 @@ export class TelegramService {
     }
   }
 
+  async getWebhookInfo(): Promise<{ url?: string; lastErrorMessage?: string; pendingUpdateCount?: number } | null> {
+    if (!this.botToken) {
+      return null;
+    }
+
+    try {
+      const response = await fetch(`https://api.telegram.org/bot${this.botToken}/getWebhookInfo`);
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        result?: {
+          url?: string;
+          last_error_message?: string;
+          pending_update_count?: number;
+        };
+      };
+      if (!payload.ok || !payload.result) {
+        return null;
+      }
+      return {
+        url: payload.result.url,
+        lastErrorMessage: payload.result.last_error_message,
+        pendingUpdateCount: payload.result.pending_update_count,
+      };
+    } catch {
+      return null;
+    }
+  }
+
   async setWebhook(webhookUrl: string): Promise<boolean> {
     if (!this.botToken) {
       this.logger.warn('TELEGRAM_BOT_TOKEN не задан — webhook не установлен');
@@ -224,11 +280,18 @@ export class TelegramService {
 
       const result = (await response.json()) as { ok?: boolean; description?: string };
       if (!response.ok || !result.ok) {
-        this.logger.error(`setWebhook failed: ${result.description ?? (await response.text())}`);
+        this.logger.error(`setWebhook failed: ${result.description ?? response.status}`);
         return false;
       }
 
       this.logger.log(`Telegram webhook установлен: ${webhookUrl}`);
+      const info = await this.getWebhookInfo();
+      if (info) {
+        this.logger.log(
+          `Webhook info: url=${info.url ?? '—'}, pending=${info.pendingUpdateCount ?? 0}` +
+            (info.lastErrorMessage ? `, last_error=${info.lastErrorMessage}` : ''),
+        );
+      }
       return true;
     } catch (error) {
       this.logger.error('Ошибка setWebhook', error as Error);

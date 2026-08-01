@@ -2,6 +2,7 @@ import {
   Controller,
   Headers,
   HttpCode,
+  Logger,
   Post,
   Req,
   UnauthorizedException,
@@ -21,17 +22,20 @@ interface TelegramUpdate {
 @ApiExcludeController()
 @Controller('telegram')
 export class TelegramWebhookController {
+  private readonly logger = new Logger(TelegramWebhookController.name);
+
   constructor(private readonly telegramService: TelegramService) {}
 
   @Public()
   @Post('webhook')
   @HttpCode(200)
-  async handleWebhook(
+  handleWebhook(
     @Req() req: Request,
     @Headers('x-telegram-bot-api-secret-token') secretToken?: string,
-  ): Promise<{ ok: true }> {
+  ): { ok: true } {
     const expectedSecret = this.telegramService.getWebhookSecret();
     if (expectedSecret && secretToken !== expectedSecret) {
+      this.logger.warn('Webhook отклонён: неверный secret token');
       throw new UnauthorizedException('Invalid telegram webhook secret');
     }
 
@@ -40,7 +44,13 @@ export class TelegramWebhookController {
     const chatId = update.message?.chat?.id;
 
     if (chatId && /^\/start(?:@\w+)?(?:\s|$)/i.test(text)) {
-      await this.telegramService.sendWelcome(String(chatId));
+      this.logger.log(`Получен /start от chat ${chatId}`);
+      // Отвечаем Telegram сразу, welcome шлём асинхронно (чтобы не ловить 15s timeout).
+      void this.telegramService.sendWelcome(String(chatId)).then((ok) => {
+        if (!ok) {
+          this.logger.error(`Welcome не удалось отправить в chat ${chatId}`);
+        }
+      });
     }
 
     return { ok: true };

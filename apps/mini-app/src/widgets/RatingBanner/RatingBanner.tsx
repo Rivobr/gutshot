@@ -1,6 +1,5 @@
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { BrandMark } from '../../shared/ui/figma';
 import { GutshotChip } from '../../shared/ui/GutshotChip';
 
 export function RatingBanner({ delay = 0 }: { delay?: number }): JSX.Element {
@@ -54,13 +53,10 @@ export function RatingBanner({ delay = 0 }: { delay?: number }): JSX.Element {
             style={{ fontSize: 27, lineHeight: 1.05, letterSpacing: '0.04em', marginTop: 4 }}
           >
             Рейтинг
-            <br />
-            GUTSHOT
           </h2>
         </div>
 
-        <div className="flex items-center gap-3">
-          <BrandMark height={16} />
+        <div className="flex items-center">
           <span
             className="flex items-center justify-center rounded-full"
             style={{

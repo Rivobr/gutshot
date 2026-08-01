@@ -195,7 +195,7 @@ export function ProfilePage(): JSX.Element {
             </defs>
           </svg>
           <span className="sans" style={{ fontSize: 10.5, color: profile.isVerified ? '#C89A3D' : '#6B614E' }}>
-            {profile.isVerified ? 'Профиль подтверждён (документы, паспорт)' : 'Профиль не подтверждён'}
+            {profile.isVerified ? 'Профиль подтверждён' : 'Профиль не подтверждён'}
           </span>
         </div>
 
