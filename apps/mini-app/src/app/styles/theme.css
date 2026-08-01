@@ -1,5 +1,7 @@
 :root {
   --app-top-pad: 52px;
+  --text-body: 14px;
+  --text-body-lg: 15px;
   --background: #090909;
   --foreground: #f5edd6;
   --card: #151515;

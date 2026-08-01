@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import QRCode from 'qrcode';
 import { usePlayerQrCode } from '../../entities/player';
-import { Logo } from '../../shared/ui/figma';
 
 export interface MyQrModalProps {
   open: boolean;
@@ -87,29 +86,28 @@ export function MyQrModal({ open, onClose }: MyQrModalProps): JSX.Element {
           >
             <div className="absolute inset-0 deco-lines opacity-40 pointer-events-none rounded-[28px]" />
 
-            <div className="relative flex items-center justify-between mb-4">
-              <div className="flex-1" />
-              <Logo size="sm" />
-              <div className="flex-1 flex justify-end">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  aria-label="Закрыть"
-                  className="flex items-center justify-center rounded-full"
-                  style={{
-                    width: 36,
-                    height: 36,
-                    border: '1px solid rgba(199,154,61,0.35)',
-                    background: 'rgba(199,154,61,0.1)',
-                    color: '#C89A3D',
-                    fontSize: 18,
-                    lineHeight: 1,
-                    cursor: 'pointer',
-                  }}
-                >
-                  ×
-                </button>
-              </div>
+            <div className="relative flex items-center justify-between mb-5">
+              <h3 className="serif font-semibold" style={{ fontSize: 20, color: '#F5EDD6' }}>
+                Мой QR-код
+              </h3>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Закрыть"
+                className="flex items-center justify-center rounded-full"
+                style={{
+                  width: 36,
+                  height: 36,
+                  border: '1px solid rgba(199,154,61,0.35)',
+                  background: 'rgba(199,154,61,0.1)',
+                  color: '#C89A3D',
+                  fontSize: 20,
+                  lineHeight: 1,
+                  cursor: 'pointer',
+                }}
+              >
+                ×
+              </button>
             </div>
 
             <div className="relative flex justify-center">
@@ -120,11 +118,11 @@ export function MyQrModal({ open, onClose }: MyQrModalProps): JSX.Element {
                 style={{ boxShadow: '0 10px 40px rgba(0,0,0,0.5)' }}
               >
                 {dataUrl && !isLoading ? (
-                  <img src={dataUrl} alt="Мой QR-код" style={{ width: 208, height: 208 }} />
+                  <img src={dataUrl} alt="Мой QR-код" style={{ width: 220, height: 220 }} />
                 ) : (
                   <div
                     className="animate-pulse rounded bg-gray-200"
-                    style={{ width: 208, height: 208 }}
+                    style={{ width: 220, height: 220 }}
                   />
                 )}
               </motion.div>
@@ -133,7 +131,7 @@ export function MyQrModal({ open, onClose }: MyQrModalProps): JSX.Element {
             {data?.qrCode && (
               <p
                 className="relative sans text-center mt-4 tracking-widest"
-                style={{ fontSize: 13, color: '#C89A3D' }}
+                style={{ fontSize: 15, color: '#C89A3D', fontWeight: 600 }}
               >
                 {data.qrCode}
               </p>
@@ -141,7 +139,7 @@ export function MyQrModal({ open, onClose }: MyQrModalProps): JSX.Element {
 
             <p
               className="relative sans text-center mt-3"
-              style={{ fontSize: 11, color: '#6B614E', lineHeight: 1.6 }}
+              style={{ fontSize: 14, color: '#A89878', lineHeight: 1.55 }}
             >
               Покажите код администратору клуба —
               <br />
@@ -156,7 +154,7 @@ export function MyQrModal({ open, onClose }: MyQrModalProps): JSX.Element {
                 background: 'rgba(199,154,61,0.1)',
                 border: '1px solid rgba(199,154,61,0.3)',
                 color: '#C89A3D',
-                fontSize: 13,
+                fontSize: 15,
                 cursor: 'pointer',
               }}
             >

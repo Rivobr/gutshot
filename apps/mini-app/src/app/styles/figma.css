@@ -225,6 +225,7 @@
 }
 .sans {
   font-family: 'Sora', system-ui, sans-serif;
+  font-size: var(--text-body, 14px);
 }
 .num {
   font-variant-numeric: tabular-nums;
@@ -232,4 +233,9 @@
     'tnum' 1,
     'lnum' 1;
   font-family: 'Sora', system-ui, sans-serif;
+}
+
+body {
+  font-size: var(--text-body, 14px);
+  line-height: 1.5;
 }

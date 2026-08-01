@@ -143,28 +143,36 @@ export function ProfilePage(): JSX.Element {
           />
         </div>
 
-        <div className="text-center">
+        <div className="text-center w-full">
           <button
             type="button"
             onClick={() => {
               setNicknameDraft(name);
               setEditingName(true);
             }}
-            className="inline-flex items-center gap-2"
+            className="inline-flex items-center gap-3"
             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+            aria-label="Изменить никнейм"
           >
-            <h2 className="serif font-semibold" style={{ fontSize: 22, color: '#F5EDD6', lineHeight: 1.2 }}>
+            <h2 className="serif font-semibold" style={{ fontSize: 24, color: '#F5EDD6', lineHeight: 1.2 }}>
               {name}
             </h2>
-            <span className="sans" style={{ fontSize: 12, color: 'rgba(199,154,61,0.75)' }}>
+            <span
+              className="flex items-center justify-center rounded-full shrink-0"
+              style={{
+                width: 40,
+                height: 40,
+                fontSize: 22,
+                color: '#C89A3D',
+                background: 'rgba(199,154,61,0.12)',
+                border: '1px solid rgba(199,154,61,0.35)',
+              }}
+            >
               ✎
             </span>
           </button>
-          <div className="mt-2">
-            <GoldBadge>Уровень {profile.level} ›</GoldBadge>
-          </div>
           {profile.username && (
-            <p className="sans mt-2" style={{ fontSize: 11, color: '#6B614E' }}>
+            <p className="sans mt-2" style={{ fontSize: 13, color: '#6B614E' }}>
               @{profile.username}
             </p>
           )}
@@ -195,22 +203,53 @@ export function ProfilePage(): JSX.Element {
               </linearGradient>
             </defs>
           </svg>
-          <span className="sans" style={{ fontSize: 10.5, color: profile.isVerified ? '#C89A3D' : '#6B614E' }}>
+          <span className="sans" style={{ fontSize: 13, color: profile.isVerified ? '#C89A3D' : '#6B614E' }}>
             {profile.isVerified ? 'Профиль подтверждён' : 'Профиль не подтверждён'}
           </span>
         </div>
 
-        {/* Level progress */}
-        <div className="w-full mt-2">
-          <div className="flex justify-between mb-1.5">
-            <span className="sans num" style={{ fontSize: 9, color: '#6B614E' }}>
+        {/* Уровень + XP — крупно и читаемо */}
+        <div
+          className="w-full mt-3 rounded-[20px] p-4 relative overflow-hidden"
+          style={{
+            background: 'linear-gradient(145deg, rgba(199,154,61,0.14), rgba(14,12,9,0.95))',
+            border: '1px solid rgba(199,154,61,0.28)',
+          }}
+        >
+          <div className="absolute inset-0 deco-lines opacity-30 pointer-events-none" />
+          <div className="relative flex items-center justify-between gap-3 mb-3">
+            <div>
+              <p
+                className="sans uppercase"
+                style={{ fontSize: 11, color: '#8A7A62', letterSpacing: '0.16em' }}
+              >
+                Уровень
+              </p>
+              <p className="serif font-semibold gold-text" style={{ fontSize: 36, lineHeight: 1.05 }}>
+                {profile.level}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="sans" style={{ fontSize: 12, color: '#8A7A62' }}>
+                Прогресс
+              </p>
+              <p className="sans num font-semibold" style={{ fontSize: 18, color: '#F5EDD6' }}>
+                {xpPct}%
+              </p>
+            </div>
+          </div>
+          <div className="relative flex justify-between mb-2">
+            <span className="sans num" style={{ fontSize: 13, color: '#C89A3D', fontWeight: 600 }}>
               {profile.xp.toLocaleString('ru-RU')} XP
             </span>
-            <span className="sans num" style={{ fontSize: 9, color: '#6B614E' }}>
+            <span className="sans num" style={{ fontSize: 13, color: '#A89878' }}>
               {profile.nextLevelXp.toLocaleString('ru-RU')} XP
             </span>
           </div>
-          <div className="rounded-full overflow-hidden" style={{ height: 4, background: 'rgba(199,154,61,0.1)' }}>
+          <div
+            className="relative rounded-full overflow-hidden"
+            style={{ height: 10, background: 'rgba(199,154,61,0.12)' }}
+          >
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${xpPct}%` }}
@@ -219,11 +258,13 @@ export function ProfilePage(): JSX.Element {
                 height: '100%',
                 background: 'linear-gradient(90deg,#9C6A1F,#C89A3D,#F7D98A)',
                 borderRadius: 99,
+                boxShadow: '0 0 12px rgba(199,154,61,0.35)',
               }}
             />
           </div>
-          <p className="sans num mt-1.5 text-center" style={{ fontSize: 9, color: 'rgba(199,154,61,0.5)' }}>
-            {Math.max(profile.nextLevelXp - profile.xp, 0).toLocaleString('ru-RU')} XP до следующего уровня
+          <p className="relative sans num mt-2.5 text-center" style={{ fontSize: 13, color: '#C0B49A' }}>
+            Ещё {Math.max(profile.nextLevelXp - profile.xp, 0).toLocaleString('ru-RU')} XP до уровня{' '}
+            {profile.level + 1}
           </p>
         </div>
       </div>
