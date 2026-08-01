@@ -1,5 +1,4 @@
 import { motion } from 'framer-motion';
-import { BrandMark } from '../../shared/ui/figma';
 
 export function SplashScreen({
   subtitle = 'Загружаем клуб…',
@@ -9,46 +8,34 @@ export function SplashScreen({
   return (
     <div
       className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6"
-      style={{ background: '#090909' }}
+      style={{ background: '#000000' }}
     >
       <div
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            'radial-gradient(ellipse at 50% 28%, rgba(199,154,61,0.18) 0%, transparent 55%)',
+            'radial-gradient(ellipse at 50% 35%, rgba(199,154,61,0.12) 0%, transparent 58%)',
         }}
       />
-      <div className="pointer-events-none absolute inset-0 deco-lines opacity-40" />
 
       <motion.div
-        initial={{ opacity: 0, y: 16, scale: 0.96 }}
+        initial={{ opacity: 0, y: 14, scale: 0.96 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
         className="relative flex flex-col items-center"
       >
-        <motion.div
-          animate={{ opacity: [0.7, 1, 0.7], scale: [0.98, 1, 0.98] }}
-          transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
-        >
-          <BrandMark height={34} />
-        </motion.div>
-
-        <h1
-          className="serif font-semibold gold-text mt-5"
-          style={{ fontSize: 34, letterSpacing: '0.18em', lineHeight: 1 }}
-        >
-          GUTSHOT
-        </h1>
-        <p
-          className="sans uppercase mt-2"
+        <motion.img
+          src="/gutshot-logo.png"
+          alt="GUTSHOT"
+          animate={{ opacity: [0.88, 1, 0.88], scale: [0.985, 1, 0.985] }}
+          transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
           style={{
-            fontSize: 11,
-            color: 'rgba(199,154,61,0.55)',
-            letterSpacing: '0.34em',
+            width: 'min(72vw, 280px)',
+            height: 'auto',
+            display: 'block',
+            filter: 'drop-shadow(0 8px 28px rgba(199,154,61,0.22))',
           }}
-        >
-          Poker Club
-        </p>
+        />
 
         <div className="mt-10 w-44">
           <div
