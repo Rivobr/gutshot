@@ -51,7 +51,7 @@ export function AchievementsPage(): JSX.Element {
         <h2 className="serif font-semibold" style={{ fontSize: 24, color: '#F5EDD6' }}>
           Достижения
         </h2>
-        <p className="sans mt-1" style={{ fontSize: 12, color: '#6B614E' }}>
+        <p className="sans mt-1" style={{ fontSize: 14, color: '#6B614E' }}>
           Получено {unlockedCount} из {ACHIEVEMENTS_CATALOG.length} · связаны с XP и уровнем
         </p>
       </div>
@@ -80,9 +80,9 @@ export function AchievementsPage(): JSX.Element {
                 <span
                   className="shrink-0 flex items-center justify-center rounded-[14px]"
                   style={{
-                    width: 48,
-                    height: 48,
-                    fontSize: 22,
+                    width: 52,
+                    height: 52,
+                    fontSize: 24,
                     background: 'rgba(199,154,61,0.08)',
                     border: '1px solid rgba(199,154,61,0.2)',
                     filter: done ? 'none' : 'grayscale(0.7)',
@@ -92,29 +92,44 @@ export function AchievementsPage(): JSX.Element {
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="serif font-semibold" style={{ fontSize: 16, color: '#F5EDD6' }}>
+                    <p className="serif font-semibold" style={{ fontSize: 18, color: '#F5EDD6' }}>
                       {item.title}
                     </p>
                     <span
                       className="sans shrink-0"
                       style={{
-                        fontSize: 10,
+                        fontSize: 12,
                         color: done ? '#C89A3D' : '#6B614E',
                         letterSpacing: '0.06em',
+                        fontWeight: 600,
                       }}
                     >
                       {done ? 'Получено' : `${progress}/${item.target}`}
                     </span>
                   </div>
-                  <p className="sans mt-1" style={{ fontSize: 12, color: '#C0B49A', lineHeight: 1.45 }}>
+                  <p className="sans mt-1.5" style={{ fontSize: 14, color: '#C0B49A', lineHeight: 1.5 }}>
                     {item.description}
                   </p>
-                  <p className="sans mt-2" style={{ fontSize: 11, color: '#6B614E', lineHeight: 1.45 }}>
-                    Как получить: {item.howTo}
-                  </p>
+                  <div
+                    className="mt-3 rounded-[14px] px-3 py-2.5"
+                    style={{
+                      background: 'rgba(199,154,61,0.06)',
+                      border: '1px solid rgba(199,154,61,0.16)',
+                    }}
+                  >
+                    <p
+                      className="sans uppercase mb-1"
+                      style={{ fontSize: 11, color: '#C89A3D', letterSpacing: '0.12em' }}
+                    >
+                      Как получить
+                    </p>
+                    <p className="sans" style={{ fontSize: 14, color: '#D8CEBC', lineHeight: 1.55 }}>
+                      {item.howTo}
+                    </p>
+                  </div>
                   <div
                     className="mt-3 rounded-full overflow-hidden"
-                    style={{ height: 4, background: 'rgba(199,154,61,0.12)' }}
+                    style={{ height: 6, background: 'rgba(199,154,61,0.12)' }}
                   >
                     <div
                       style={{

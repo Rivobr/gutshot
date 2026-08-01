@@ -11,7 +11,7 @@ import {
   useUpdateNickname,
 } from '../../entities/player';
 import { MyQrModal } from '../../widgets/MyQrModal/MyQrModal';
-import { GoldBadge, SectionLabel } from '../../shared/ui/figma';
+import { SectionLabel } from '../../shared/ui/figma';
 import { PlayerAvatar } from '../../shared/ui/PlayerAvatar';
 import { displayNameOf } from '../../shared/lib/display-name';
 import { formatDate } from '../../shared/lib/format';
