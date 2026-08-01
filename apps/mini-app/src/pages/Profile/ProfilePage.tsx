@@ -109,19 +109,19 @@ export function ProfilePage(): JSX.Element {
           onClick={() => setQrOpen(true)}
           whileTap={{ scale: 0.92 }}
           aria-label="Мой QR-код"
-          className="absolute flex items-center justify-center rounded-[14px]"
+          className="absolute flex items-center justify-center rounded-[16px]"
           style={{
-            top: 20,
-            left: 18,
-            width: 42,
-            height: 42,
+            top: 56,
+            left: 16,
+            width: 52,
+            height: 52,
             zIndex: 2,
             background: 'linear-gradient(145deg, rgba(199,154,61,0.16), rgba(156,106,31,0.06))',
             border: '1px solid rgba(199,154,61,0.32)',
             cursor: 'pointer',
           }}
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
             <path
               d="M4 4h6v6H4V4Zm0 10h6v6H4v-6ZM14 4h6v6h-6V4Zm0 10h2v2h-2v-2Zm4 0h2v2h-2v-2Zm-4 4h2v2h-2v-2Zm4 0h2v2h-2v-2Z"
               stroke="#C89A3D"
