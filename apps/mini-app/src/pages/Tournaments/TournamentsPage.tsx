@@ -25,7 +25,7 @@ export function TournamentsPage(): JSX.Element {
   return (
     <div className="flex flex-col">
       <div className="px-5 pt-6 pb-4">
-        <h2 className="serif font-semibold mb-4" style={{ fontSize: 24, color: '#F5EDD6' }}>
+        <h2 className="serif font-semibold mb-4" style={{ fontSize: 28, color: '#F5EDD6' }}>
           Турниры
         </h2>
 
@@ -68,7 +68,7 @@ export function TournamentsPage(): JSX.Element {
         </div>
       </div>
 
-      <div className="px-5 pb-6 flex flex-col gap-3">
+      <div className="px-5 pb-6 flex flex-col gap-4">
         {isLoading ? (
           <Loader />
         ) : visible.length > 0 ? (

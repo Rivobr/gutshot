@@ -68,7 +68,7 @@ export function RatingPage(): JSX.Element {
         subtitle:
           tab === 'weekly'
             ? 'Сыграйте турнир на этой неделе — и появитесь в рейтинге'
-            : 'Наберите очки в этом месяце, чтобы попасть в финал',
+            : 'Наберите очков в этом месяце, чтобы попасть в финал',
       };
     }
 
@@ -289,7 +289,7 @@ export function RatingPage(): JSX.Element {
                       {formatPoints(pointsOf(p))}
                     </p>
                     <p className="sans num" style={{ fontSize: 9, color: '#6B614E' }}>
-                      очки
+                      очков
                     </p>
                   </div>
                 </motion.div>
@@ -370,7 +370,7 @@ function YouHereCard({
             {formatPoints(points)}
           </p>
           <p className="sans" style={{ fontSize: 9, color: '#6B614E' }}>
-            очки
+            очков
           </p>
         </div>
       </div>

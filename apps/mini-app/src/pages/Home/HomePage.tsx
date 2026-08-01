@@ -12,10 +12,10 @@ import { formatDateShort, formatTime, seatsWord } from '../../shared/lib/format'
 function Chip({ icon, children }: { icon: string; children: string }): JSX.Element {
   return (
     <span
-      className="sans inline-flex items-center gap-1.5 rounded-full px-3"
+      className="sans inline-flex items-center gap-1.5 rounded-full px-3.5"
       style={{
-        height: 30,
-        fontSize: 11,
+        height: 34,
+        fontSize: 13,
         color: '#E7DCC4',
         background: 'rgba(9,9,9,0.55)',
         border: '1px solid rgba(199,154,61,0.3)',
@@ -67,7 +67,7 @@ export function HomePage(): JSX.Element {
               boxShadow: { duration: 2.8, repeat: Infinity, ease: 'easeInOut' },
             }}
             whileTap={{ scale: 0.985 }}
-            className="vip-card-hero relative overflow-hidden rounded-[22px] w-full text-left"
+            className="vip-card-hero relative overflow-hidden rounded-[26px] w-full text-left"
             style={{ border: 'none', cursor: 'pointer', padding: 0 }}
           >
             {/* Бегущий блик */}
@@ -91,23 +91,23 @@ export function HomePage(): JSX.Element {
                 position: 'absolute',
                 right: -18,
                 top: -12,
-                width: 172,
-                height: 172,
+                width: 196,
+                height: 196,
                 opacity: 0.1,
                 transform: 'rotate(14deg)',
                 pointerEvents: 'none',
               }}
             />
 
-            <div className="relative p-5" style={{ zIndex: 3 }}>
-              <div className="flex flex-wrap items-center gap-2 mb-5">
+            <div className="relative p-6" style={{ zIndex: 3 }}>
+              <div className="flex flex-wrap items-center gap-2.5 mb-6">
                 <motion.span
-                  className="sans inline-flex items-center gap-1.5 rounded-full px-3"
+                  className="sans inline-flex items-center gap-1.5 rounded-full px-3.5"
                   animate={{ opacity: [0.75, 1, 0.75] }}
                   transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
                   style={{
-                    height: 30,
-                    fontSize: 11,
+                    height: 34,
+                    fontSize: 13,
                     color: '#0A0A0A',
                     background: 'linear-gradient(135deg, #C89A3D, #F7D98A)',
                     fontWeight: 600,
@@ -122,17 +122,17 @@ export function HomePage(): JSX.Element {
 
               <p
                 className="sans uppercase"
-                style={{ fontSize: 9, color: '#8E7A55', letterSpacing: '0.22em' }}
+                style={{ fontSize: 11, color: '#8E7A55', letterSpacing: '0.22em' }}
               >
                 Турнир
               </p>
 
-              <div className="flex items-end justify-between gap-3 mt-1.5">
+              <div className="flex items-end justify-between gap-3 mt-2">
                 <div className="min-w-0">
                   <h2
                     className="serif font-semibold uppercase"
                     style={{
-                      fontSize: 28,
+                      fontSize: 34,
                       lineHeight: 1.05,
                       color: '#F5EDD6',
                       letterSpacing: '0.02em',
@@ -143,10 +143,10 @@ export function HomePage(): JSX.Element {
                 </div>
 
                 <motion.span
-                  className="btn-shine sans font-semibold rounded-full shrink-0 px-6 inline-flex items-center justify-center"
+                  className="btn-shine sans font-semibold rounded-full shrink-0 px-7 inline-flex items-center justify-center"
                   animate={{ scale: [1, 1.03, 1] }}
                   transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                  style={{ ...goldButtonStyle(), height: 44, fontSize: 12, letterSpacing: '0.1em' }}
+                  style={{ ...goldButtonStyle(), height: 50, fontSize: 14, letterSpacing: '0.1em' }}
                 >
                   {isRegistered ? 'Вы записаны' : 'Записаться'}
                 </motion.span>
