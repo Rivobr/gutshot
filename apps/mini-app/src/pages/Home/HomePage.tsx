@@ -42,18 +42,8 @@ export function HomePage(): JSX.Element {
 
       <div
         className="flex flex-col px-4 pb-6 gap-4"
-        style={{ paddingTop: 18, position: 'relative', zIndex: 1 }}
+        style={{ paddingTop: 8, position: 'relative', zIndex: 1 }}
       >
-        {/* Логотип-шапка */}
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="flex justify-center pb-1"
-        >
-          <Logo size="sm" />
-        </motion.div>
-
         {/* Ближайший турнир */}
         {isLoading ? (
           <Loader />

@@ -17,7 +17,15 @@ export function Layout(): JSX.Element {
             background: 'radial-gradient(ellipse at 50% 0%, rgba(156,106,31,0.06) 0%, transparent 60%)',
           }}
         />
-        <div className="flex-1 relative text-foreground hs overflow-y-auto" style={{ zIndex: 1, paddingBottom: 80 }}>
+        <div
+          className="flex-1 relative text-foreground hs overflow-y-auto"
+          style={{
+            zIndex: 1,
+            paddingBottom: 80,
+            // Опускаем контент ниже системной шапки Telegram («Закрыть»).
+            paddingTop: 'var(--app-top-pad, 52px)',
+          }}
+        >
           <AnimatePresence mode="wait">
             <PageTransition>
               <Outlet />

@@ -111,7 +111,8 @@ export function ProfilePage(): JSX.Element {
           aria-label="Мой QR-код"
           className="absolute flex items-center justify-center rounded-[16px]"
           style={{
-            top: 56,
+            // Ниже логотипа профиля, вне зоны «Закрыть» Telegram.
+            top: 118,
             left: 16,
             width: 52,
             height: 52,
@@ -407,7 +408,6 @@ export function ProfilePage(): JSX.Element {
         )}
 
         <div className="flex flex-col items-center gap-2 py-4">
-          <Logo size="sm" />
           <p className="sans text-center" style={{ fontSize: 10, color: '#3E3428' }}>
             Версия 1.0 · GUTSHOT Poker Club
           </p>

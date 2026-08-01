@@ -1,3 +1,10 @@
+interface TelegramSafeArea {
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
+}
+
 interface TelegramWebApp {
   initData: string;
   version?: string;
@@ -12,6 +19,9 @@ interface TelegramWebApp {
   isFullscreen?: boolean;
   isVersionAtLeast?: (version: string) => boolean;
   disableVerticalSwipes?: () => void;
+  safeAreaInset?: TelegramSafeArea;
+  contentSafeAreaInset?: TelegramSafeArea;
+  onEvent?: (eventType: string, callback: () => void) => void;
 }
 
 declare global {
@@ -21,6 +31,8 @@ declare global {
 }
 
 const APP_BG = '#090909';
+/** Запас под кнопку «Закрыть» / Menu Telegram, когда нет content safe area. */
+const TELEGRAM_HEADER_FALLBACK_PX = 52;
 
 export function getTelegramWebApp(): TelegramWebApp | undefined {
   return window.Telegram?.WebApp;
@@ -30,15 +42,25 @@ export function getTelegramInitData(): string {
   return getTelegramWebApp()?.initData ?? '';
 }
 
-/** Тёмная шапка и максимум экрана — убирает «белую полосу» Telegram. */
+function applyTopInset(webApp: TelegramWebApp): void {
+  const safeTop = webApp.safeAreaInset?.top ?? 0;
+  const contentTop = webApp.contentSafeAreaInset?.top ?? 0;
+  const telegramChrome = contentTop > 0 ? contentTop : TELEGRAM_HEADER_FALLBACK_PX;
+  const pad = Math.max(safeTop + telegramChrome, TELEGRAM_HEADER_FALLBACK_PX);
+  document.documentElement.style.setProperty('--app-top-pad', `${pad}px`);
+}
+
+/** Тёмная шапка, safe-area и максимум экрана. */
 export function configureTelegramChrome(): void {
   const webApp = getTelegramWebApp();
   if (!webApp) {
+    document.documentElement.style.setProperty('--app-top-pad', `${TELEGRAM_HEADER_FALLBACK_PX}px`);
     return;
   }
 
   webApp.ready();
   webApp.expand();
+  applyTopInset(webApp);
 
   try {
     webApp.setHeaderColor?.(APP_BG);
@@ -66,4 +88,9 @@ export function configureTelegramChrome(): void {
       // Пользователь/клиент может отклонить fullscreen — остаётся тёмная шапка.
     }
   }
+
+  applyTopInset(webApp);
+  webApp.onEvent?.('safeAreaChanged', () => applyTopInset(webApp));
+  webApp.onEvent?.('contentSafeAreaChanged', () => applyTopInset(webApp));
+  webApp.onEvent?.('fullscreenChanged', () => applyTopInset(webApp));
 }
