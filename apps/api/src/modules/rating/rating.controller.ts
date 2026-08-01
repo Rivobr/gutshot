@@ -19,4 +19,9 @@ export class RatingController {
   getWeekly() {
     return this.ratingService.getWeeklyRating();
   }
+
+  @Get('scale')
+  getScale() {
+    return this.ratingService.getPlaceScale();
+  }
 }

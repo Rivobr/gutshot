@@ -12,7 +12,6 @@ import {
   TournamentStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { QrService } from '../qr/qr.service';
 import { TelegramService } from '../telegram/telegram.service';
 import { NotificationsService } from '../telegram/notifications.service';
 import { PlayerEventsService } from '../progression/player-events.service';
@@ -21,7 +20,6 @@ import { PlayerEventsService } from '../progression/player-events.service';
 export class RegistrationsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly qrService: QrService,
     private readonly telegramService: TelegramService,
     private readonly notificationsService: NotificationsService,
     private readonly playerEventsService: PlayerEventsService,
@@ -80,7 +78,6 @@ export class RegistrationsService {
     });
 
     if (status === RegistrationStatus.REGISTERED) {
-      await this.qrService.getOrCreateActiveToken(registration.id);
       await this.notificationsService.notify({
         userId: user.id,
         telegramId: user.telegramId,
@@ -126,8 +123,6 @@ export class RegistrationsService {
         data: { status: RegistrationStatus.CANCELLED, cancelledAt: new Date() },
       });
 
-      await this.qrService.invalidate(registrationId);
-
       const wasActiveSlot = registration.status === RegistrationStatus.REGISTERED;
 
       if (!wasActiveSlot) {
@@ -152,9 +147,7 @@ export class RegistrationsService {
       return nextWaiting;
     });
 
-    // Отправка уведомлений и генерация QR — после коммита транзакции.
     if (promoted) {
-      await this.qrService.getOrCreateActiveToken(promoted.id);
       await this.notificationsService.notify({
         userId: promoted.userId,
         telegramId: promoted.user.telegramId,
@@ -196,21 +189,6 @@ export class RegistrationsService {
       orderBy: { registeredAt: 'desc' },
       include: { tournament: true },
     });
-  }
-
-  async getCurrentQr(userId: string) {
-    const registration = await this.getCurrent(userId);
-
-    if (!registration || registration.status !== RegistrationStatus.REGISTERED) {
-      throw new NotFoundException('Активная регистрация не найдена');
-    }
-
-    const qrToken = await this.qrService.getOrCreateActiveToken(registration.id);
-
-    return {
-      token: qrToken.token,
-      expiresAt: qrToken.expiresAt,
-    };
   }
 
   async findByTournament(tournamentId: string) {

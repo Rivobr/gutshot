@@ -28,9 +28,4 @@ export class RegistrationsController {
   getCurrent(@CurrentUser() user: JwtPayload) {
     return this.registrationsService.getCurrent(user.sub);
   }
-
-  @Get('current/qr')
-  getCurrentQr(@CurrentUser() user: JwtPayload) {
-    return this.registrationsService.getCurrentQr(user.sub);
-  }
 }

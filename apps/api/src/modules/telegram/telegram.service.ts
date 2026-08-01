@@ -156,6 +156,49 @@ export class TelegramService {
     return true;
   }
 
+  /**
+   * Берёт актуальную аватарку пользователя через Bot API.
+   * photo_url из initData часто отсутствует, поэтому это основной источник.
+   */
+  async getUserProfilePhotoUrl(telegramId: string): Promise<string | undefined> {
+    if (!this.botToken) {
+      return undefined;
+    }
+
+    try {
+      const photosResponse = await fetch(
+        `https://api.telegram.org/bot${this.botToken}/getUserProfilePhotos?user_id=${encodeURIComponent(telegramId)}&limit=1`,
+      );
+      const photosPayload = (await photosResponse.json()) as {
+        ok?: boolean;
+        result?: { total_count?: number; photos?: Array<Array<{ file_id: string }>> };
+      };
+
+      const sizes = photosPayload.result?.photos?.[0] ?? [];
+      const bestSize = sizes[sizes.length - 1];
+      if (!photosPayload.ok || !bestSize?.file_id) {
+        return undefined;
+      }
+
+      const fileResponse = await fetch(
+        `https://api.telegram.org/bot${this.botToken}/getFile?file_id=${encodeURIComponent(bestSize.file_id)}`,
+      );
+      const filePayload = (await fileResponse.json()) as {
+        ok?: boolean;
+        result?: { file_path?: string };
+      };
+
+      if (!filePayload.ok || !filePayload.result?.file_path) {
+        return undefined;
+      }
+
+      return `https://api.telegram.org/file/bot${this.botToken}/${filePayload.result.file_path}`;
+    } catch (error) {
+      this.logger.warn(`Не удалось получить аватар Telegram ${telegramId}: ${(error as Error).message}`);
+      return undefined;
+    }
+  }
+
   async setWebhook(webhookUrl: string): Promise<boolean> {
     if (!this.botToken) {
       this.logger.warn('TELEGRAM_BOT_TOKEN не задан — webhook не установлен');

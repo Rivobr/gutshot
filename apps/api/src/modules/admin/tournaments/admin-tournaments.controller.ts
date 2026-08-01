@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, Param, ParseArrayPipe, Patch, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  ParseArrayPipe,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AdminAuthGuard } from '../../auth/guards/admin-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
@@ -45,7 +56,8 @@ export class AdminTournamentsController {
     return this.adminTournamentsService.update(id, dto);
   }
 
-  @Roles(AdminRole.OWNER)
+  @Roles(AdminRole.OWNER, AdminRole.ADMIN)
+  @HttpCode(204)
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.adminTournamentsService.remove(id);
@@ -67,6 +79,12 @@ export class AdminTournamentsController {
   @Post(':id/start')
   start(@Param('id') id: string) {
     return this.adminTournamentsService.start(id);
+  }
+
+  @Roles(AdminRole.OWNER, AdminRole.ADMIN)
+  @Post(':id/archive')
+  archive(@Param('id') id: string) {
+    return this.adminTournamentsService.archive(id);
   }
 
   @Roles(AdminRole.OWNER, AdminRole.ADMIN)

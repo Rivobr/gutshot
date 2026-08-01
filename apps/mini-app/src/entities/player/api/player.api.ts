@@ -20,6 +20,10 @@ export const playerApi = {
     const { data } = await apiClient.get('/profile');
     return data.data;
   },
+  async updateNickname(nickname: string): Promise<PlayerProfileDto> {
+    const { data } = await apiClient.patch('/profile', { nickname });
+    return data.data;
+  },
   async getQrCode(): Promise<{ qrCode: string }> {
     const { data } = await apiClient.get('/profile/qr');
     return data.data;

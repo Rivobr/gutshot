@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { FormEvent, useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Loader } from '@gutshot/ui';
 import type { AchievementCode } from '@gutshot/types';
 import {
@@ -7,9 +7,12 @@ import {
   usePlayerEvents,
   useProfile,
   useTournamentHistory,
+  useUpdateNickname,
 } from '../../entities/player';
 import { MyQrModal } from '../../widgets/MyQrModal/MyQrModal';
-import { GoldBadge, Logo, SectionLabel, initialsOf } from '../../shared/ui/figma';
+import { GoldBadge, Logo, SectionLabel } from '../../shared/ui/figma';
+import { PlayerAvatar } from '../../shared/ui/PlayerAvatar';
+import { displayNameOf } from '../../shared/lib/display-name';
 import { formatDate } from '../../shared/lib/format';
 import { PLAYER_EVENT_LABELS, formatEventDate } from '../../shared/lib/event-labels';
 
@@ -37,7 +40,16 @@ export function ProfilePage(): JSX.Element {
   const { data: history } = useTournamentHistory();
   const { data: events } = usePlayerEvents();
   const { data: unlockedAchievements } = useAchievements();
+  const updateNickname = useUpdateNickname();
   const [isQrOpen, setQrOpen] = useState(false);
+  const [isEditingName, setEditingName] = useState(false);
+  const [nicknameDraft, setNicknameDraft] = useState('');
+
+  useEffect(() => {
+    if (profile) {
+      setNicknameDraft(displayNameOf(profile));
+    }
+  }, [profile]);
 
   if (isLoading || !profile) {
     return <Loader />;
@@ -47,7 +59,14 @@ export function ProfilePage(): JSX.Element {
 
   const xpPct = Math.round(profile.progress * 100);
   const s = profile.stats;
-  const name = `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim() || 'Игрок';
+  const name = displayNameOf(profile);
+
+  const handleSaveNickname = (event: FormEvent) => {
+    event.preventDefault();
+    updateNickname.mutate(nicknameDraft, {
+      onSuccess: () => setEditingName(false),
+    });
+  };
 
   const stats: StatItem[] = [
     { icon: '🏆', value: `${s.wins}`, label: 'Побед' },
@@ -114,23 +133,32 @@ export function ProfilePage(): JSX.Element {
         <Logo size="md" />
 
         <div className="relative mt-3">
-          <div
-            className="w-20 h-20 rounded-full flex items-center justify-center serif font-semibold"
-            style={{
-              background: 'linear-gradient(135deg, #9C6A1F 0%, #C89A3D 50%, #F7D98A 100%)',
-              color: '#0A0A0A',
-              fontSize: 28,
-              boxShadow: '0 0 0 3px rgba(199,154,61,0.18), 0 0 32px rgba(156,106,31,0.28)',
-            }}
-          >
-            {initialsOf(profile.firstName, profile.lastName)}
-          </div>
+          <PlayerAvatar
+            photoUrl={profile.photoUrl}
+            firstName={profile.firstName}
+            lastName={profile.lastName}
+            nickname={profile.nickname}
+            size={80}
+          />
         </div>
 
         <div className="text-center">
-          <h2 className="serif font-semibold" style={{ fontSize: 22, color: '#F5EDD6', lineHeight: 1.2 }}>
-            {name}
-          </h2>
+          <button
+            type="button"
+            onClick={() => {
+              setNicknameDraft(name);
+              setEditingName(true);
+            }}
+            className="inline-flex items-center gap-2"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+          >
+            <h2 className="serif font-semibold" style={{ fontSize: 22, color: '#F5EDD6', lineHeight: 1.2 }}>
+              {name}
+            </h2>
+            <span className="sans" style={{ fontSize: 12, color: 'rgba(199,154,61,0.75)' }}>
+              ✎
+            </span>
+          </button>
           <div className="mt-2">
             <GoldBadge>Уровень {profile.level} ›</GoldBadge>
           </div>
@@ -386,6 +414,89 @@ export function ProfilePage(): JSX.Element {
       </div>
 
       <MyQrModal open={isQrOpen} onClose={() => setQrOpen(false)} />
+
+      <AnimatePresence>
+        {isEditingName && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end justify-center px-4 pb-8"
+            style={{ background: 'rgba(0,0,0,0.72)' }}
+            onClick={() => setEditingName(false)}
+          >
+            <motion.form
+              initial={{ y: 40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 24, opacity: 0 }}
+              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              onClick={(event) => event.stopPropagation()}
+              onSubmit={handleSaveNickname}
+              className="w-full max-w-md rounded-[22px] p-5"
+              style={{
+                background: 'linear-gradient(180deg, #1A1610 0%, #0E0C09 100%)',
+                border: '1px solid rgba(199,154,61,0.28)',
+              }}
+            >
+              <h3 className="serif font-semibold" style={{ fontSize: 20, color: '#F5EDD6' }}>
+                Никнейм
+              </h3>
+              <p className="sans mt-1 mb-4" style={{ fontSize: 12, color: '#6B614E', lineHeight: 1.5 }}>
+                Так вас будут видеть другие игроки в клубе
+              </p>
+              <input
+                value={nicknameDraft}
+                onChange={(event) => setNicknameDraft(event.target.value)}
+                maxLength={32}
+                autoFocus
+                className="w-full rounded-[14px] px-4 py-3 sans"
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(199,154,61,0.28)',
+                  color: '#F5EDD6',
+                  fontSize: 15,
+                  outline: 'none',
+                }}
+              />
+              {updateNickname.isError && (
+                <p className="sans mt-2" style={{ fontSize: 12, color: '#E07A6E' }}>
+                  Не удалось сохранить никнейм. Проверьте длину (2–32) и символы.
+                </p>
+              )}
+              <div className="mt-4 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingName(false)}
+                  className="flex-1 py-3 rounded-[14px] sans"
+                  style={{
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(120,110,90,0.3)',
+                    color: '#C0B49A',
+                    fontSize: 13,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Отмена
+                </button>
+                <button
+                  type="submit"
+                  disabled={updateNickname.isPending || nicknameDraft.trim().length < 2}
+                  className="flex-1 py-3 rounded-[14px] sans font-semibold disabled:opacity-50"
+                  style={{
+                    background: 'linear-gradient(135deg,#9C6A1F,#C89A3D)',
+                    border: 'none',
+                    color: '#0A0A0A',
+                    fontSize: 13,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Сохранить
+                </button>
+              </div>
+            </motion.form>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

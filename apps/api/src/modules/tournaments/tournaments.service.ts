@@ -36,14 +36,12 @@ export class TournamentsService {
         userId: reg.user.id,
         firstName: reg.user.firstName,
         lastName: reg.user.lastName,
+        nickname: reg.user.nickname,
         username: reg.user.username,
         photoUrl: reg.user.photoUrl,
         level: calculateLevel(reg.user.playerProfile?.xp ?? 0),
         top10Percent,
         status: reg.status,
-        // Постоянный QR игрока; для профилей, созданных до его появления,
-        // остается прежний формат до первого входа в Mini App.
-        qrToken: reg.user.qrCode ?? `gutshot:player:${reg.user.id}`,
       };
     });
   }

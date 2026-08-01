@@ -1,9 +1,7 @@
 import { motion } from 'framer-motion';
 import { Loader } from '@gutshot/ui';
-import { QRCard } from '../../widgets/QRCard/QRCard';
 import {
   useCancelRegistration,
-  useCurrentQr,
   useCurrentRegistration,
 } from '../../entities/registration';
 import { GoldBadge, Logo } from '../../shared/ui/figma';
@@ -18,7 +16,6 @@ const STATUS_LABELS: Record<string, string> = {
 
 export function MyTournamentPage(): JSX.Element {
   const { data: registration, isLoading } = useCurrentRegistration();
-  const { data: qr } = useCurrentQr(registration?.status === 'REGISTERED');
   const cancelMutation = useCancelRegistration();
 
   if (isLoading) {
@@ -65,10 +62,6 @@ export function MyTournamentPage(): JSX.Element {
               )}
             </div>
           </motion.div>
-
-          {registration.status === 'REGISTERED' && qr && (
-            <QRCard token={qr.token} expiresAt={qr.expiresAt} />
-          )}
 
           {registration.status === 'WAITING' && (
             <div className="vip-card rounded-[18px] p-5">

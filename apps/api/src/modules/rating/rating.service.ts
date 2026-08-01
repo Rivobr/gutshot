@@ -1,10 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { calculateLevelProgress } from '../../common/utils/level.util';
+import { buildPlaceRatingScale } from '../../common/constants/xp-defaults.constants';
+import { XpSettingsService } from '../progression/xp-settings.service';
 
 @Injectable()
 export class RatingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly xpSettingsService: XpSettingsService,
+  ) {}
 
   async getOverallRating() {
     const profiles = await this.prisma.playerProfile.findMany({
@@ -17,6 +22,7 @@ export class RatingService {
       userId: profile.userId,
       firstName: profile.user.firstName,
       lastName: profile.user.lastName,
+      nickname: profile.user.nickname,
       photoUrl: profile.user.photoUrl,
       xp: profile.xp,
       level: calculateLevelProgress(profile.xp).level,
@@ -46,9 +52,16 @@ export class RatingService {
         userId: entry.userId,
         firstName: user?.firstName,
         lastName: user?.lastName,
+        nickname: user?.nickname,
         photoUrl: user?.photoUrl,
         weeklyXp: entry._sum.amount ?? 0,
       };
     });
+  }
+
+  /** Шкала очков за места 1–20 для отображения игрокам и админам. */
+  async getPlaceScale() {
+    const settings = await this.xpSettingsService.getAll();
+    return buildPlaceRatingScale(settings);
   }
 }

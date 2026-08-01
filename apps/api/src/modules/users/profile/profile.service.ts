@@ -62,6 +62,7 @@ export class ProfileService {
       username: user.username,
       firstName: user.firstName,
       lastName: user.lastName,
+      nickname: user.nickname,
       photoUrl: user.photoUrl,
       xp: user.playerProfile.xp,
       memberSince: user.createdAt.toISOString(),

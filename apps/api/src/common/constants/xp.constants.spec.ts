@@ -1,19 +1,27 @@
-import { getXpForPlace, XP_REWARDS } from './xp.constants';
+import { getXpForPlace } from './xp.constants';
+import { DEFAULT_PLACE_RATING } from './xp-defaults.constants';
 
-describe('xp.constants', () => {
-  it('начисляет корректный XP за призовые места', () => {
-    expect(getXpForPlace(1)).toBe(XP_REWARDS.PLACE_1);
-    expect(getXpForPlace(2)).toBe(XP_REWARDS.PLACE_2);
-    expect(getXpForPlace(3)).toBe(XP_REWARDS.PLACE_3);
+describe('getXpForPlace', () => {
+  it('возвращает очки шкалы рейтинга для мест 1–20', () => {
+    expect(getXpForPlace(1)).toBe(3600);
+    expect(getXpForPlace(2)).toBe(2900);
+    expect(getXpForPlace(10)).toBe(1475);
+    expect(getXpForPlace(20)).toBe(300);
   });
 
-  it('начисляет XP за места с 4 по 8', () => {
-    expect(getXpForPlace(4)).toBe(XP_REWARDS.PLACE_4_TO_8);
-    expect(getXpForPlace(8)).toBe(XP_REWARDS.PLACE_4_TO_8);
+  it('согласована с DEFAULT_PLACE_RATING', () => {
+    for (let place = 1; place <= 20; place += 1) {
+      expect(getXpForPlace(place)).toBe(DEFAULT_PLACE_RATING[place]);
+    }
   });
 
-  it('начисляет базовый XP за остальные места', () => {
-    expect(getXpForPlace(9)).toBe(XP_REWARDS.OTHER);
-    expect(getXpForPlace(24)).toBe(XP_REWARDS.OTHER);
+  it('для мест вне таблицы возвращает 0', () => {
+    expect(getXpForPlace(21)).toBe(0);
+    expect(getXpForPlace(0)).toBe(0);
+  });
+
+  it('сумма полной таблицы равна 30 525', () => {
+    const total = Object.values(DEFAULT_PLACE_RATING).reduce((sum, value) => sum + value, 0);
+    expect(total).toBe(30_525);
   });
 });

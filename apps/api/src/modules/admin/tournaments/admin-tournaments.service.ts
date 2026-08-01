@@ -76,9 +76,58 @@ export class AdminTournamentsService {
     });
   }
 
+  /**
+   * Удаляет турнир вместе с регистрациями и результатами.
+   * История игроков (PlayerEvent / XPHistory) сохраняется — связь с турниром обнуляется.
+   */
   async remove(id: string): Promise<void> {
     await this.findById(id);
-    await this.prisma.tournament.delete({ where: { id } });
+
+    await this.prisma.$transaction(async (tx) => {
+      const registrations = await tx.registration.findMany({
+        where: { tournamentId: id },
+        select: { id: true },
+      });
+      const registrationIds = registrations.map((item) => item.id);
+
+      if (registrationIds.length > 0) {
+        await tx.qRToken.deleteMany({ where: { registrationId: { in: registrationIds } } });
+      }
+
+      const results = await tx.tournamentResult.findMany({
+        where: { tournamentId: id },
+        select: { id: true },
+      });
+      const resultIds = results.map((item) => item.id);
+
+      if (resultIds.length > 0) {
+        await tx.xPHistory.updateMany({
+          where: { tournamentResultId: { in: resultIds } },
+          data: { tournamentResultId: null },
+        });
+      }
+
+      await tx.tournamentResult.deleteMany({ where: { tournamentId: id } });
+      await tx.registration.deleteMany({ where: { tournamentId: id } });
+      await tx.playerEvent.updateMany({
+        where: { tournamentId: id },
+        data: { tournamentId: null },
+      });
+      await tx.tournament.delete({ where: { id } });
+    });
+  }
+
+  async archive(id: string) {
+    const tournament = await this.findById(id);
+
+    if (tournament.status === TournamentStatus.IN_PROGRESS) {
+      throw new BadRequestException('Сначала завершите турнир, затем архивируйте');
+    }
+
+    return this.prisma.tournament.update({
+      where: { id },
+      data: { status: TournamentStatus.ARCHIVED },
+    });
   }
 
   async openRegistration(id: string) {
@@ -147,6 +196,7 @@ export class AdminTournamentsService {
           username: registration.user.username,
           firstName: registration.user.firstName,
           lastName: registration.user.lastName,
+          nickname: registration.user.nickname,
           photoUrl: registration.user.photoUrl,
           xp,
           level: this.levelsService.computeProgress(thresholds, xp).level,

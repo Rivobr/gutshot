@@ -7,7 +7,6 @@ import { UsersModule } from './modules/users/users.module';
 import { TournamentsModule } from './modules/tournaments/tournaments.module';
 import { RegistrationsModule } from './modules/registrations/registrations.module';
 import { RatingModule } from './modules/rating/rating.module';
-import { QrModule } from './modules/qr/qr.module';
 import { HistoryModule } from './modules/history/history.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { ProgressionModule } from './modules/progression/progression.module';
@@ -36,7 +35,6 @@ import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
     TournamentsModule,
     RegistrationsModule,
     RatingModule,
-    QrModule,
     HistoryModule,
     AdminModule,
     RemindersModule,

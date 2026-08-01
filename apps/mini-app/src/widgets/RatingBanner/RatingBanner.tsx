@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { BrandMark } from '../../shared/ui/figma';
+import { GutshotChip } from '../../shared/ui/GutshotChip';
 
 export function RatingBanner({ delay = 0 }: { delay?: number }): JSX.Element {
   const navigate = useNavigate();
@@ -13,35 +14,35 @@ export function RatingBanner({ delay = 0 }: { delay?: number }): JSX.Element {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
       whileTap={{ scale: 0.982 }}
-      className="vip-card-hero relative overflow-hidden rounded-[22px] w-full text-left"
-      style={{ height: 152 }}
+      className="vip-card-hero relative rounded-[22px] w-full text-left"
+      style={{ height: 152, overflow: 'visible' }}
     >
       <div
-        className="absolute inset-0 pointer-events-none"
+        className="absolute inset-0 pointer-events-none rounded-[22px] overflow-hidden"
         style={{
           background:
             'radial-gradient(ellipse at 78% 40%, rgba(199,154,61,0.24) 0%, transparent 62%)',
         }}
       />
-      <div className="absolute inset-0 deco-lines opacity-50 pointer-events-none" />
+      <div className="absolute inset-0 deco-lines opacity-50 pointer-events-none rounded-[22px] overflow-hidden" />
 
-      {/* Декоративная «медаль» */}
+      {/* 3D-фишка: подброс и аккуратное приземление */}
       <div
-        className="chip-spin absolute rounded-full"
+        className="absolute pointer-events-none"
         style={{
-          right: -34,
+          right: 8,
           top: '50%',
-          marginTop: -66,
-          width: 132,
-          height: 132,
-          border: '2px dashed rgba(199,154,61,0.3)',
-          background:
-            'radial-gradient(circle at 40% 35%, rgba(247,217,138,0.22), rgba(156,106,31,0.06) 60%, transparent 72%)',
+          marginTop: -64,
+          width: 128,
+          height: 128,
+          zIndex: 2,
         }}
-      />
+      >
+        <GutshotChip size={120} tossDelay={delay + 0.25} loop />
+      </div>
 
-      <div className="relative flex flex-col justify-between h-full p-5">
-        <div>
+      <div className="relative flex flex-col justify-between h-full p-5" style={{ zIndex: 3 }}>
+        <div style={{ maxWidth: '58%' }}>
           <p
             className="sans uppercase"
             style={{ fontSize: 8.5, color: '#6B614E', letterSpacing: '0.2em' }}

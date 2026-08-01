@@ -1,7 +1,9 @@
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Button } from '@gutshot/ui';
-import { useCreateTournament } from '../../entities/tournament';
+import type { AdminTournament } from '../../entities/tournament';
+import { useCreateTournament, useUpdateTournament } from '../../entities/tournament';
 
 interface FormValues {
   title: string;
@@ -10,30 +12,79 @@ interface FormValues {
   maxPlayers: number;
 }
 
-export interface CreateTournamentModalProps {
+export interface TournamentFormModalProps {
   open: boolean;
   onClose: () => void;
+  tournament?: AdminTournament | null;
 }
 
-export function CreateTournamentModal({ open, onClose }: CreateTournamentModalProps): JSX.Element {
+function toLocalInputValue(iso: string): string {
+  const date = new Date(iso);
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+export function TournamentFormModal({
+  open,
+  onClose,
+  tournament,
+}: TournamentFormModalProps): JSX.Element {
+  const isEdit = Boolean(tournament);
   const { register, handleSubmit, reset } = useForm<FormValues>();
   const createTournament = useCreateTournament();
+  const updateTournament = useUpdateTournament();
+  const isPending = createTournament.isPending || updateTournament.isPending;
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    if (tournament) {
+      reset({
+        title: tournament.title,
+        description: tournament.description ?? '',
+        date: toLocalInputValue(tournament.date),
+        maxPlayers: tournament.maxPlayers,
+      });
+      return;
+    }
+
+    reset({
+      title: '',
+      description: '',
+      date: '',
+      maxPlayers: 30,
+    });
+  }, [open, tournament, reset]);
 
   const onSubmit = (values: FormValues) => {
-    createTournament.mutate(
-      {
-        ...values,
-        buyIn: 0,
-        maxPlayers: Number(values.maxPlayers),
-        date: new Date(values.date).toISOString(),
-      },
-      {
-        onSuccess: () => {
-          reset();
-          onClose();
+    const payload = {
+      title: values.title,
+      description: values.description || undefined,
+      buyIn: 0,
+      maxPlayers: Number(values.maxPlayers),
+      date: new Date(values.date).toISOString(),
+    };
+
+    if (tournament) {
+      updateTournament.mutate(
+        { id: tournament.id, payload },
+        {
+          onSuccess: () => {
+            onClose();
+          },
         },
+      );
+      return;
+    }
+
+    createTournament.mutate(payload, {
+      onSuccess: () => {
+        reset();
+        onClose();
       },
-    );
+    });
   };
 
   return (
@@ -43,7 +94,7 @@ export function CreateTournamentModal({ open, onClose }: CreateTournamentModalPr
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
           onClick={onClose}
         >
           <motion.div
@@ -53,7 +104,9 @@ export function CreateTournamentModal({ open, onClose }: CreateTournamentModalPr
             className="w-full max-w-md rounded-lg border border-border bg-card p-6"
             onClick={(event) => event.stopPropagation()}
           >
-            <h2 className="mb-4 text-lg font-medium">Новый турнир</h2>
+            <h2 className="mb-4 text-lg font-medium">
+              {isEdit ? 'Редактировать турнир' : 'Новый турнир'}
+            </h2>
             <form className="flex flex-col gap-3" onSubmit={handleSubmit(onSubmit)}>
               <input
                 className="rounded-md border border-border bg-secondary px-3 py-2.5"
@@ -63,6 +116,7 @@ export function CreateTournamentModal({ open, onClose }: CreateTournamentModalPr
               <textarea
                 className="rounded-md border border-border bg-secondary px-3 py-2.5"
                 placeholder="Описание"
+                rows={3}
                 {...register('description')}
               />
               <input
@@ -72,16 +126,17 @@ export function CreateTournamentModal({ open, onClose }: CreateTournamentModalPr
               />
               <input
                 type="number"
+                min={2}
                 className="rounded-md border border-border bg-secondary px-3 py-2.5"
                 placeholder="Максимум игроков"
-                {...register('maxPlayers', { required: true })}
+                {...register('maxPlayers', { required: true, min: 2 })}
               />
               <div className="mt-2 flex justify-end gap-2">
                 <Button type="button" variant="ghost" onClick={onClose}>
                   Отмена
                 </Button>
-                <Button type="submit" isLoading={createTournament.isPending}>
-                  Создать
+                <Button type="submit" isLoading={isPending}>
+                  {isEdit ? 'Сохранить' : 'Создать'}
                 </Button>
               </div>
             </form>

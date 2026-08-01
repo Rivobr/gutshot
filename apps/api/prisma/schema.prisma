@@ -90,6 +90,16 @@ enum XpSettingKey {
   PLACE_8
   PLACE_9
   PLACE_10
+  PLACE_11
+  PLACE_12
+  PLACE_13
+  PLACE_14
+  PLACE_15
+  PLACE_16
+  PLACE_17
+  PLACE_18
+  PLACE_19
+  PLACE_20
 }
 
 /// Типы юридических документов клуба.
@@ -124,6 +134,8 @@ model User {
   username  String?
   firstName String?
   lastName  String?
+  /// Отображаемое имя в клубе. Игрок может менять самостоятельно.
+  nickname  String?
   photoUrl  String?
   isBlocked Boolean  @default(false)
   isVerified Boolean @default(false)

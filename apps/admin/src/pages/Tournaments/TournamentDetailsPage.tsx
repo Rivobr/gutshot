@@ -1,15 +1,24 @@
-import { useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import type { AdminTournamentRegistration } from '@gutshot/types';
 import { Avatar, Badge, Button, Card, Loader } from '@gutshot/ui';
 import {
   useAdminTournament,
   useMarkAttendance,
   useTournamentRegistrations,
+  type AdminTournament,
 } from '../../entities/tournament';
 import { useAdminHistory } from '../../entities/history';
 import { PLAYER_EVENT_LABELS, formatDateTime } from '../../shared/lib/event-labels';
+import { tournamentStatusLabel } from '../../shared/lib/tournament-status';
+import { TournamentActions } from './TournamentActions';
+import { TournamentFormModal } from './TournamentFormModal';
+import { FinishTournamentModal } from './FinishTournamentModal';
 
-function displayName(user: AdminTournamentRegistration['user']): string {
+function displayName(user: AdminTournamentRegistration['user'] & { nickname?: string | null }): string {
+  if (user.nickname?.trim()) {
+    return user.nickname.trim();
+  }
   const name = `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim();
   return name || user.username || 'Игрок';
 }
@@ -17,11 +26,23 @@ function displayName(user: AdminTournamentRegistration['user']): string {
 export function TournamentDetailsPage(): JSX.Element {
   const { id = '' } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const { data: tournament, isLoading } = useAdminTournament(id);
   const { data: registrations, isLoading: isRegistrationsLoading } = useTournamentRegistrations(id);
   const { data: history } = useAdminHistory({ tournamentId: id, take: 50 });
   const markAttendance = useMarkAttendance(id);
+
+  const [isEditOpen, setEditOpen] = useState(false);
+  const [isFinishOpen, setFinishOpen] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get('finish') === '1') {
+      setFinishOpen(true);
+      searchParams.delete('finish');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   if (isLoading || !tournament) {
     return <Loader />;
@@ -31,22 +52,48 @@ export function TournamentDetailsPage(): JSX.Element {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-3">
         <button
           onClick={() => navigate('/tournaments')}
           className="self-start text-sm text-muted-foreground hover:text-foreground"
         >
           ‹ К списку турниров
         </button>
-        <h1 className="text-2xl font-medium">{tournament.title}</h1>
-        <p className="text-sm text-muted-foreground">
-          {formatDateTime(tournament.date)} · статус {tournament.status} · пришли {arrivedCount} из{' '}
-          {registrations?.length ?? 0}
-        </p>
+
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-medium">{tournament.title}</h1>
+              <Badge>{tournamentStatusLabel(tournament.status)}</Badge>
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {formatDateTime(tournament.date)} · мест {tournament.maxPlayers} · пришли{' '}
+              {arrivedCount} из {registrations?.length ?? 0}
+            </p>
+            {tournament.description && (
+              <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{tournament.description}</p>
+            )}
+          </div>
+
+          <TournamentActions
+            tournamentId={tournament.id}
+            status={tournament.status}
+            onEdit={() => setEditOpen(true)}
+            onFinish={() => setFinishOpen(true)}
+            onDeleted={() => navigate('/tournaments')}
+          />
+        </div>
       </div>
 
       <Card className="gap-4">
-        <h2 className="font-medium">Зарегистрированные игроки</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-medium">Зарегистрированные игроки</h2>
+          {tournament.status === 'IN_PROGRESS' && (
+            <Button className="px-3 py-1.5 text-xs" onClick={() => setFinishOpen(true)}>
+              Завершить с местами
+            </Button>
+          )}
+        </div>
 
         {isRegistrationsLoading ? (
           <Loader />
@@ -54,7 +101,6 @@ export function TournamentDetailsPage(): JSX.Element {
           <p className="text-sm text-muted-foreground">На турнир пока никто не зарегистрирован</p>
         ) : (
           <>
-            {/* Desktop */}
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full text-sm">
                 <thead>
@@ -109,7 +155,6 @@ export function TournamentDetailsPage(): JSX.Element {
               </table>
             </div>
 
-            {/* Mobile */}
             <div className="flex flex-col gap-3 md:hidden">
               {registrations.map((registration) => (
                 <div
@@ -183,6 +228,19 @@ export function TournamentDetailsPage(): JSX.Element {
           </ul>
         )}
       </Card>
+
+      <TournamentFormModal
+        open={isEditOpen}
+        tournament={tournament as AdminTournament}
+        onClose={() => setEditOpen(false)}
+      />
+
+      <FinishTournamentModal
+        open={isFinishOpen}
+        tournamentId={id}
+        registrations={registrations ?? []}
+        onClose={() => setFinishOpen(false)}
+      />
     </div>
   );
 }

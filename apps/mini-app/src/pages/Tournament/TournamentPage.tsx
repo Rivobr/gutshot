@@ -1,12 +1,11 @@
-import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
-import { TournamentParticipant } from '@gutshot/types';
 import { Loader } from '@gutshot/ui';
 import { useTournament, useTournamentParticipants } from '../../entities/tournament';
 import { useCurrentRegistration, useRegister } from '../../entities/registration';
-import { Divider, InfoCard, SectionLabel, goldButtonStyle, initialsOf } from '../../shared/ui/figma';
-import { PlayerQrModal } from '../../widgets/PlayerQrModal/PlayerQrModal';
+import { Divider, InfoCard, SectionLabel, goldButtonStyle } from '../../shared/ui/figma';
+import { PlayerAvatar } from '../../shared/ui/PlayerAvatar';
+import { displayNameOf } from '../../shared/lib/display-name';
 import { formatDate, formatTime, seatsWord } from '../../shared/lib/format';
 
 const UPCOMING_STATUSES = ['DRAFT', 'REGISTRATION_OPEN', 'REGISTRATION_CLOSED', 'IN_PROGRESS'];
@@ -18,7 +17,6 @@ export function TournamentPage(): JSX.Element {
   const { data: participants } = useTournamentParticipants(id ?? '');
   const { data: currentRegistration } = useCurrentRegistration();
   const registerMutation = useRegister();
-  const [selectedPlayer, setSelectedPlayer] = useState<TournamentParticipant | null>(null);
 
   if (isLoading || !tournament) {
     return <Loader />;
@@ -161,30 +159,23 @@ export function TournamentPage(): JSX.Element {
         ) : (
           <div className="flex flex-col gap-2">
             {participants.map((p, i) => (
-              <motion.button
+              <motion.div
                 key={p.userId}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.35, delay: i * 0.04 }}
-                onClick={() => setSelectedPlayer(p)}
-                whileTap={{ scale: 0.985 }}
-                className="vip-card rounded-[16px] p-3 flex items-center gap-3 text-left card-pressed"
-                style={{ border: 'none', cursor: 'pointer' }}
+                className="vip-card rounded-[16px] p-3 flex items-center gap-3"
               >
-                <div
-                  className="w-11 h-11 rounded-full flex items-center justify-center serif font-semibold shrink-0"
-                  style={{
-                    background: 'linear-gradient(135deg,#9C6A1F,#C89A3D,#F7D98A)',
-                    color: '#0A0A0A',
-                    fontSize: 15,
-                    boxShadow: '0 0 0 2px rgba(199,154,61,0.2), 0 0 16px rgba(156,106,31,0.25)',
-                  }}
-                >
-                  {initialsOf(p.firstName, p.lastName)}
-                </div>
+                <PlayerAvatar
+                  photoUrl={p.photoUrl}
+                  firstName={p.firstName}
+                  lastName={p.lastName}
+                  nickname={p.nickname}
+                  size={44}
+                />
                 <div className="flex-1 min-w-0">
                   <p className="serif font-semibold truncate" style={{ fontSize: 15, color: '#F5EDD6' }}>
-                    {`${p.firstName ?? ''} ${p.lastName ?? ''}`.trim() || 'Игрок'}
+                    {displayNameOf(p)}
                   </p>
                   <div className="flex items-center gap-2">
                     {p.username && (
@@ -201,17 +192,12 @@ export function TournamentPage(): JSX.Element {
                   <p className="sans num gold-text-sm font-semibold" style={{ fontSize: 12 }}>
                     ТОП-10: {p.top10Percent}%
                   </p>
-                  <span className="sans" style={{ fontSize: 15, color: 'rgba(199,154,61,0.4)' }}>
-                    ›
-                  </span>
                 </div>
-              </motion.button>
+              </motion.div>
             ))}
           </div>
         )}
       </div>
-
-      <PlayerQrModal participant={selectedPlayer} onClose={() => setSelectedPlayer(null)} />
     </motion.div>
   );
 }

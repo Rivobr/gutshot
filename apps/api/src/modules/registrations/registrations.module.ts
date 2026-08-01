@@ -1,12 +1,11 @@
 import { Module } from '@nestjs/common';
-import { QrModule } from '../qr/qr.module';
 import { TelegramModule } from '../telegram/telegram.module';
 import { ProgressionModule } from '../progression/progression.module';
 import { RegistrationsService } from './registrations.service';
 import { RegistrationsController } from './registrations.controller';
 
 @Module({
-  imports: [QrModule, TelegramModule, ProgressionModule],
+  imports: [TelegramModule, ProgressionModule],
   controllers: [RegistrationsController],
   providers: [RegistrationsService],
   exports: [RegistrationsService],

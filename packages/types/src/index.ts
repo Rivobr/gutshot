@@ -23,6 +23,7 @@ export interface User {
   username?: string | null;
   firstName?: string | null;
   lastName?: string | null;
+  nickname?: string | null;
   photoUrl?: string | null;
   isBlocked: boolean;
 }
@@ -33,6 +34,7 @@ export interface PlayerProfileDto {
   username?: string | null;
   firstName?: string | null;
   lastName?: string | null;
+  nickname?: string | null;
   photoUrl?: string | null;
   xp: number;
   level: number;
@@ -61,12 +63,12 @@ export interface TournamentParticipant {
   userId: string;
   firstName?: string | null;
   lastName?: string | null;
+  nickname?: string | null;
   username?: string | null;
   photoUrl?: string | null;
   level: number;
   top10Percent: number;
   status: RegistrationStatus;
-  qrToken: string;
 }
 
 export interface Tournament {
@@ -98,6 +100,7 @@ export interface RatingEntry {
   userId: string;
   firstName?: string | null;
   lastName?: string | null;
+  nickname?: string | null;
   photoUrl?: string | null;
   xp?: number;
   weeklyXp?: number;
@@ -218,7 +221,78 @@ export type XpSettingKey =
   | 'PLACE_7'
   | 'PLACE_8'
   | 'PLACE_9'
-  | 'PLACE_10';
+  | 'PLACE_10'
+  | 'PLACE_11'
+  | 'PLACE_12'
+  | 'PLACE_13'
+  | 'PLACE_14'
+  | 'PLACE_15'
+  | 'PLACE_16'
+  | 'PLACE_17'
+  | 'PLACE_18'
+  | 'PLACE_19'
+  | 'PLACE_20';
+
+/** Ключи шкалы рейтинга: место → настройка XP. */
+export const PLACE_RATING_KEY_BY_PLACE: Record<number, XpSettingKey> = {
+  1: 'TOURNAMENT_WIN',
+  2: 'PLACE_2',
+  3: 'PLACE_3',
+  4: 'PLACE_4',
+  5: 'PLACE_5',
+  6: 'PLACE_6',
+  7: 'PLACE_7',
+  8: 'PLACE_8',
+  9: 'PLACE_9',
+  10: 'PLACE_10',
+  11: 'PLACE_11',
+  12: 'PLACE_12',
+  13: 'PLACE_13',
+  14: 'PLACE_14',
+  15: 'PLACE_15',
+  16: 'PLACE_16',
+  17: 'PLACE_17',
+  18: 'PLACE_18',
+  19: 'PLACE_19',
+  20: 'PLACE_20',
+};
+
+export const PLACE_RATING_KEYS: XpSettingKey[] = Object.values(PLACE_RATING_KEY_BY_PLACE);
+
+export interface PlaceRatingRow {
+  place: number;
+  points: number;
+  /** Разница с предыдущим местом (для 1 места — null). */
+  diff: number | null;
+}
+
+export interface PlaceRatingScaleDto {
+  rows: PlaceRatingRow[];
+  totalPoints: number;
+}
+
+/** Собирает шкалу рейтинга 1–20 из карты настроек XP. */
+export function buildPlaceRatingScale(
+  settings: Partial<Record<XpSettingKey, number>>,
+): PlaceRatingScaleDto {
+  const rows: PlaceRatingRow[] = [];
+
+  for (let place = 1; place <= 20; place += 1) {
+    const key = PLACE_RATING_KEY_BY_PLACE[place];
+    const points = settings[key] ?? 0;
+    const previous = place === 1 ? null : (rows[place - 2]?.points ?? 0);
+    rows.push({
+      place,
+      points,
+      diff: previous === null ? null : points - previous,
+    });
+  }
+
+  return {
+    rows,
+    totalPoints: rows.reduce((sum, row) => sum + row.points, 0),
+  };
+}
 
 export type LegalDocumentType =
   | 'CLUB_RULES'
@@ -320,6 +394,7 @@ export interface AdminTournamentRegistration {
     username?: string | null;
     firstName?: string | null;
     lastName?: string | null;
+    nickname?: string | null;
     photoUrl?: string | null;
     xp: number;
     level: number;

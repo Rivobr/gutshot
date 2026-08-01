@@ -46,6 +46,7 @@ export class AuthService {
         username: user.username,
         firstName: user.firstName,
         lastName: user.lastName,
+        nickname: user.nickname,
         photoUrl: user.photoUrl,
       },
     };

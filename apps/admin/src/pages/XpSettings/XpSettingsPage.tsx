@@ -1,8 +1,18 @@
-import { useEffect, useState } from 'react';
-import type { LevelThresholdDto, XpSettingKey } from '@gutshot/types';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  PLACE_RATING_KEY_BY_PLACE,
+  buildPlaceRatingScale,
+  type LevelThresholdDto,
+  type XpSettingKey,
+} from '@gutshot/types';
 import { Button, Card, Loader } from '@gutshot/ui';
 import { useUpdateLevels, useUpdateXpSettings, useXpConfig } from '../../entities/xp-config';
-import { XP_SETTING_LABELS, XP_SETTING_ORDER } from '../../shared/lib/event-labels';
+import {
+  XP_EVENT_SETTING_ORDER,
+  XP_SETTING_LABELS,
+  XP_SETTING_ORDER,
+  formatPoints,
+} from '../../shared/lib/event-labels';
 
 export function XpSettingsPage(): JSX.Element {
   const { data, isLoading } = useXpConfig();
@@ -21,6 +31,11 @@ export function XpSettingsPage(): JSX.Element {
     setValues(Object.fromEntries(data.settings.map((item) => [item.key, item.value])));
     setLevels(data.levels);
   }, [data]);
+
+  const scale = useMemo(
+    () => buildPlaceRatingScale(values as Partial<Record<XpSettingKey, number>>),
+    [values],
+  );
 
   if (isLoading || !data) {
     return <Loader />;
@@ -71,6 +86,14 @@ export function XpSettingsPage(): JSX.Element {
     ]);
   };
 
+  const setPlacePoints = (place: number, points: number) => {
+    const key = PLACE_RATING_KEY_BY_PLACE[place];
+    if (!key) {
+      return;
+    }
+    setValues((current) => ({ ...current, [key]: points }));
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -81,10 +104,54 @@ export function XpSettingsPage(): JSX.Element {
       </div>
 
       <Card className="gap-4">
-        <h2 className="font-medium">Начисление опыта</h2>
+        <div>
+          <h2 className="font-medium">Шкала рейтинга (места 1–20)</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Очки за место в турнире. 1 место — премия за победу; со 2 по 20 — плавное снижение.
+            Всего за турнир при полной таблице:{' '}
+            <span className="text-foreground">{formatPoints(scale.totalPoints)}</span> очков.
+          </p>
+        </div>
+
+        <div className="overflow-x-auto rounded-md border border-border">
+          <table className="w-full min-w-[420px] text-sm">
+            <thead>
+              <tr className="border-b border-border bg-secondary/40 text-left text-muted-foreground">
+                <th className="px-3 py-2.5 font-medium">Место</th>
+                <th className="px-3 py-2.5 font-medium">Рейтинг</th>
+                <th className="px-3 py-2.5 font-medium">Разница с предыдущим</th>
+              </tr>
+            </thead>
+            <tbody>
+              {scale.rows.map((row) => (
+                <tr key={row.place} className="border-b border-border/60">
+                  <td className="px-3 py-2 font-medium">{row.place}</td>
+                  <td className="px-3 py-2">
+                    <input
+                      type="number"
+                      min={0}
+                      value={values[PLACE_RATING_KEY_BY_PLACE[row.place]] ?? 0}
+                      onChange={(event) =>
+                        setPlacePoints(row.place, Number(event.target.value))
+                      }
+                      className="w-28 rounded-md border border-border bg-secondary px-2.5 py-1.5 outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </td>
+                  <td className="px-3 py-2 text-muted-foreground">
+                    {row.diff === null ? '—' : formatPoints(row.diff)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      <Card className="gap-4">
+        <h2 className="font-medium">Прочие начисления</h2>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {XP_SETTING_ORDER.map((key: XpSettingKey) => (
+          {XP_EVENT_SETTING_ORDER.map((key: XpSettingKey) => (
             <label key={key} className="flex flex-col gap-1.5">
               <span className="text-sm text-muted-foreground">{XP_SETTING_LABELS[key]}</span>
               <input

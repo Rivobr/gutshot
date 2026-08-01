@@ -6,7 +6,6 @@ import { DashboardPage } from '../../pages/Dashboard/DashboardPage';
 import { PlayersPage } from '../../pages/Players/PlayersPage';
 import { TournamentsPage } from '../../pages/Tournaments/TournamentsPage';
 import { TournamentDetailsPage } from '../../pages/Tournaments/TournamentDetailsPage';
-import { CheckInPage } from '../../pages/CheckIn/CheckInPage';
 import { ScannerPage } from '../../pages/Scanner/ScannerPage';
 import { XpSettingsPage } from '../../pages/XpSettings/XpSettingsPage';
 import { LegalDocumentsPage } from '../../pages/LegalDocuments/LegalDocumentsPage';
@@ -27,7 +26,6 @@ export const router = createBrowserRouter([
           { path: '/tournaments/:id', element: <TournamentDetailsPage /> },
           { path: '/players', element: <PlayersPage /> },
           { path: '/scanner', element: <ScannerPage /> },
-          { path: '/check-in', element: <CheckInPage /> },
           { path: '/history', element: <HistoryPage /> },
           { path: '/xp-settings', element: <XpSettingsPage /> },
           { path: '/legal-documents', element: <LegalDocumentsPage /> },

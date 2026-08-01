@@ -1,4 +1,5 @@
 import type { PlayerEventType, ScannerEventType, XpSettingKey } from '@gutshot/types';
+import { PLACE_RATING_KEYS } from '@gutshot/types';
 
 export const SCANNER_EVENTS: { value: ScannerEventType; label: string; icon: string }[] = [
   { value: 'ARRIVED', label: 'Пришёл', icon: '✅' },
@@ -34,7 +35,7 @@ export const XP_SETTING_LABELS: Record<XpSettingKey, string> = {
   FOUR_OF_A_KIND: 'Каре',
   STRAIGHT_FLUSH: 'Стрит-флеш',
   ROYAL_FLUSH: 'Роял-флеш',
-  TOURNAMENT_WIN: 'Победа в турнире (1 место)',
+  TOURNAMENT_WIN: '1 место (победа)',
   PLACE_2: '2 место',
   PLACE_3: '3 место',
   PLACE_4: '4 место',
@@ -44,10 +45,20 @@ export const XP_SETTING_LABELS: Record<XpSettingKey, string> = {
   PLACE_8: '8 место',
   PLACE_9: '9 место',
   PLACE_10: '10 место',
+  PLACE_11: '11 место',
+  PLACE_12: '12 место',
+  PLACE_13: '13 место',
+  PLACE_14: '14 место',
+  PLACE_15: '15 место',
+  PLACE_16: '16 место',
+  PLACE_17: '17 место',
+  PLACE_18: '18 место',
+  PLACE_19: '19 место',
+  PLACE_20: '20 место',
 };
 
-/** Порядок отображения настроек: сначала события, затем призовые места. */
-export const XP_SETTING_ORDER: XpSettingKey[] = [
+/** Прочие начисления (не шкала мест). */
+export const XP_EVENT_SETTING_ORDER: XpSettingKey[] = [
   'ATTENDANCE',
   'ELIMINATION',
   'RE_ENTRY',
@@ -55,16 +66,15 @@ export const XP_SETTING_ORDER: XpSettingKey[] = [
   'FOUR_OF_A_KIND',
   'STRAIGHT_FLUSH',
   'ROYAL_FLUSH',
-  'TOURNAMENT_WIN',
-  'PLACE_2',
-  'PLACE_3',
-  'PLACE_4',
-  'PLACE_5',
-  'PLACE_6',
-  'PLACE_7',
-  'PLACE_8',
-  'PLACE_9',
-  'PLACE_10',
+];
+
+/** Шкала рейтинга 1–20. */
+export const XP_PLACE_SETTING_ORDER: XpSettingKey[] = [...PLACE_RATING_KEYS];
+
+/** Полный порядок для сохранения всех ключей. */
+export const XP_SETTING_ORDER: XpSettingKey[] = [
+  ...XP_EVENT_SETTING_ORDER,
+  ...XP_PLACE_SETTING_ORDER,
 ];
 
 export function formatDateTime(value: string | Date): string {
@@ -75,4 +85,8 @@ export function formatDateTime(value: string | Date): string {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+export function formatPoints(value: number): string {
+  return value.toLocaleString('ru-RU');
 }

@@ -1,4 +1,4 @@
-import { Controller, Get, HttpCode, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
@@ -6,6 +6,7 @@ import { JwtPayload } from '../../../common/interfaces/jwt-payload.interface';
 import { ProfileService } from './profile.service';
 import { UsersService } from '../users.service';
 import { QueryEventsDto } from './dto/query-events.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @ApiTags('Profile')
 @ApiBearerAuth()
@@ -19,6 +20,12 @@ export class ProfileController {
 
   @Get()
   getProfile(@CurrentUser() user: JwtPayload) {
+    return this.profileService.getProfile(user.sub);
+  }
+
+  @Patch()
+  async updateProfile(@CurrentUser() user: JwtPayload, @Body() dto: UpdateProfileDto) {
+    await this.usersService.updateNickname(user.sub, dto.nickname);
     return this.profileService.getProfile(user.sub);
   }
 

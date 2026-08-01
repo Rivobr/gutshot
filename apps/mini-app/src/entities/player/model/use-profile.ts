@@ -50,3 +50,16 @@ export function useAcceptConsent() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['profile'] }),
   });
 }
+
+export function useUpdateNickname() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (nickname: string) => playerApi.updateNickname(nickname),
+    onSuccess: (profile) => {
+      queryClient.setQueryData(['profile'], profile);
+      queryClient.invalidateQueries({ queryKey: ['rating'] });
+      queryClient.invalidateQueries({ queryKey: ['tournaments'] });
+    },
+  });
+}

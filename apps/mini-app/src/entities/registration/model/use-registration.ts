@@ -5,15 +5,6 @@ export function useCurrentRegistration() {
   return useQuery({ queryKey: ['registrations', 'current'], queryFn: registrationApi.getCurrent });
 }
 
-export function useCurrentQr(enabled: boolean) {
-  return useQuery({
-    queryKey: ['registrations', 'current', 'qr'],
-    queryFn: registrationApi.getCurrentQr,
-    enabled,
-    refetchInterval: 30_000,
-  });
-}
-
 export function useRegister() {
   const queryClient = useQueryClient();
   return useMutation({

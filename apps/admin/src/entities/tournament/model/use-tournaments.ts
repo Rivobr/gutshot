@@ -43,12 +43,27 @@ export function useCreateTournament() {
   });
 }
 
-export function useTournamentAction(action: 'open' | 'close' | 'start' | 'remove') {
+export function useUpdateTournament() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Partial<CreateTournamentPayload> }) =>
+      adminTournamentsApi.update(id, payload),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments', variables.id] });
+    },
+  });
+}
+
+export type TournamentAction = 'open' | 'close' | 'start' | 'archive' | 'remove';
+
+export function useTournamentAction(action: TournamentAction) {
   const queryClient = useQueryClient();
   const fn = {
     open: adminTournamentsApi.open,
     close: adminTournamentsApi.close,
     start: adminTournamentsApi.start,
+    archive: adminTournamentsApi.archive,
     remove: adminTournamentsApi.remove,
   }[action];
 
@@ -61,8 +76,17 @@ export function useTournamentAction(action: 'open' | 'close' | 'start' | 'remove
 export function useFinishTournament() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, results }: { id: string; results: { registrationId: string; place: number }[] }) =>
-      adminTournamentsApi.finish(id, results),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] }),
+    mutationFn: ({
+      id,
+      results,
+    }: {
+      id: string;
+      results: { registrationId: string; place: number }[];
+    }) => adminTournamentsApi.finish(id, results),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'history'] });
+    },
   });
 }

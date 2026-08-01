@@ -141,7 +141,7 @@ export function HomePage(): JSX.Element {
                 Вы зарегистрированы
               </span>
               <span className="serif font-semibold" style={{ fontSize: 15, color: '#F5EDD6' }}>
-                Мой билет и QR
+                Мой билет
               </span>
             </span>
             <span style={{ color: 'rgba(199,154,61,0.6)', fontSize: 20 }}>›</span>

@@ -136,6 +136,7 @@ export class ScannerService {
       username: user.username,
       firstName: user.firstName,
       lastName: user.lastName,
+      nickname: user.nickname,
       photoUrl: user.photoUrl,
       isBlocked: user.isBlocked,
       qrCode: user.qrCode,

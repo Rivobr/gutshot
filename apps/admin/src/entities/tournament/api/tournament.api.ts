@@ -45,6 +45,10 @@ export const adminTournamentsApi = {
     const { data } = await apiClient.post(`/admin/tournaments/${id}/start`);
     return data.data;
   },
+  async archive(id: string) {
+    const { data } = await apiClient.post(`/admin/tournaments/${id}/archive`);
+    return data.data;
+  },
   async finish(id: string, results: { registrationId: string; place: number }[]) {
     const { data } = await apiClient.post(`/admin/tournaments/${id}/finish`, results);
     return data.data;
