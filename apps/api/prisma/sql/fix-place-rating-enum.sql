@@ -1,0 +1,14 @@
+-- Починка шкалы рейтинга: enum + значения мест 1–20
+-- Запуск:
+-- docker compose exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" < apps/api/prisma/sql/fix-place-rating-enum.sql
+
+ALTER TYPE "XpSettingKey" ADD VALUE IF NOT EXISTS 'PLACE_11';
+ALTER TYPE "XpSettingKey" ADD VALUE IF NOT EXISTS 'PLACE_12';
+ALTER TYPE "XpSettingKey" ADD VALUE IF NOT EXISTS 'PLACE_13';
+ALTER TYPE "XpSettingKey" ADD VALUE IF NOT EXISTS 'PLACE_14';
+ALTER TYPE "XpSettingKey" ADD VALUE IF NOT EXISTS 'PLACE_15';
+ALTER TYPE "XpSettingKey" ADD VALUE IF NOT EXISTS 'PLACE_16';
+ALTER TYPE "XpSettingKey" ADD VALUE IF NOT EXISTS 'PLACE_17';
+ALTER TYPE "XpSettingKey" ADD VALUE IF NOT EXISTS 'PLACE_18';
+ALTER TYPE "XpSettingKey" ADD VALUE IF NOT EXISTS 'PLACE_19';
+ALTER TYPE "XpSettingKey" ADD VALUE IF NOT EXISTS 'PLACE_20';
