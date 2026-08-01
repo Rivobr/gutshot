@@ -11,7 +11,7 @@ import {
   useUpdateNickname,
 } from '../../entities/player';
 import { MyQrModal } from '../../widgets/MyQrModal/MyQrModal';
-import { GoldBadge, Logo, SectionLabel } from '../../shared/ui/figma';
+import { GoldBadge, SectionLabel } from '../../shared/ui/figma';
 import { PlayerAvatar } from '../../shared/ui/PlayerAvatar';
 import { displayNameOf } from '../../shared/lib/display-name';
 import { formatDate } from '../../shared/lib/format';
@@ -44,6 +44,7 @@ export function ProfilePage(): JSX.Element {
   const updateNickname = useUpdateNickname();
   const [isQrOpen, setQrOpen] = useState(false);
   const [isEditingName, setEditingName] = useState(false);
+  const [isActivityOpen, setActivityOpen] = useState(false);
   const [nicknameDraft, setNicknameDraft] = useState('');
 
   useEffect(() => {
@@ -111,8 +112,7 @@ export function ProfilePage(): JSX.Element {
           aria-label="Мой QR-код"
           className="absolute flex items-center justify-center rounded-[16px]"
           style={{
-            // Ниже логотипа профиля, вне зоны «Закрыть» Telegram.
-            top: 118,
+            top: 24,
             left: 16,
             width: 52,
             height: 52,
@@ -131,8 +131,6 @@ export function ProfilePage(): JSX.Element {
             />
           </svg>
         </motion.button>
-
-        <Logo size="md" />
 
         <div className="relative mt-3">
           <PlayerAvatar
@@ -342,38 +340,70 @@ export function ProfilePage(): JSX.Element {
           </div>
         </div>
 
-        {/* Активность: все события клуба по игроку */}
+        {/* Активность: свёрнута по умолчанию, раскрывается по нажатию */}
         {events && events.length > 0 && (
           <div>
-            <div className="mb-3">
+            <button
+              type="button"
+              onClick={() => setActivityOpen((open) => !open)}
+              className="w-full flex items-center justify-between mb-1"
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 0,
+              }}
+            >
               <SectionLabel>Активность</SectionLabel>
-            </div>
-            {events.map((event, i) => (
-              <div
-                key={event.id}
-                className={`flex items-center justify-between gap-3 py-3 ${i > 0 ? 'border-t' : ''}`}
-                style={{ borderColor: 'rgba(199,154,61,0.1)' }}
+              <span
+                className="sans"
+                style={{
+                  fontSize: 11,
+                  color: '#C89A3D',
+                  letterSpacing: '0.04em',
+                }}
               >
-                <div className="min-w-0">
-                  <p
-                    className="serif truncate"
-                    style={{ fontSize: 13.5, color: '#F5EDD6', lineHeight: 1.35 }}
-                  >
-                    {PLAYER_EVENT_LABELS[event.type]}
-                  </p>
-                  <p className="sans num truncate" style={{ fontSize: 10, color: '#6B614E' }}>
-                    {formatEventDate(event.createdAt)}
-                    {event.tournament ? ` · ${event.tournament.title}` : ''}
-                  </p>
-                </div>
-                {event.xpAmount !== 0 && (
-                  <span className="sans num shrink-0" style={{ fontSize: 11.5, color: '#C89A3D' }}>
-                    {event.xpAmount > 0 ? '+' : ''}
-                    {event.xpAmount} XP
-                  </span>
-                )}
-              </div>
-            ))}
+                {isActivityOpen ? 'Свернуть ▲' : `Показать (${events.length}) ▼`}
+              </span>
+            </button>
+            <AnimatePresence initial={false}>
+              {isActivityOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                  style={{ overflow: 'hidden' }}
+                >
+                  {events.map((event, i) => (
+                    <div
+                      key={event.id}
+                      className={`flex items-center justify-between gap-3 py-3 ${i > 0 ? 'border-t' : ''}`}
+                      style={{ borderColor: 'rgba(199,154,61,0.1)' }}
+                    >
+                      <div className="min-w-0">
+                        <p
+                          className="serif truncate"
+                          style={{ fontSize: 13.5, color: '#F5EDD6', lineHeight: 1.35 }}
+                        >
+                          {PLAYER_EVENT_LABELS[event.type]}
+                        </p>
+                        <p className="sans num truncate" style={{ fontSize: 10, color: '#6B614E' }}>
+                          {formatEventDate(event.createdAt)}
+                          {event.tournament ? ` · ${event.tournament.title}` : ''}
+                        </p>
+                      </div>
+                      {event.xpAmount !== 0 && (
+                        <span className="sans num shrink-0" style={{ fontSize: 11.5, color: '#C89A3D' }}>
+                          {event.xpAmount > 0 ? '+' : ''}
+                          {event.xpAmount} XP
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
 

@@ -5,7 +5,7 @@ import { Loader } from '@gutshot/ui';
 import type { RatingEntry } from '@gutshot/types';
 import { apiClient } from '../../shared/api/client';
 import { useProfile } from '../../entities/player';
-import { Logo, SectionLabel } from '../../shared/ui/figma';
+import { SectionLabel } from '../../shared/ui/figma';
 import { PlayerAvatar } from '../../shared/ui/PlayerAvatar';
 import { displayNameOf } from '../../shared/lib/display-name';
 
@@ -108,8 +108,7 @@ export function RatingPage(): JSX.Element {
   return (
     <div className="flex flex-col">
       <div className="px-5 pt-6 pb-4">
-        <Logo size="sm" />
-        <h2 className="serif font-semibold mt-4" style={{ fontSize: 24, color: '#F5EDD6' }}>
+        <h2 className="serif font-semibold" style={{ fontSize: 24, color: '#F5EDD6' }}>
           Рейтинг клуба
         </h2>
         <p className="sans mt-1" style={{ fontSize: 12, color: '#6B614E' }}>

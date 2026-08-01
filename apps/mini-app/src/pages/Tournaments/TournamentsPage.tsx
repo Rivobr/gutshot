@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { Loader } from '@gutshot/ui';
 import { TournamentCard } from '../../widgets/TournamentCard/TournamentCard';
 import { useTournaments } from '../../entities/tournament';
-import { Logo } from '../../shared/ui/figma';
 
 type Tab = 'upcoming' | 'completed';
 
@@ -26,8 +25,7 @@ export function TournamentsPage(): JSX.Element {
   return (
     <div className="flex flex-col">
       <div className="px-5 pt-6 pb-4">
-        <Logo size="sm" />
-        <h2 className="serif font-semibold mt-4 mb-4" style={{ fontSize: 24, color: '#F5EDD6' }}>
+        <h2 className="serif font-semibold mb-4" style={{ fontSize: 24, color: '#F5EDD6' }}>
           Турниры
         </h2>
 
