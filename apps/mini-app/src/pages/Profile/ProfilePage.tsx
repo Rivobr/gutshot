@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { isAxiosError } from 'axios';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Loader } from '@gutshot/ui';
@@ -21,6 +22,7 @@ import {
   mergeAchievementTexts,
   type AchievementContext,
 } from '../../shared/lib/achievements-catalog';
+import { AchievementMedallion } from '../../shared/ui/AchievementMedallion';
 
 interface StatItem {
   icon: string;
@@ -67,6 +69,24 @@ export function ProfilePage(): JSX.Element {
       onSuccess: () => setEditingName(false),
     });
   };
+
+  const nicknameErrorMessage = (() => {
+    if (!updateNickname.isError) {
+      return null;
+    }
+    const error = updateNickname.error;
+    if (isAxiosError(error)) {
+      const payload = error.response?.data as { message?: string | string[] } | undefined;
+      const message = payload?.message;
+      if (typeof message === 'string' && message.trim()) {
+        return message;
+      }
+      if (Array.isArray(message) && message[0]) {
+        return String(message[0]);
+      }
+    }
+    return 'Не удалось сохранить никнейм. Проверьте длину (2–32) и символы.';
+  })();
 
   const stats: StatItem[] = [
     { icon: '🏆', value: `${s.wins}`, label: 'Побед' },
@@ -371,16 +391,7 @@ export function ProfilePage(): JSX.Element {
                     : '1px solid rgba(199,154,61,0.12)',
                 }}
               >
-                <span
-                  style={{
-                    fontSize: 26,
-                    filter: a.unlocked
-                      ? 'drop-shadow(0 0 8px rgba(199,154,61,0.5))'
-                      : 'grayscale(1)',
-                  }}
-                >
-                  {a.unlocked ? a.icon : '🔒'}
-                </span>
+                <AchievementMedallion id={a.id} locked={!a.unlocked} size={42} />
                 <span
                   className="sans text-center"
                   style={{ fontSize: 10, color: '#D8CEBC', lineHeight: 1.25 }}
@@ -573,7 +584,12 @@ export function ProfilePage(): JSX.Element {
                 </p>
                 <input
                   value={nicknameDraft}
-                  onChange={(event) => setNicknameDraft(event.target.value)}
+                  onChange={(event) => {
+                    setNicknameDraft(event.target.value);
+                    if (updateNickname.isError) {
+                      updateNickname.reset();
+                    }
+                  }}
                   maxLength={32}
                   autoFocus
                   className="w-full rounded-[14px] px-4 py-3 sans"
@@ -585,9 +601,9 @@ export function ProfilePage(): JSX.Element {
                     outline: 'none',
                   }}
                 />
-                {updateNickname.isError && (
+                {nicknameErrorMessage && (
                   <p className="sans mt-2" style={{ fontSize: 12, color: '#E07A6E' }}>
-                    Не удалось сохранить никнейм. Проверьте длину (2–32) и символы.
+                    {nicknameErrorMessage}
                   </p>
                 )}
                 <div className="mt-4 flex gap-2">

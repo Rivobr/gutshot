@@ -52,7 +52,8 @@ services:
       dockerfile: apps/mini-app/Dockerfile
       network: host
       args:
-        VITE_API_URL: ${VITE_API_URL:-https://api.gutshotapp.ru/api/v1}
+        # Same-origin so Mini App works behind Cloudflare/alternate HTTPS fronts.
+        VITE_API_URL: ${VITE_API_URL:-/api/v1}
     container_name: gutshot-mini-app
     restart: unless-stopped
     ports:
@@ -95,6 +96,19 @@ services:
       - admin
     networks:
       - gutshot-network
+
+  # Optional named Cloudflare Tunnel (not the temporary trycloudflare quick tunnel).
+  # Requires CLOUDFLARE_TUNNEL_TOKEN and hostnames published in Zero Trust UI.
+  # Start: docker compose --profile cloudflare up -d cloudflared
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: gutshot-cloudflared
+    restart: unless-stopped
+    profiles: ["cloudflare"]
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    network_mode: host
 
 networks:
   gutshot-network:
