@@ -45,9 +45,10 @@ export class TelegramBotBootstrap implements OnModuleInit {
       return;
     }
 
+    const entryUrl = `${miniAppUrl}/go.html`;
     const menuOk = await this.withRetries(
-      () => this.telegramService.setChatMenuButton(miniAppUrl),
-      `setChatMenuButton ${miniAppUrl}`,
+      () => this.telegramService.setChatMenuButton(entryUrl),
+      `setChatMenuButton ${entryUrl}`,
     );
     if (!menuOk) {
       this.logger.error(`Не удалось установить menu button: ${miniAppUrl}`);

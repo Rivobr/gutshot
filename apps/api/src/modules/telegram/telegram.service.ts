@@ -74,9 +74,12 @@ export class TelegramService {
       this.configService.get<string>('telegram.miniAppUrl')?.trim() ||
       'https://app.gutshotapp.ru'
     ).replace(/\/$/, '');
+    // Lightweight entry (health + redirect) — more reliable for flaky iOS WebViews
+    // than opening the full SPA bundle directly from the menu/button.
+    const entryUrl = `${miniAppUrl}/go.html?t=${Date.now()}`;
     const openAppKeyboard = {
       inline_keyboard: [
-        [{ text: '♠️ Открыть GUTSHOT', web_app: { url: miniAppUrl } }],
+        [{ text: '♠️ Открыть GUTSHOT', web_app: { url: entryUrl } }],
       ],
     };
 
