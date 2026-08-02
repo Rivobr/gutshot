@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 
 /** Золотые медальоны в стиле постера «Система достижений». */
 
@@ -19,7 +19,7 @@ function MedallionShell({
   locked?: boolean;
   size: number;
 }): JSX.Element {
-  const id = `m${size}`;
+  const uid = useId().replace(/:/g, '');
   return (
     <svg
       width={size}
@@ -35,23 +35,23 @@ function MedallionShell({
       }}
     >
       <defs>
-        <radialGradient id={`${id}-face`} cx="35%" cy="30%" r="70%">
+        <radialGradient id={`${uid}-face`} cx="35%" cy="30%" r="70%">
           <stop offset="0%" stopColor={GOLD.light} />
           <stop offset="45%" stopColor={GOLD.mid} />
           <stop offset="100%" stopColor={GOLD.dark} />
         </radialGradient>
-        <linearGradient id={`${id}-rim`} x1="0" y1="0" x2="64" y2="64">
+        <linearGradient id={`${uid}-rim`} x1="0" y1="0" x2="64" y2="64">
           <stop offset="0%" stopColor={GOLD.light} />
           <stop offset="50%" stopColor={GOLD.dark} />
           <stop offset="100%" stopColor={GOLD.rim} />
         </linearGradient>
-        <linearGradient id={`${id}-ink`} x1="20" y1="10" x2="48" y2="54">
+        <linearGradient id={`${uid}-ink`} x1="20" y1="10" x2="48" y2="54">
           <stop offset="0%" stopColor={GOLD.deep} />
           <stop offset="100%" stopColor="#1A1006" />
         </linearGradient>
       </defs>
-      <circle cx="32" cy="32" r="31" fill={`url(#${id}-rim)`} />
-      <circle cx="32" cy="32" r="27.5" fill={`url(#${id}-face)`} />
+      <circle cx="32" cy="32" r="31" fill={`url(#${uid}-rim)`} />
+      <circle cx="32" cy="32" r="27.5" fill={`url(#${uid}-face)`} />
       <circle
         cx="32"
         cy="32"
@@ -61,7 +61,7 @@ function MedallionShell({
         strokeWidth="1.2"
         fill="none"
       />
-      <g fill={`url(#${id}-ink)`} stroke={`url(#${id}-ink)`} strokeWidth="0.4">
+      <g fill={`url(#${uid}-ink)`} stroke={`url(#${uid}-ink)`} strokeWidth="0.4">
         {children}
       </g>
     </svg>
