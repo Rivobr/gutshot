@@ -134,7 +134,8 @@ model User {
   username  String?
   firstName String?
   lastName  String?
-  /// Отображаемое имя в клубе. Игрок может менять самостоятельно.
+  /// Отображаемое имя в клубе. Уникально без учёта регистра
+  /// (индекс User_nickname_lower_key в миграции). Игрок меняет сам.
   nickname  String?
   photoUrl  String?
   isBlocked Boolean  @default(false)
