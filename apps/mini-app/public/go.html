@@ -6,6 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <title>GUTSHOT</title>
     <style>
       html,
@@ -47,88 +48,26 @@
       .msg {
         font-size: 14px;
         opacity: 0.75;
-        max-width: 280px;
-        line-height: 1.4;
-      }
-      .btn {
-        display: none;
-        margin-top: 8px;
-        padding: 12px 20px;
-        border: 0;
-        border-radius: 12px;
-        background: #c9a227;
-        color: #111;
-        font-weight: 700;
-        font-size: 15px;
-      }
-      .btn.show {
-        display: inline-block;
       }
     </style>
-  </head>
-  <body>
-    <div id="s">
-      <div class="logo">GUTSHOT</div>
-      <div class="spin" id="sp"></div>
-      <div class="msg" id="m">Подключаемся…</div>
-      <button class="btn" id="b" type="button">Открыть клуб</button>
-    </div>
     <script>
       (function () {
-        var TARGET = "/?from=go&t=" + Date.now();
-        var m = document.getElementById("m");
-        var b = document.getElementById("b");
-        var sp = document.getElementById("sp");
-        var done = false;
-
-        function go() {
-          if (done) return;
-          done = true;
-          location.replace(TARGET);
-        }
-
-        function fail(text) {
-          sp.style.display = "none";
-          m.textContent = text;
-          b.classList.add("show");
-        }
-
-        b.onclick = go;
-
-        // Soften Telegram boot ASAP if SDK already present.
         try {
           if (window.Telegram && Telegram.WebApp) {
             Telegram.WebApp.ready();
             Telegram.WebApp.expand();
           }
         } catch (e) {}
-
-        var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
-        var timer = setTimeout(function () {
-          if (ctrl) ctrl.abort();
-          // Even if health is slow, try opening the app — better than stuck forever.
-          go();
-        }, 4000);
-
-        fetch("/api/v1/health", {
-          cache: "no-store",
-          credentials: "omit",
-          signal: ctrl ? ctrl.signal : undefined,
-        })
-          .then(function (r) {
-            clearTimeout(timer);
-            if (!r.ok) {
-              fail("Сервер отвечает с ошибкой. Нажмите «Открыть клуб».");
-              return;
-            }
-            go();
-          })
-          .catch(function () {
-            clearTimeout(timer);
-            // Still try — health may be blocked while static works, or vice versa.
-            go();
-          });
+        // Immediate redirect — no health fetch (fetch itself can hang on flaky TLS).
+        location.replace("/t.html?from=go&t=" + Date.now());
       })();
     </script>
+  </head>
+  <body>
+    <div id="s">
+      <div class="logo">GUTSHOT</div>
+      <div class="spin"></div>
+      <div class="msg">Открываем…</div>
+    </div>
   </body>
 </html>
