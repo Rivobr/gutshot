@@ -71,12 +71,30 @@
           } catch (e) {}
         }
 
+        function postReadyEvent() {
+          try {
+            // Низкоуровневый сигнал на случай, если WebApp.ready() игнорируется.
+            var wv = window.Telegram && window.Telegram.WebView;
+            if (wv && typeof wv.postEvent === 'function') {
+              wv.postEvent('web_app_ready', {});
+            }
+          } catch (e) {}
+          try {
+            if (window.TelegramWebviewProxy && window.TelegramWebviewProxy.postEvent) {
+              window.TelegramWebviewProxy.postEvent('web_app_ready', '{}');
+            }
+          } catch (e) {}
+        }
+
         function bootTelegram() {
           try {
             var tg = window.Telegram && window.Telegram.WebApp;
             if (!tg) {
+              // Даже без объекта WebApp пробуем низкоуровневый ready.
+              postReadyEvent();
               return false;
             }
+            postReadyEvent();
             tg.ready();
             tg.expand();
             try {
