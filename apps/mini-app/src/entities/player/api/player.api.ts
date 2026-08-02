@@ -38,7 +38,8 @@ export const playerApi = {
     return data.data;
   },
   async acceptConsent(): Promise<{ consentAcceptedAt: string }> {
-    const { data } = await apiClient.post('/profile/consent');
+    // Явно шлём {} — пустой POST с Content-Type JSON даёт 400 на Nest.
+    const { data } = await apiClient.post('/profile/consent', {});
     return data.data;
   },
   async getLegalDocuments(): Promise<LegalDocumentDto[]> {

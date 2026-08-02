@@ -1,5 +1,9 @@
+import { isAxiosError } from 'axios';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { PlayerProfileDto } from '@gutshot/types';
 import { playerApi } from '../api/player.api';
+import { getTelegramInitData } from '../../../shared/lib/telegram';
+import { loginWithTelegramInitData } from '../../../processes/startup/use-startup';
 
 export function useProfile() {
   return useQuery({
@@ -61,8 +65,34 @@ export function useAcceptConsent() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: playerApi.acceptConsent,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['profile'] }),
+    mutationFn: async () => {
+      try {
+        return await playerApi.acceptConsent();
+      } catch (error) {
+        // Протухший JWT на экране согласия — перелогин и один повтор.
+        if (!isAxiosError(error) || error.response?.status !== 401) {
+          throw error;
+        }
+        const initData = getTelegramInitData();
+        if (!initData) {
+          throw error;
+        }
+        await loginWithTelegramInitData(initData);
+        return playerApi.acceptConsent();
+      }
+    },
+    onSuccess: (result) => {
+      queryClient.setQueryData(['profile'], (current: PlayerProfileDto | undefined) => {
+        if (!current) {
+          return current;
+        }
+        return {
+          ...current,
+          consentAcceptedAt: result.consentAcceptedAt,
+        };
+      });
+      void queryClient.invalidateQueries({ queryKey: ['profile'] });
+    },
   });
 }
 

@@ -6,11 +6,12 @@ import { tokenStorage } from '../../shared/lib/token-storage';
 
 export type StartupStatus = 'loading' | 'ready' | 'error';
 
-const INIT_WAIT_MS = 2_000;
+const INIT_WAIT_MS = 2_500;
 const HARD_TIMEOUT_MS = 8_000;
+const REAUTH_FLAG = 'gutshot_reauth_once';
 
 /** Telegram иногда отдаёт initData не в первый тик после открытия WebApp. */
-async function waitForInitData(timeoutMs = INIT_WAIT_MS): Promise<string> {
+export async function waitForInitData(timeoutMs = INIT_WAIT_MS): Promise<string> {
   const startedAt = Date.now();
   let initData = getTelegramInitData();
   if (initData) {
@@ -30,9 +31,13 @@ async function waitForInitData(timeoutMs = INIT_WAIT_MS): Promise<string> {
 
 function extractAuthError(error: unknown): string {
   if (isAxiosError(error)) {
-    const message = error.response?.data?.message;
+    const payload = error.response?.data as { message?: string | string[] } | undefined;
+    const message = payload?.message;
     if (typeof message === 'string' && message.trim()) {
       return message;
+    }
+    if (Array.isArray(message) && message[0]) {
+      return String(message[0]);
     }
 
     if (error.code === 'ECONNABORTED') {
@@ -47,17 +52,20 @@ function extractAuthError(error: unknown): string {
   return 'Не удалось выполнить авторизацию';
 }
 
-async function refreshSessionInBackground(): Promise<void> {
+/** Логин по initData; при успехе сбрасывает флаг анти-цикла reload. */
+export async function loginWithTelegramInitData(initData: string): Promise<string> {
+  const response = await authApi.loginWithTelegram(initData);
+  tokenStorage.set(response.accessToken);
   try {
-    const initData = await waitForInitData(1_500);
-    if (!initData) {
-      return;
-    }
-    const response = await authApi.loginWithTelegram(initData);
-    tokenStorage.set(response.accessToken);
+    sessionStorage.removeItem(REAUTH_FLAG);
   } catch {
-    // Старый JWT остаётся — следующий запрос профиля решит, жив ли он.
+    // ignore
   }
+  return response.accessToken;
+}
+
+function extractAuthErrorMessage(error: unknown): string {
+  return extractAuthError(error);
 }
 
 export function useStartup(): { status: StartupStatus; errorMessage?: string } {
@@ -80,7 +88,6 @@ export function useStartup(): { status: StartupStatus; errorMessage?: string } {
     };
 
     const watchdog = window.setTimeout(() => {
-      // Если есть токен — лучше пустить дальше, чем вечный сплэш.
       if (tokenStorage.get()) {
         finish('ready');
         return;
@@ -98,13 +105,47 @@ export function useStartup(): { status: StartupStatus; errorMessage?: string } {
         // chrome API не должен ломать вход
       }
 
-      // Быстрый путь: есть JWT → сразу в приложение, сессию обновим в фоне.
+      // 1) Свежий initData важнее старого JWT — иначе старые юзеры
+      //    уезжают в 401 → reload → снова мёртвый токен.
+      const immediateInit = getTelegramInitData();
+      if (immediateInit) {
+        try {
+          await loginWithTelegramInitData(immediateInit);
+          if (!cancelled) {
+            finish('ready');
+          }
+          return;
+        } catch (error) {
+          if (tokenStorage.get()) {
+            if (!cancelled) {
+              finish('ready');
+            }
+            return;
+          }
+          if (!cancelled) {
+            finish('error', extractAuthErrorMessage(error));
+          }
+          return;
+        }
+      }
+
+      // 2) initData ещё нет — если есть токен, пускаем дальше и ждём initData в фоне.
       if (tokenStorage.get()) {
         finish('ready');
-        void refreshSessionInBackground();
+        void (async () => {
+          try {
+            const initData = await waitForInitData(2_000);
+            if (initData) {
+              await loginWithTelegramInitData(initData);
+            }
+          } catch {
+            // оставляем текущий токен
+          }
+        })();
         return;
       }
 
+      // 3) Новые пользователи без токена — ждём initData.
       const initData = await waitForInitData();
       if (cancelled) {
         return;
@@ -112,18 +153,15 @@ export function useStartup(): { status: StartupStatus; errorMessage?: string } {
 
       if (initData) {
         try {
-          const response = await authApi.loginWithTelegram(initData);
-          if (cancelled) {
-            return;
+          await loginWithTelegramInitData(initData);
+          if (!cancelled) {
+            finish('ready');
           }
-          tokenStorage.set(response.accessToken);
-          finish('ready');
           return;
         } catch (error) {
-          if (cancelled) {
-            return;
+          if (!cancelled) {
+            finish('error', extractAuthErrorMessage(error));
           }
-          finish('error', extractAuthError(error));
           return;
         }
       }

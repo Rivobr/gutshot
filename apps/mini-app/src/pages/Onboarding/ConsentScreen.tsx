@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { isAxiosError } from 'axios';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { LegalDocumentDto, LegalDocumentType } from '@gutshot/types';
 import { Logo, goldButtonStyle } from '../../shared/ui/figma';
@@ -89,7 +90,19 @@ export function ConsentScreen(): JSX.Element {
 
           {acceptConsent.isError && (
             <p className="sans text-center mt-3" style={{ fontSize: 11, color: '#C0392B' }}>
-              Не удалось сохранить согласие. Попробуйте ещё раз.
+              {(() => {
+                const err = acceptConsent.error;
+                if (isAxiosError(err)) {
+                  const msg = err.response?.data?.message;
+                  if (typeof msg === 'string' && msg.trim()) {
+                    return msg;
+                  }
+                  if (!err.response) {
+                    return 'Нет связи с сервером. Проверьте интернет и нажмите ещё раз.';
+                  }
+                }
+                return 'Не удалось сохранить согласие. Попробуйте ещё раз.';
+              })()}
             </p>
           )}
 

@@ -28,6 +28,15 @@ export function createApiClient(options: CreateApiClientOptions): AxiosInstance 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Пустое тело + Content-Type: application/json ломает Nest body-parser (400).
+    if (config.data === undefined || config.data === null) {
+      if (config.headers) {
+        delete config.headers['Content-Type'];
+        delete config.headers['content-type'];
+      }
+    }
+
     return config;
   });
 

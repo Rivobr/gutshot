@@ -61,6 +61,10 @@ export class ProfileController {
   @Post('consent')
   async acceptConsent(@CurrentUser() user: JwtPayload) {
     const updated = await this.usersService.acceptConsent(user.sub);
-    return { consentAcceptedAt: updated.consentAcceptedAt };
+    return {
+      consentAcceptedAt: updated.consentAcceptedAt
+        ? updated.consentAcceptedAt.toISOString()
+        : null,
+    };
   }
 }

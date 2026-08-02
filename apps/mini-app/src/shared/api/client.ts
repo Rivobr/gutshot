@@ -2,6 +2,8 @@ import { createApiClient } from '@gutshot/shared';
 import { env } from '../config/env';
 import { tokenStorage } from '../lib/token-storage';
 
+const REAUTH_FLAG = 'gutshot_reauth_once';
+
 export const apiClient = createApiClient({
   baseURL: env.apiUrl,
   getToken: () => tokenStorage.get(),
@@ -9,10 +11,20 @@ export const apiClient = createApiClient({
     const hadToken = Boolean(tokenStorage.get());
     tokenStorage.clear();
 
-    // Reload только если сессия реально была — иначе логин с 401
-    // зацикливает экран загрузки у новых пользователей.
-    if (hadToken) {
-      window.location.reload();
+    if (!hadToken) {
+      return;
     }
+
+    // Один автоматический reload за сессию вкладки — без бесконечного цикла.
+    try {
+      if (sessionStorage.getItem(REAUTH_FLAG)) {
+        return;
+      }
+      sessionStorage.setItem(REAUTH_FLAG, '1');
+    } catch {
+      // ignore
+    }
+
+    window.location.reload();
   },
 });
