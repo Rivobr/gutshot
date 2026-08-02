@@ -97,6 +97,19 @@ services:
     networks:
       - gutshot-network
 
+  # Optional named Cloudflare Tunnel (not the temporary trycloudflare quick tunnel).
+  # Requires CLOUDFLARE_TUNNEL_TOKEN and hostnames published in Zero Trust UI.
+  # Start: docker compose --profile cloudflare up -d cloudflared
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: gutshot-cloudflared
+    restart: unless-stopped
+    profiles: ["cloudflare"]
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    network_mode: host
+
 networks:
   gutshot-network:
     driver: bridge
