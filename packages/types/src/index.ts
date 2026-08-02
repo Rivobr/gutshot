@@ -56,6 +56,12 @@ export interface PlayerProfileDto {
     daysInClub: number;
     reEntries: number;
     bounties: number;
+    /** Отметки явки (ARRIVED) — для достижений «посети клуб». */
+    visits: number;
+    /** Финиши в топ-9. */
+    finalTables: number;
+    /** Максимальная серия побед подряд (1 места). */
+    winStreak: number;
   };
 }
 
@@ -346,16 +352,16 @@ export interface LegalDocumentDto {
 
 /** Редактируемый текст достижения (отображение в Mini App). */
 export type AchievementTextId =
-  | 'first_game'
-  | 'regular'
-  | 'first_itm'
-  | 'first_win'
-  | 'three_wins'
-  | 'bounty_hunter'
-  | 'club_week'
+  | 'first_visit'
+  | 'visit_5'
   | 'four_kind'
+  | 'first_knockout'
+  | 'royal_flush'
+  | 'visit_10'
+  | 'first_win'
   | 'straight_flush'
-  | 'royal_flush';
+  | 'final_table'
+  | 'win_streak';
 
 export interface AchievementTextDto {
   id: AchievementTextId;

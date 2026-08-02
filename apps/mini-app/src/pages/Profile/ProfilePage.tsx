@@ -78,12 +78,11 @@ export function ProfilePage(): JSX.Element {
   ];
 
   const achievementCtx: AchievementContext = {
-    tournamentsPlayed: s.tournamentsPlayed,
+    visits: s.visits ?? 0,
     wins: s.wins,
-    itm: s.itm,
-    firstPlaces: s.firstPlaces,
+    finalTables: s.finalTables ?? 0,
+    winStreak: s.winStreak ?? 0,
     bounties: s.bounties ?? 0,
-    daysInClub: s.daysInClub,
     unlockedCodes,
   };
 

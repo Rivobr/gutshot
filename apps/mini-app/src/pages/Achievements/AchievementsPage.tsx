@@ -27,12 +27,11 @@ export function AchievementsPage(): JSX.Element {
   }
 
   const ctx: AchievementContext = {
-    tournamentsPlayed: profile.stats.tournamentsPlayed,
+    visits: profile.stats.visits ?? 0,
     wins: profile.stats.wins,
-    itm: profile.stats.itm,
-    firstPlaces: profile.stats.firstPlaces,
+    finalTables: profile.stats.finalTables ?? 0,
+    winStreak: profile.stats.winStreak ?? 0,
     bounties: profile.stats.bounties ?? 0,
-    daysInClub: profile.stats.daysInClub,
     unlockedCodes: new Set((unlockedAchievements ?? []).map((item) => item.code)),
   };
 
@@ -41,8 +40,16 @@ export function AchievementsPage(): JSX.Element {
   ).length;
 
   return (
-    <div className="flex flex-col pb-8">
-      <div className="px-5 pt-6 pb-4">
+    <div className="flex flex-col pb-8 relative overflow-hidden">
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(ellipse at 80% 0%, rgba(199,154,61,0.12) 0%, transparent 45%), radial-gradient(ellipse at 10% 100%, rgba(199,154,61,0.06) 0%, transparent 40%)',
+        }}
+      />
+
+      <div className="relative px-5 pt-6 pb-4">
         <button
           type="button"
           onClick={() => navigate(-1)}
@@ -58,105 +65,139 @@ export function AchievementsPage(): JSX.Element {
         >
           ← Назад
         </button>
-        <h2 className="serif font-semibold" style={{ fontSize: 24, color: '#F5EDD6' }}>
-          Достижения
+
+        <p
+          className="sans uppercase"
+          style={{ fontSize: 11, color: '#C89A3D', letterSpacing: '0.22em', fontWeight: 600 }}
+        >
+          Система достижений
+        </p>
+        <h2
+          className="serif font-semibold mt-1.5"
+          style={{ fontSize: 26, color: '#F5EDD6', lineHeight: 1.15 }}
+        >
+          Собирай достижения
         </h2>
-        <p className="sans mt-1" style={{ fontSize: 14, color: '#6B614E' }}>
-          Получено {unlockedCount} из {catalog.length} · связаны с XP и уровнем
+        <p className="sans mt-2" style={{ fontSize: 13, color: '#8A7A62', lineHeight: 1.45 }}>
+          Получай XP и повышай уровень в клубе · {unlockedCount} из {catalog.length}
         </p>
       </div>
 
-      <div className="px-5 flex flex-col gap-3">
+      <div className="relative px-4 grid grid-cols-2 gap-2.5">
         {catalog.map((item, index) => {
           const progress = item.getProgress(ctx);
           const done = progress >= item.target;
-          const pct = Math.min(100, Math.round((progress / item.target) * 100));
 
           return (
             <motion.div
               key={item.id}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35, delay: index * 0.04 }}
-              className="vip-card rounded-[18px] p-4"
+              initial={{ opacity: 0, y: 14, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.4, delay: index * 0.04, ease: [0.22, 1, 0.36, 1] }}
+              className="relative rounded-[18px] p-3.5 flex flex-col"
               style={{
-                opacity: done ? 1 : 0.92,
+                minHeight: 168,
+                background: done
+                  ? 'linear-gradient(160deg, rgba(199,154,61,0.18), rgba(14,12,9,0.96))'
+                  : 'linear-gradient(160deg, rgba(28,24,20,0.95), rgba(12,10,8,0.98))',
                 border: done
-                  ? '1px solid rgba(199,154,61,0.35)'
+                  ? '1px solid rgba(247,217,138,0.4)'
                   : '1px solid rgba(199,154,61,0.12)',
+                boxShadow: done ? '0 0 22px rgba(199,154,61,0.12)' : 'none',
               }}
             >
-              <div className="flex items-start gap-3">
+              {!done && (
                 <span
-                  className="shrink-0 flex items-center justify-center rounded-[14px]"
+                  className="absolute top-2.5 right-2.5"
+                  style={{ fontSize: 12, opacity: 0.55 }}
+                >
+                  🔒
+                </span>
+              )}
+
+              <div
+                className="flex items-center justify-center rounded-[14px] mb-3"
+                style={{
+                  width: 48,
+                  height: 48,
+                  fontSize: 24,
+                  background: done
+                    ? 'rgba(199,154,61,0.14)'
+                    : 'rgba(199,154,61,0.05)',
+                  border: '1px solid rgba(199,154,61,0.2)',
+                  filter: done ? 'none' : 'grayscale(1)',
+                  opacity: done ? 1 : 0.55,
+                }}
+              >
+                {item.icon}
+              </div>
+
+              <p
+                className="serif font-semibold uppercase"
+                style={{
+                  fontSize: 13,
+                  color: done ? '#F5EDD6' : '#8A7A62',
+                  letterSpacing: '0.04em',
+                  lineHeight: 1.2,
+                }}
+              >
+                {item.title}
+              </p>
+              <p
+                className="sans mt-1 flex-1"
+                style={{
+                  fontSize: 11,
+                  color: done ? '#C0B49A' : '#5C5346',
+                  lineHeight: 1.35,
+                }}
+              >
+                {item.description}
+              </p>
+
+              <div className="mt-3 flex items-center justify-between gap-2">
+                <span
+                  className="sans num font-semibold"
                   style={{
-                    width: 52,
-                    height: 52,
-                    fontSize: 24,
-                    background: 'rgba(199,154,61,0.08)',
-                    border: '1px solid rgba(199,154,61,0.2)',
-                    filter: done ? 'none' : 'grayscale(0.7)',
+                    fontSize: 12,
+                    color: done ? '#F7D98A' : '#6B614E',
+                    letterSpacing: '0.04em',
                   }}
                 >
-                  {done ? item.icon : '🔒'}
+                  XP {item.xp}
                 </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="serif font-semibold" style={{ fontSize: 18, color: '#F5EDD6' }}>
-                      {item.title}
-                    </p>
-                    <span
-                      className="sans shrink-0"
-                      style={{
-                        fontSize: 12,
-                        color: done ? '#C89A3D' : '#6B614E',
-                        letterSpacing: '0.06em',
-                        fontWeight: 600,
-                      }}
-                    >
-                      {done ? 'Получено' : `${progress}/${item.target}`}
-                    </span>
-                  </div>
-                  <p className="sans mt-1.5" style={{ fontSize: 14, color: '#C0B49A', lineHeight: 1.5 }}>
-                    {item.description}
-                  </p>
-                  <div
-                    className="mt-3 rounded-[14px] px-3 py-2.5"
-                    style={{
-                      background: 'rgba(199,154,61,0.06)',
-                      border: '1px solid rgba(199,154,61,0.16)',
-                    }}
-                  >
-                    <p
-                      className="sans uppercase mb-1"
-                      style={{ fontSize: 11, color: '#C89A3D', letterSpacing: '0.12em' }}
-                    >
-                      Как получить
-                    </p>
-                    <p className="sans" style={{ fontSize: 14, color: '#D8CEBC', lineHeight: 1.55 }}>
-                      {item.howTo}
-                    </p>
-                  </div>
-                  <div
-                    className="mt-3 rounded-full overflow-hidden"
-                    style={{ height: 6, background: 'rgba(199,154,61,0.12)' }}
-                  >
-                    <div
-                      style={{
-                        width: `${pct}%`,
-                        height: '100%',
-                        background: done
-                          ? 'linear-gradient(90deg, #9C6A1F, #C89A3D)'
-                          : 'linear-gradient(90deg, #5a4a2a, #8a7340)',
-                        borderRadius: 99,
-                      }}
-                    />
-                  </div>
-                </div>
+                <span
+                  className="sans"
+                  style={{
+                    fontSize: 10,
+                    color: done ? '#C89A3D' : '#4A4338',
+                    fontWeight: 600,
+                  }}
+                >
+                  {done ? 'Получено' : `${progress}/${item.target}`}
+                </span>
               </div>
             </motion.div>
           );
         })}
+      </div>
+
+      <div
+        className="relative mx-4 mt-5 rounded-[18px] p-4"
+        style={{
+          background: 'linear-gradient(135deg, rgba(199,154,61,0.12), rgba(14,12,9,0.95))',
+          border: '1px solid rgba(199,154,61,0.22)',
+        }}
+      >
+        <p
+          className="sans uppercase"
+          style={{ fontSize: 10, color: '#C89A3D', letterSpacing: '0.14em', fontWeight: 600 }}
+        >
+          Привилегии
+        </p>
+        <p className="sans mt-1.5" style={{ fontSize: 13, color: '#D8CEBC', lineHeight: 1.45 }}>
+          Чем больше достижений — тем выше уровень и больше привилегий: поощрения, приглашения на
+          мероприятия и особый статус.
+        </p>
       </div>
     </div>
   );

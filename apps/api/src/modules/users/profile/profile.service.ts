@@ -44,22 +44,53 @@ export class ProfileService {
     // код дозаполняется здесь и далее уже не меняется.
     const qrCode = user.qrCode ?? (await this.usersService.ensureQrCode(user.id)).qrCode;
 
-    const [tournamentsPlayed, resultsCount, wins, itm, placeAvg, levelProgress] =
-      await Promise.all([
-        this.prisma.registration.count({
-          where: { userId, status: 'FINISHED' },
-        }),
-        this.prisma.tournamentResult.count({ where: { userId } }),
-        this.prisma.tournamentResult.count({ where: { userId, place: 1 } }),
-        this.prisma.tournamentResult.count({
-          where: { userId, place: { lte: 10 } },
-        }),
-        this.prisma.tournamentResult.aggregate({
-          where: { userId },
-          _avg: { place: true },
-        }),
-        this.levelsService.getProgress(user.playerProfile.xp),
-      ]);
+    const [
+      tournamentsPlayed,
+      resultsCount,
+      wins,
+      itm,
+      finalTables,
+      placeAvg,
+      visits,
+      placeHistory,
+      levelProgress,
+    ] = await Promise.all([
+      this.prisma.registration.count({
+        where: { userId, status: 'FINISHED' },
+      }),
+      this.prisma.tournamentResult.count({ where: { userId } }),
+      this.prisma.tournamentResult.count({ where: { userId, place: 1 } }),
+      this.prisma.tournamentResult.count({
+        where: { userId, place: { lte: 10 } },
+      }),
+      this.prisma.tournamentResult.count({
+        where: { userId, place: { lte: 9 } },
+      }),
+      this.prisma.tournamentResult.aggregate({
+        where: { userId },
+        _avg: { place: true },
+      }),
+      this.prisma.playerEvent.count({
+        where: { userId, type: 'ARRIVED' },
+      }),
+      this.prisma.tournamentResult.findMany({
+        where: { userId },
+        select: { place: true, tournament: { select: { date: true } } },
+        orderBy: { tournament: { date: 'asc' } },
+      }),
+      this.levelsService.getProgress(user.playerProfile.xp),
+    ]);
+
+    let winStreak = 0;
+    let currentStreak = 0;
+    for (const row of placeHistory) {
+      if (row.place === 1) {
+        currentStreak += 1;
+        winStreak = Math.max(winStreak, currentStreak);
+      } else {
+        currentStreak = 0;
+      }
+    }
 
     const firstPlaces = wins;
     const top10Percent =
@@ -95,6 +126,9 @@ export class ProfileService {
         daysInClub,
         reEntries: user.playerProfile.reEntries,
         bounties: user.playerProfile.bounties,
+        visits,
+        finalTables,
+        winStreak,
       },
     };
   }
