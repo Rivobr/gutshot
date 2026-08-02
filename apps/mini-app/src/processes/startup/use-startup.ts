@@ -6,8 +6,9 @@ import { tokenStorage } from '../../shared/lib/token-storage';
 
 export type StartupStatus = 'loading' | 'ready' | 'error';
 
-const INIT_WAIT_MS = 2_500;
-const HARD_TIMEOUT_MS = 7_000;
+const INIT_WAIT_MS = 4_000;
+const HARD_TIMEOUT_MS = 25_000;
+const LOGIN_ATTEMPTS = 3;
 
 /** Telegram иногда отдаёт initData не в первый тик после открытия WebApp. */
 export async function waitForInitData(timeoutMs = INIT_WAIT_MS): Promise<string> {
@@ -51,11 +52,31 @@ function extractAuthError(error: unknown): string {
   return 'Не удалось выполнить авторизацию';
 }
 
+function isRetryableNetworkError(error: unknown): boolean {
+  if (!isAxiosError(error)) {
+    return false;
+  }
+  // No HTTP response = TLS/network drop; timeout = ECONNABORTED.
+  return !error.response || error.code === 'ECONNABORTED';
+}
+
 /** Логин по initData. Флаг reauth снимается только после успешного /profile. */
 export async function loginWithTelegramInitData(initData: string): Promise<string> {
-  const response = await authApi.loginWithTelegram(initData);
-  tokenStorage.set(response.accessToken);
-  return response.accessToken;
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= LOGIN_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await authApi.loginWithTelegram(initData);
+      tokenStorage.set(response.accessToken);
+      return response.accessToken;
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableNetworkError(error) || attempt === LOGIN_ATTEMPTS) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 400 * attempt));
+    }
+  }
+  throw lastError;
 }
 
 export function useStartup(): { status: StartupStatus; errorMessage?: string } {
