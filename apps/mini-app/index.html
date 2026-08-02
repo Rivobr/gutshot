@@ -14,19 +14,70 @@
       #boot {
         min-height: 100dvh;
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
+        gap: 14px;
         background: #000;
         color: #8A7A62;
-        font-family: system-ui, sans-serif;
+        font-family: system-ui, -apple-system, sans-serif;
         font-size: 13px;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.06em;
+      }
+      #boot-bar {
+        width: 120px;
+        height: 3px;
+        border-radius: 99px;
+        overflow: hidden;
+        background: rgba(199,154,61,0.12);
+      }
+      #boot-bar > i {
+        display: block;
+        width: 40%;
+        height: 100%;
+        border-radius: 99px;
+        background: linear-gradient(90deg, transparent, #C89A3D, transparent);
+        animation: boot-slide 1.1s ease-in-out infinite;
+      }
+      @keyframes boot-slide {
+        0% { transform: translateX(-120%); }
+        100% { transform: translateX(280%); }
       }
     </style>
+    <!-- Сразу снимаем скелетон Telegram — до загрузки React-бандла -->
+    <script>
+      (function () {
+        try {
+          var tg = window.Telegram && window.Telegram.WebApp;
+          if (tg) {
+            tg.ready();
+            tg.expand();
+            if (tg.setHeaderColor) tg.setHeaderColor('#090909');
+            if (tg.setBackgroundColor) tg.setBackgroundColor('#090909');
+          }
+        } catch (e) {}
+      })();
+    </script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+      (function () {
+        try {
+          var tg = window.Telegram && window.Telegram.WebApp;
+          if (tg) {
+            tg.ready();
+            tg.expand();
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
-    <div id="root"><div id="boot">GUTSHOT</div></div>
+    <div id="root">
+      <div id="boot">
+        <span>GUTSHOT</span>
+        <div id="boot-bar"><i></i></div>
+      </div>
+    </div>
     <script type="module" src="/src/app/main.tsx"></script>
   </body>
 </html>

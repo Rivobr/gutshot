@@ -14,15 +14,13 @@ export default defineConfig({
   },
   build: {
     target: 'es2020',
-    cssCodeSplit: true,
+    // Один JS-чанк надёжнее в Telegram WebView: меньше гонок/404 на медленной сети.
+    cssCodeSplit: false,
     sourcemap: false,
+    modulePreload: { polyfill: true },
     rollupOptions: {
       output: {
-        manualChunks: {
-          react: ['react', 'react-dom', 'react-router-dom'],
-          query: ['@tanstack/react-query'],
-          motion: ['framer-motion'],
-        },
+        inlineDynamicImports: true,
       },
     },
   },
