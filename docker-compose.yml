@@ -52,7 +52,8 @@ services:
       dockerfile: apps/mini-app/Dockerfile
       network: host
       args:
-        VITE_API_URL: ${VITE_API_URL:-https://api.gutshotapp.ru/api/v1}
+        # Same-origin через nginx app.gutshotapp.ru/api → меньше CORS/SSL проблем в iOS WebView
+        VITE_API_URL: ${VITE_API_URL:-https://app.gutshotapp.ru/api/v1}
     container_name: gutshot-mini-app
     restart: unless-stopped
     ports:

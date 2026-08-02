@@ -44,40 +44,123 @@
         100% { transform: translateX(280%); }
       }
     </style>
-    <!-- Сразу снимаем скелетон Telegram — до загрузки React-бандла -->
+    <!--
+      Снимаем нативный скелетон Telegram сразу, без блокирующей загрузки
+      telegram.org/js/telegram-web-app.js. Внутри Telegram bridge уже инжектится
+      клиентом; внешний sync-скрипт на части сетей/WebView зависает навечно
+      и оставляет «четыре квадрата» вместо чёрного boot-экрана.
+    -->
     <script>
       (function () {
-        try {
-          var tg = window.Telegram && window.Telegram.WebApp;
-          if (tg) {
+        var APP_BG = '#090909';
+        var pinged = false;
+
+        // Маяк в access-лог: JS в WebView реально стартовал.
+        function pingBoot(stage) {
+          if (pinged && stage === 'start') return;
+          try {
+            var img = new Image();
+            img.src =
+              '/__boot.gif?s=' +
+              encodeURIComponent(stage) +
+              '&t=' +
+              Date.now() +
+              '&tg=' +
+              (window.Telegram && window.Telegram.WebApp ? '1' : '0');
+            if (stage === 'start') pinged = true;
+          } catch (e) {}
+        }
+
+        function postReadyEvent() {
+          try {
+            // Низкоуровневый сигнал на случай, если WebApp.ready() игнорируется.
+            var wv = window.Telegram && window.Telegram.WebView;
+            if (wv && typeof wv.postEvent === 'function') {
+              wv.postEvent('web_app_ready', {});
+            }
+          } catch (e) {}
+          try {
+            if (window.TelegramWebviewProxy && window.TelegramWebviewProxy.postEvent) {
+              window.TelegramWebviewProxy.postEvent('web_app_ready', '{}');
+            }
+          } catch (e) {}
+        }
+
+        function bootTelegram() {
+          try {
+            var tg = window.Telegram && window.Telegram.WebApp;
+            if (!tg) {
+              // Даже без объекта WebApp пробуем низкоуровневый ready.
+              postReadyEvent();
+              return false;
+            }
+            postReadyEvent();
             tg.ready();
             tg.expand();
-            if (tg.setHeaderColor) tg.setHeaderColor('#090909');
-            if (tg.setBackgroundColor) tg.setBackgroundColor('#090909');
+            try {
+              if (tg.setHeaderColor) tg.setHeaderColor(APP_BG);
+              if (tg.setBackgroundColor) tg.setBackgroundColor(APP_BG);
+              if (tg.setBottomBarColor) tg.setBottomBarColor(APP_BG);
+            } catch (e) {}
+            pingBoot('ready');
+            return true;
+          } catch (e) {
+            pingBoot('ready_error');
+            return false;
           }
-        } catch (e) {}
-      })();
-    </script>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script>
-      (function () {
-        try {
-          var tg = window.Telegram && window.Telegram.WebApp;
-          if (tg) {
-            tg.ready();
-            tg.expand();
-          }
-        } catch (e) {}
+        }
+
+        pingBoot('start');
+        if (!bootTelegram()) {
+          // На части клиентов bridge появляется чуть позже первого тика.
+          var attempts = 0;
+          var timer = setInterval(function () {
+            attempts += 1;
+            if (bootTelegram() || attempts >= 100) {
+              clearInterval(timer);
+              if (attempts >= 100) pingBoot('no_tg');
+            }
+          }, 20);
+        }
+
+        // На части iOS клиентов bridge не инжектится сам — подтягиваем SDK async.
+        // Sync-load нельзя: блокирует первый кадр и оставляет квадраты Telegram.
+        if (!(window.Telegram && window.Telegram.WebApp)) {
+          var s = document.createElement('script');
+          s.src = 'https://telegram.org/js/telegram-web-app.js';
+          s.async = true;
+          s.onload = function () {
+            bootTelegram();
+            pingBoot('sdk_loaded');
+          };
+          s.onerror = function () {
+            pingBoot('sdk_error');
+          };
+          document.head.appendChild(s);
+          pingBoot('sdk_loading');
+        }
       })();
     </script>
   </head>
-  <body>
+  <body style="background:#000;margin:0;">
     <div id="root">
       <div id="boot">
         <span>GUTSHOT</span>
         <div id="boot-bar"><i></i></div>
       </div>
     </div>
+    <script>
+      // Повторный ready после body — страховка для капризных WebView.
+      (function () {
+        try {
+          var tg = window.Telegram && window.Telegram.WebApp;
+          if (tg) {
+            tg.ready();
+            tg.expand();
+          }
+        } catch (e) {}
+      })();
+    </script>
     <script type="module" src="/src/app/main.tsx"></script>
   </body>
 </html>
