@@ -44,30 +44,56 @@
         100% { transform: translateX(280%); }
       }
     </style>
-    <!-- Сразу снимаем скелетон Telegram — до загрузки React-бандла -->
+    <!--
+      Снимаем нативный скелетон Telegram сразу, без блокирующей загрузки
+      telegram.org/js/telegram-web-app.js. Внутри Telegram bridge уже инжектится
+      клиентом; внешний sync-скрипт на части сетей/WebView зависает навечно
+      и оставляет «четыре квадрата» вместо чёрного boot-экрана.
+    -->
     <script>
       (function () {
-        try {
-          var tg = window.Telegram && window.Telegram.WebApp;
-          if (tg) {
+        var APP_BG = '#090909';
+
+        function bootTelegram() {
+          try {
+            var tg = window.Telegram && window.Telegram.WebApp;
+            if (!tg) {
+              return false;
+            }
             tg.ready();
             tg.expand();
-            if (tg.setHeaderColor) tg.setHeaderColor('#090909');
-            if (tg.setBackgroundColor) tg.setBackgroundColor('#090909');
+            if (tg.setHeaderColor) tg.setHeaderColor(APP_BG);
+            if (tg.setBackgroundColor) tg.setBackgroundColor(APP_BG);
+            return true;
+          } catch (e) {
+            return false;
           }
-        } catch (e) {}
-      })();
-    </script>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script>
-      (function () {
-        try {
-          var tg = window.Telegram && window.Telegram.WebApp;
-          if (tg) {
-            tg.ready();
-            tg.expand();
+        }
+
+        if (bootTelegram()) {
+          return;
+        }
+
+        // На части клиентов bridge появляется чуть позже первого тика.
+        var attempts = 0;
+        var timer = setInterval(function () {
+          attempts += 1;
+          if (bootTelegram() || attempts >= 50) {
+            clearInterval(timer);
           }
-        } catch (e) {}
+        }, 20);
+
+        // Вне Telegram (обычный браузер) подгружаем SDK асинхронно — только для отладки.
+        // Внутри Mini App этот файл не нужен и не должен блокировать первый кадр.
+        if (!(window.Telegram && window.Telegram.WebApp)) {
+          var s = document.createElement('script');
+          s.src = 'https://telegram.org/js/telegram-web-app.js';
+          s.async = true;
+          s.onload = function () {
+            bootTelegram();
+          };
+          document.head.appendChild(s);
+        }
       })();
     </script>
   </head>
