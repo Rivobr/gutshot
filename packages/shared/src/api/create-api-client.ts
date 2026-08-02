@@ -19,7 +19,8 @@ export function createApiClient(options: CreateApiClientOptions): AxiosInstance 
   const client = axios.create({
     baseURL: options.baseURL,
     headers: { 'Content-Type': 'application/json' },
-    timeout: 20_000,
+    // Короткий таймаут — лучше ошибка с retry, чем вечный сплэш в Mini App.
+    timeout: 10_000,
   });
 
   client.interceptors.request.use((config) => {

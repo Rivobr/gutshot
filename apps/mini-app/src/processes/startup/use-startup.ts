@@ -6,20 +6,23 @@ import { tokenStorage } from '../../shared/lib/token-storage';
 
 export type StartupStatus = 'loading' | 'ready' | 'error';
 
-const INIT_WAIT_MS = 5_000;
-const HARD_TIMEOUT_MS = 12_000;
+const INIT_WAIT_MS = 2_000;
+const HARD_TIMEOUT_MS = 8_000;
 
 /** Telegram иногда отдаёт initData не в первый тик после открытия WebApp. */
 async function waitForInitData(timeoutMs = INIT_WAIT_MS): Promise<string> {
   const startedAt = Date.now();
+  let initData = getTelegramInitData();
+  if (initData) {
+    return initData;
+  }
 
   while (Date.now() - startedAt < timeoutMs) {
-    const initData = getTelegramInitData();
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    initData = getTelegramInitData();
     if (initData) {
       return initData;
     }
-
-    await new Promise((resolve) => setTimeout(resolve, 50));
   }
 
   return getTelegramInitData();
@@ -44,6 +47,19 @@ function extractAuthError(error: unknown): string {
   return 'Не удалось выполнить авторизацию';
 }
 
+async function refreshSessionInBackground(): Promise<void> {
+  try {
+    const initData = await waitForInitData(1_500);
+    if (!initData) {
+      return;
+    }
+    const response = await authApi.loginWithTelegram(initData);
+    tokenStorage.set(response.accessToken);
+  } catch {
+    // Старый JWT остаётся — следующий запрос профиля решит, жив ли он.
+  }
+}
+
 export function useStartup(): { status: StartupStatus; errorMessage?: string } {
   const [status, setStatus] = useState<StartupStatus>('loading');
   const [errorMessage, setErrorMessage] = useState<string>();
@@ -63,8 +79,12 @@ export function useStartup(): { status: StartupStatus; errorMessage?: string } {
       setStatus(next);
     };
 
-    // Жёсткий таймаут — экран загрузки не должен висеть вечно (часто у 1 клиента).
     const watchdog = window.setTimeout(() => {
+      // Если есть токен — лучше пустить дальше, чем вечный сплэш.
+      if (tokenStorage.get()) {
+        finish('ready');
+        return;
+      }
       finish(
         'error',
         'Загрузка занимает слишком много времени. Закройте мини-приложение и откройте снова через кнопку бота.',
@@ -78,10 +98,14 @@ export function useStartup(): { status: StartupStatus; errorMessage?: string } {
         // chrome API не должен ломать вход
       }
 
-      // Всегда пробуем свежий initData — старый JWT у одного пользователя
-      // иначе оставляет «вечную» загрузку профиля.
-      const initData = await waitForInitData();
+      // Быстрый путь: есть JWT → сразу в приложение, сессию обновим в фоне.
+      if (tokenStorage.get()) {
+        finish('ready');
+        void refreshSessionInBackground();
+        return;
+      }
 
+      const initData = await waitForInitData();
       if (cancelled) {
         return;
       }
@@ -99,17 +123,9 @@ export function useStartup(): { status: StartupStatus; errorMessage?: string } {
           if (cancelled) {
             return;
           }
-          // Если логин не прошёл, но есть старый токен — попробуем с ним.
-          if (!tokenStorage.get()) {
-            finish('error', extractAuthError(error));
-            return;
-          }
+          finish('error', extractAuthError(error));
+          return;
         }
-      }
-
-      if (tokenStorage.get()) {
-        finish('ready');
-        return;
       }
 
       finish(

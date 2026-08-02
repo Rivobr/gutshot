@@ -6,7 +6,9 @@ export function useProfile() {
     queryKey: ['profile'],
     queryFn: playerApi.getProfile,
     retry: 1,
-    staleTime: 30_000,
+    staleTime: 60_000,
+    // Не висеть бесконечно при плохой сети — ConsentGate тоже режет по таймеру.
+    meta: { critical: true },
   });
 }
 

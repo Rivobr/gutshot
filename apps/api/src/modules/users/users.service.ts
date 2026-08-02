@@ -37,10 +37,9 @@ export class UsersService {
   async findOrCreateFromTelegram(telegramUser: TelegramInitDataUser): Promise<User> {
     const telegramId = String(telegramUser.id);
     const existing = await this.findByTelegramId(telegramId);
-    const photoUrl =
-      (await this.telegramService.getUserProfilePhotoUrl(telegramId)) ??
-      telegramUser.photo_url ??
-      null;
+    // Не ждём Bot API за аватар на логине — это главный тормоз входа.
+    // Берём photo_url из initData (если есть), аватар подтягиваем в фоне.
+    const photoFromInit = telegramUser.photo_url ?? null;
 
     if (existing) {
       // Никнейм не трогаем — его меняет только сам игрок.
@@ -51,26 +50,47 @@ export class UsersService {
           username: telegramUser.username,
           firstName: telegramUser.first_name,
           lastName: telegramUser.last_name,
-          photoUrl: photoUrl ?? existing.photoUrl,
+          photoUrl: photoFromInit ?? existing.photoUrl,
           nickname: existing.nickname ?? defaultNickname(telegramUser),
         },
       });
 
+      void this.refreshPhotoInBackground(updated.id, telegramId);
+
       return updated.qrCode ? updated : this.ensureQrCode(updated.id);
     }
 
-    return this.prisma.user.create({
+    const created = await this.prisma.user.create({
       data: {
         telegramId,
         username: telegramUser.username,
         firstName: telegramUser.first_name,
         lastName: telegramUser.last_name,
         nickname: defaultNickname(telegramUser),
-        photoUrl,
+        photoUrl: photoFromInit,
         qrCode: generatePlayerQrCode(),
         playerProfile: { create: { xp: 0 } },
       },
     });
+
+    void this.refreshPhotoInBackground(created.id, telegramId);
+    return created;
+  }
+
+  /** Фоновая подтяжка аватара — не блокирует /auth/telegram. */
+  private async refreshPhotoInBackground(userId: string, telegramId: string): Promise<void> {
+    try {
+      const photoUrl = await this.telegramService.getUserProfilePhotoUrl(telegramId);
+      if (!photoUrl) {
+        return;
+      }
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { photoUrl },
+      });
+    } catch {
+      // ignore — аватар не критичен для входа
+    }
   }
 
   async updateNickname(userId: string, nickname: string): Promise<User> {

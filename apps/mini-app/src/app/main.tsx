@@ -3,8 +3,13 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import './styles/index.css';
 
-createRoot(document.getElementById('root')!).render(
+const root = createRoot(document.getElementById('root')!);
+const tree = import.meta.env.DEV ? (
   <StrictMode>
     <App />
-  </StrictMode>,
+  </StrictMode>
+) : (
+  <App />
 );
+
+root.render(tree);

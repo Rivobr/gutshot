@@ -163,9 +163,13 @@ export class TelegramService {
       return undefined;
     }
 
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2_500);
+
     try {
       const photosResponse = await fetch(
         `https://api.telegram.org/bot${this.botToken}/getUserProfilePhotos?user_id=${encodeURIComponent(telegramId)}&limit=1`,
+        { signal: controller.signal },
       );
       const photosPayload = (await photosResponse.json()) as {
         ok?: boolean;
@@ -180,6 +184,7 @@ export class TelegramService {
 
       const fileResponse = await fetch(
         `https://api.telegram.org/bot${this.botToken}/getFile?file_id=${encodeURIComponent(bestSize.file_id)}`,
+        { signal: controller.signal },
       );
       const filePayload = (await fileResponse.json()) as {
         ok?: boolean;
@@ -194,6 +199,8 @@ export class TelegramService {
     } catch (error) {
       this.logger.warn(`Не удалось получить аватар Telegram ${telegramId}: ${(error as Error).message}`);
       return undefined;
+    } finally {
+      clearTimeout(timer);
     }
   }
 

@@ -1,12 +1,17 @@
+import { useEffect, useState } from 'react';
 import { RouterProvider } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { QueryProvider } from './providers/query-provider';
 import { router } from './router/router';
 import { useStartup } from '../processes/startup/use-startup';
 import { ConsentScreen } from '../pages/Onboarding/ConsentScreen';
 import { useProfile } from '../entities/player';
+import { tournamentApi } from '../entities/tournament/api/tournament.api';
 import { EmptyState, Button } from '@gutshot/ui';
 import { tokenStorage } from '../shared/lib/token-storage';
 import { SplashScreen } from '../widgets/SplashScreen/SplashScreen';
+
+const PROFILE_WAIT_MS = 8_000;
 
 export function App(): JSX.Element {
   const { status, errorMessage } = useStartup();
@@ -46,20 +51,43 @@ export function App(): JSX.Element {
  * на других устройствах — и появляется снова, если админ сбросил согласие.
  */
 function ConsentGate({ children }: { children: JSX.Element }): JSX.Element {
-  const { data: profile, isPending, isError, refetch, failureCount } = useProfile();
+  const queryClient = useQueryClient();
+  const { data: profile, isPending, isError, failureCount } = useProfile();
+  const [timedOut, setTimedOut] = useState(false);
 
-  if (isPending) {
+  useEffect(() => {
+    if (!isPending) {
+      setTimedOut(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setTimedOut(true), PROFILE_WAIT_MS);
+    return () => window.clearTimeout(timer);
+  }, [isPending]);
+
+  // Прогрев главной: турнир подтянется параллельно, пока пользователь на сплэше/согласии.
+  useEffect(() => {
+    if (!profile?.consentAcceptedAt) {
+      return;
+    }
+    void queryClient.prefetchQuery({
+      queryKey: ['tournaments', 'nearest'],
+      queryFn: tournamentApi.getNearest,
+      staleTime: 30_000,
+    });
+  }, [profile?.consentAcceptedAt, queryClient]);
+
+  if (isPending && !timedOut) {
     return <SplashScreen subtitle="Загружаем профиль…" />;
   }
 
-  if (isError || !profile) {
+  if (isError || !profile || timedOut) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-4">
         <EmptyState
           icon="⚠️"
           title="Не удалось загрузить профиль"
           description={
-            failureCount > 1
+            timedOut || failureCount > 1
               ? 'Сессия могла устареть. Нажмите «Повторить» или откройте бота заново.'
               : 'Проверьте соединение и попробуйте снова'
           }
@@ -67,11 +95,7 @@ function ConsentGate({ children }: { children: JSX.Element }): JSX.Element {
         <Button
           onClick={() => {
             tokenStorage.clear();
-            void refetch().then((result) => {
-              if (result.isError) {
-                window.location.reload();
-              }
-            });
+            window.location.reload();
           }}
         >
           Повторить
