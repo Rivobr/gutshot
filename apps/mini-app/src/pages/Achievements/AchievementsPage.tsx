@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
-import { motion } from 'framer-motion';
+import { useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Loader } from '@gutshot/ui';
 import {
@@ -10,6 +11,7 @@ import {
 import {
   mergeAchievementTexts,
   type AchievementContext,
+  type AchievementDef,
 } from '../../shared/lib/achievements-catalog';
 import { AchievementMedallion } from '../../shared/ui/AchievementMedallion';
 
@@ -18,6 +20,7 @@ export function AchievementsPage(): JSX.Element {
   const { data: profile, isLoading } = useProfile();
   const { data: unlockedAchievements } = useAchievements();
   const { data: achievementTexts } = useAchievementTexts();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const catalog = useMemo(
     () => mergeAchievementTexts(achievementTexts),
     [achievementTexts],
@@ -40,6 +43,12 @@ export function AchievementsPage(): JSX.Element {
     (item) => item.getProgress(ctx) >= item.target,
   ).length;
 
+  const selected = selectedId
+    ? catalog.find((item) => item.id === selectedId) ?? null
+    : null;
+  const selectedProgress = selected ? selected.getProgress(ctx) : 0;
+  const selectedDone = selected ? selectedProgress >= selected.target : false;
+
   return (
     <div
       className="flex flex-col pb-10 relative overflow-hidden min-h-full"
@@ -48,7 +57,6 @@ export function AchievementsPage(): JSX.Element {
           'radial-gradient(ellipse at 50% 0%, rgba(90,55,12,0.45) 0%, transparent 42%), linear-gradient(180deg, #120e09 0%, #090907 40%, #0c0a08 100%)',
       }}
     >
-      {/* текстура постера */}
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.07]"
         style={{
@@ -129,8 +137,10 @@ export function AchievementsPage(): JSX.Element {
           const done = progress >= item.target;
 
           return (
-            <motion.div
+            <motion.button
               key={item.id}
+              type="button"
+              onClick={() => setSelectedId(item.id)}
               initial={{ opacity: 0, y: 16, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{
@@ -138,10 +148,12 @@ export function AchievementsPage(): JSX.Element {
                 delay: 0.05 + index * 0.035,
                 ease: [0.22, 1, 0.36, 1],
               }}
+              whileTap={{ scale: 0.97 }}
               className="relative flex flex-col items-center text-center px-2.5 pt-3.5 pb-3"
               style={{
                 minHeight: 178,
                 borderRadius: 16,
+                cursor: 'pointer',
                 background: done
                   ? 'linear-gradient(165deg, rgba(72,48,14,0.75) 0%, rgba(18,14,10,0.96) 55%, rgba(10,8,6,0.98) 100%)'
                   : 'linear-gradient(165deg, rgba(32,26,18,0.92) 0%, rgba(12,10,8,0.98) 100%)',
@@ -210,7 +222,7 @@ export function AchievementsPage(): JSX.Element {
                   {progress}/{item.target}
                 </p>
               )}
-            </motion.div>
+            </motion.button>
           );
         })}
       </div>
@@ -235,6 +247,133 @@ export function AchievementsPage(): JSX.Element {
           Чем больше достижений — тем выше уровень и больше привилегий в клубе.
         </p>
       </motion.div>
+
+      {createPortal(
+        <AnimatePresence>
+          {selected && (
+            <AchievementHowToModal
+              item={selected}
+              progress={selectedProgress}
+              done={selectedDone}
+              onClose={() => setSelectedId(null)}
+            />
+          )}
+        </AnimatePresence>,
+        document.body,
+      )}
     </div>
+  );
+}
+
+function AchievementHowToModal({
+  item,
+  progress,
+  done,
+  onClose,
+}: {
+  item: AchievementDef;
+  progress: number;
+  done: boolean;
+  onClose: () => void;
+}): JSX.Element {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 flex items-center justify-center px-4"
+      style={{
+        zIndex: 1000,
+        background: 'rgba(0,0,0,0.72)',
+        paddingTop: 'max(16px, env(safe-area-inset-top))',
+        paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
+      }}
+      onClick={onClose}
+    >
+      <motion.div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="achievement-howto-title"
+        initial={{ y: 40, opacity: 0, scale: 0.97 }}
+        animate={{ y: 0, opacity: 1, scale: 1 }}
+        exit={{ y: 24, opacity: 0, scale: 0.98 }}
+        transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+        onClick={(event) => event.stopPropagation()}
+        className="w-full max-w-md rounded-[22px] p-5"
+        style={{
+          background: 'linear-gradient(180deg, #1A1610 0%, #0E0C09 100%)',
+          border: '1px solid rgba(199,154,61,0.28)',
+          boxShadow: '0 20px 50px rgba(0,0,0,0.55)',
+        }}
+      >
+        <div className="flex flex-col items-center text-center">
+          <AchievementMedallion id={item.id} locked={!done} size={88} />
+          <h3
+            id="achievement-howto-title"
+            className="serif font-semibold uppercase mt-3"
+            style={{ fontSize: 18, color: '#F5EDD6', letterSpacing: '0.04em' }}
+          >
+            {item.title}
+          </h3>
+          <p className="sans mt-1" style={{ fontSize: 12, color: '#8A7A62' }}>
+            {item.description}
+          </p>
+          <div className="mt-2 flex items-center gap-3">
+            <span
+              className="sans num font-semibold"
+              style={{ fontSize: 13, color: '#F7D98A', letterSpacing: '0.06em' }}
+            >
+              XP {item.xp}
+            </span>
+            <span
+              className="sans"
+              style={{
+                fontSize: 11,
+                color: done ? '#C89A3D' : '#6B614E',
+                fontWeight: 600,
+              }}
+            >
+              {done ? 'Получено' : `${progress}/${item.target}`}
+            </span>
+          </div>
+        </div>
+
+        <div
+          className="mt-4 rounded-[16px] px-3.5 py-3"
+          style={{
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(199,154,61,0.16)',
+          }}
+        >
+          <p
+            className="sans uppercase"
+            style={{ fontSize: 10, color: '#C89A3D', letterSpacing: '0.14em', fontWeight: 700 }}
+          >
+            Как открыть
+          </p>
+          <p
+            className="sans mt-2"
+            style={{ fontSize: 13, color: '#D8CEBC', lineHeight: 1.55 }}
+          >
+            {item.howTo}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-full mt-4 py-3 rounded-[14px] sans font-semibold"
+          style={{
+            background: 'linear-gradient(135deg,#9C6A1F,#C89A3D)',
+            border: 'none',
+            color: '#0A0A0A',
+            fontSize: 13,
+            cursor: 'pointer',
+          }}
+        >
+          Понятно
+        </button>
+      </motion.div>
+    </motion.div>
   );
 }
