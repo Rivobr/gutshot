@@ -61,18 +61,15 @@ export function useAchievementTexts() {
   });
 }
 
-export function useAcceptConsent() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async () => {
-      try {
-        return await playerApi.acceptConsent();
-      } catch (error) {
-        // Протухший JWT на экране согласия — перелогин и один повтор.
-        if (!isAxiosError(error) || error.response?.status !== 401) {
-          throw error;
-        }
+async function acceptConsentWithRetry(): Promise<{ consentAcceptedAt: string }> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      return await playerApi.acceptConsent();
+    } catch (error) {
+      lastError = error;
+      // Протухший JWT на экране согласия — перелогин и повтор.
+      if (isAxiosError(error) && error.response?.status === 401) {
         const initData = getTelegramInitData();
         if (!initData) {
           throw error;
@@ -80,7 +77,23 @@ export function useAcceptConsent() {
         await loginWithTelegramInitData(initData);
         return playerApi.acceptConsent();
       }
-    },
+      // Сетевой обрыв (часто iOS WebView + SSL keepalive) — короткая пауза и повтор.
+      const isNetwork =
+        isAxiosError(error) && !error.response;
+      if (!isNetwork || attempt === 3) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 350 * attempt));
+    }
+  }
+  throw lastError;
+}
+
+export function useAcceptConsent() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => acceptConsentWithRetry(),
     onSuccess: (result) => {
       queryClient.setQueryData(['profile'], (current: PlayerProfileDto | undefined) => {
         if (!current) {

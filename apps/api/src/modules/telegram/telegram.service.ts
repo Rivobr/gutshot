@@ -70,6 +70,15 @@ export class TelegramService {
 
     // Снимаем старую reply-клавиатуру («Открыть клуб»), если она уже была у пользователя.
     const removeKeyboard = { remove_keyboard: true };
+    const miniAppUrl = (
+      this.configService.get<string>('telegram.miniAppUrl')?.trim() ||
+      'https://app.gutshotapp.ru'
+    ).replace(/\/$/, '');
+    const openAppKeyboard = {
+      inline_keyboard: [
+        [{ text: '♠️ Открыть GUTSHOT', web_app: { url: miniAppUrl } }],
+      ],
+    };
 
     try {
       const photoSent = await this.sendWelcomePhoto(chatId);
@@ -77,9 +86,15 @@ export class TelegramService {
         this.logger.warn(`Welcome photo не отправлено в chat ${chatId}, шлём только текст`);
       }
 
-      const textOk = await this.sendMessage(chatId, WELCOME_CAPTION, removeKeyboard);
-      if (!textOk) {
-        this.logger.error(`Welcome text не отправлен в chat ${chatId}`);
+      // Сначала убираем старую reply-клавиатуру, затем шлём кнопку web_app.
+      await this.sendMessage(chatId, WELCOME_CAPTION, removeKeyboard);
+      const buttonOk = await this.sendMessage(
+        chatId,
+        'Нажмите кнопку, чтобы открыть приложение:',
+        openAppKeyboard,
+      );
+      if (!buttonOk) {
+        this.logger.error(`Welcome button не отправлена в chat ${chatId}`);
         return false;
       }
 
@@ -87,7 +102,7 @@ export class TelegramService {
       return true;
     } catch (error) {
       this.logger.error(`Ошибка отправки welcome в chat ${chatId}`, error as Error);
-      return this.sendMessage(chatId, WELCOME_CAPTION, removeKeyboard);
+      return this.sendMessage(chatId, WELCOME_CAPTION, openAppKeyboard);
     }
   }
 
