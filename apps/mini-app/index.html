@@ -53,6 +53,23 @@
     <script>
       (function () {
         var APP_BG = '#090909';
+        var pinged = false;
+
+        // Маяк в access-лог: JS в WebView реально стартовал.
+        function pingBoot(stage) {
+          if (pinged && stage === 'start') return;
+          try {
+            var img = new Image();
+            img.src =
+              '/__boot.gif?s=' +
+              encodeURIComponent(stage) +
+              '&t=' +
+              Date.now() +
+              '&tg=' +
+              (window.Telegram && window.Telegram.WebApp ? '1' : '0');
+            if (stage === 'start') pinged = true;
+          } catch (e) {}
+        }
 
         function bootTelegram() {
           try {
@@ -62,29 +79,33 @@
             }
             tg.ready();
             tg.expand();
-            if (tg.setHeaderColor) tg.setHeaderColor(APP_BG);
-            if (tg.setBackgroundColor) tg.setBackgroundColor(APP_BG);
+            try {
+              if (tg.setHeaderColor) tg.setHeaderColor(APP_BG);
+              if (tg.setBackgroundColor) tg.setBackgroundColor(APP_BG);
+              if (tg.setBottomBarColor) tg.setBottomBarColor(APP_BG);
+            } catch (e) {}
+            pingBoot('ready');
             return true;
           } catch (e) {
+            pingBoot('ready_error');
             return false;
           }
         }
 
-        if (bootTelegram()) {
-          return;
+        pingBoot('start');
+        if (!bootTelegram()) {
+          // На части клиентов bridge появляется чуть позже первого тика.
+          var attempts = 0;
+          var timer = setInterval(function () {
+            attempts += 1;
+            if (bootTelegram() || attempts >= 100) {
+              clearInterval(timer);
+              if (attempts >= 100) pingBoot('no_tg');
+            }
+          }, 20);
         }
 
-        // На части клиентов bridge появляется чуть позже первого тика.
-        var attempts = 0;
-        var timer = setInterval(function () {
-          attempts += 1;
-          if (bootTelegram() || attempts >= 50) {
-            clearInterval(timer);
-          }
-        }, 20);
-
         // Вне Telegram (обычный браузер) подгружаем SDK асинхронно — только для отладки.
-        // Внутри Mini App этот файл не нужен и не должен блокировать первый кадр.
         if (!(window.Telegram && window.Telegram.WebApp)) {
           var s = document.createElement('script');
           s.src = 'https://telegram.org/js/telegram-web-app.js';
@@ -97,13 +118,25 @@
       })();
     </script>
   </head>
-  <body>
+  <body style="background:#000;margin:0;">
     <div id="root">
       <div id="boot">
         <span>GUTSHOT</span>
         <div id="boot-bar"><i></i></div>
       </div>
     </div>
+    <script>
+      // Повторный ready после body — страховка для капризных WebView.
+      (function () {
+        try {
+          var tg = window.Telegram && window.Telegram.WebApp;
+          if (tg) {
+            tg.ready();
+            tg.expand();
+          }
+        } catch (e) {}
+      })();
+    </script>
     <script type="module" src="/src/app/main.tsx"></script>
   </body>
 </html>

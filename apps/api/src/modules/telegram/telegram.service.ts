@@ -70,6 +70,20 @@ export class TelegramService {
 
     // Снимаем старую reply-клавиатуру («Открыть клуб»), если она уже была у пользователя.
     const removeKeyboard = { remove_keyboard: true };
+    const miniAppUrl = (
+      this.configService.get<string>('telegram.miniAppUrl') ?? 'https://app.gutshotapp.ru'
+    ).replace(/\/$/, '');
+    // Inline web_app-кнопка с cache-bust — обходит залипший Main Mini App / menu cache.
+    const openAppKeyboard = {
+      inline_keyboard: [
+        [
+          {
+            text: 'Открыть клуб',
+            web_app: { url: `${miniAppUrl}/?v=${Date.now()}` },
+          },
+        ],
+      ],
+    };
 
     try {
       const photoSent = await this.sendWelcomePhoto(chatId);
@@ -82,6 +96,9 @@ export class TelegramService {
         this.logger.error(`Welcome text не отправлен в chat ${chatId}`);
         return false;
       }
+
+      // Отдельное сообщение с кнопкой Mini App — самый надёжный вход для проблемных клиентов.
+      await this.sendMessage(chatId, 'Нажмите кнопку, чтобы открыть приложение:', openAppKeyboard);
 
       this.logger.log(`Welcome отправлен в chat ${chatId}`);
       return true;
