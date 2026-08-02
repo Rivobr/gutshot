@@ -7,8 +7,7 @@ import { tokenStorage } from '../../shared/lib/token-storage';
 export type StartupStatus = 'loading' | 'ready' | 'error';
 
 const INIT_WAIT_MS = 2_500;
-const HARD_TIMEOUT_MS = 8_000;
-const REAUTH_FLAG = 'gutshot_reauth_once';
+const HARD_TIMEOUT_MS = 7_000;
 
 /** Telegram иногда отдаёт initData не в первый тик после открытия WebApp. */
 export async function waitForInitData(timeoutMs = INIT_WAIT_MS): Promise<string> {
@@ -52,20 +51,11 @@ function extractAuthError(error: unknown): string {
   return 'Не удалось выполнить авторизацию';
 }
 
-/** Логин по initData; при успехе сбрасывает флаг анти-цикла reload. */
+/** Логин по initData. Флаг reauth снимается только после успешного /profile. */
 export async function loginWithTelegramInitData(initData: string): Promise<string> {
   const response = await authApi.loginWithTelegram(initData);
   tokenStorage.set(response.accessToken);
-  try {
-    sessionStorage.removeItem(REAUTH_FLAG);
-  } catch {
-    // ignore
-  }
   return response.accessToken;
-}
-
-function extractAuthErrorMessage(error: unknown): string {
-  return extractAuthError(error);
 }
 
 export function useStartup(): { status: StartupStatus; errorMessage?: string } {
@@ -105,8 +95,7 @@ export function useStartup(): { status: StartupStatus; errorMessage?: string } {
         // chrome API не должен ломать вход
       }
 
-      // 1) Свежий initData важнее старого JWT — иначе старые юзеры
-      //    уезжают в 401 → reload → снова мёртвый токен.
+      // Всегда предпочитаем свежий initData.
       const immediateInit = getTelegramInitData();
       if (immediateInit) {
         try {
@@ -123,13 +112,12 @@ export function useStartup(): { status: StartupStatus; errorMessage?: string } {
             return;
           }
           if (!cancelled) {
-            finish('error', extractAuthErrorMessage(error));
+            finish('error', extractAuthError(error));
           }
           return;
         }
       }
 
-      // 2) initData ещё нет — если есть токен, пускаем дальше и ждём initData в фоне.
       if (tokenStorage.get()) {
         finish('ready');
         void (async () => {
@@ -145,7 +133,6 @@ export function useStartup(): { status: StartupStatus; errorMessage?: string } {
         return;
       }
 
-      // 3) Новые пользователи без токена — ждём initData.
       const initData = await waitForInitData();
       if (cancelled) {
         return;
@@ -160,7 +147,7 @@ export function useStartup(): { status: StartupStatus; errorMessage?: string } {
           return;
         } catch (error) {
           if (!cancelled) {
-            finish('error', extractAuthErrorMessage(error));
+            finish('error', extractAuthError(error));
           }
           return;
         }

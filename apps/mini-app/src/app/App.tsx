@@ -1,17 +1,23 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { RouterProvider } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { QueryProvider } from './providers/query-provider';
 import { router } from './router/router';
-import { useStartup } from '../processes/startup/use-startup';
+import {
+  loginWithTelegramInitData,
+  useStartup,
+  waitForInitData,
+} from '../processes/startup/use-startup';
 import { ConsentScreen } from '../pages/Onboarding/ConsentScreen';
 import { useProfile } from '../entities/player';
 import { tournamentApi } from '../entities/tournament/api/tournament.api';
 import { EmptyState, Button } from '@gutshot/ui';
+import { clearReauthFlag } from '../shared/api/client';
 import { tokenStorage } from '../shared/lib/token-storage';
+import { getTelegramInitData } from '../shared/lib/telegram';
 import { SplashScreen } from '../widgets/SplashScreen/SplashScreen';
 
-const PROFILE_WAIT_MS = 8_000;
+const PROFILE_WAIT_MS = 6_000;
 
 export function App(): JSX.Element {
   const { status, errorMessage } = useStartup();
@@ -27,6 +33,7 @@ export function App(): JSX.Element {
         <Button
           onClick={() => {
             tokenStorage.clear();
+            clearReauthFlag();
             window.location.reload();
           }}
         >
@@ -45,26 +52,28 @@ export function App(): JSX.Element {
   );
 }
 
-/**
- * Приветственный экран показывается, пока игрок не принял соглашения.
- * Факт принятия хранится в БД, поэтому экран не появляется повторно
- * на других устройствах — и появляется снова, если админ сбросил согласие.
- */
 function ConsentGate({ children }: { children: JSX.Element }): JSX.Element {
   const queryClient = useQueryClient();
-  const { data: profile, isPending, isError, failureCount } = useProfile();
+  const { data: profile, isPending, isError, isFetching, refetch } = useProfile();
   const [timedOut, setTimedOut] = useState(false);
+  const [recovering, setRecovering] = useState(false);
+  const recoveryTried = useRef(false);
 
   useEffect(() => {
-    if (!isPending) {
+    if (!isPending && !isFetching && !recovering) {
       setTimedOut(false);
       return;
     }
     const timer = window.setTimeout(() => setTimedOut(true), PROFILE_WAIT_MS);
     return () => window.clearTimeout(timer);
-  }, [isPending]);
+  }, [isPending, isFetching, recovering]);
 
-  // Прогрев главной: турнир подтянется параллельно, пока пользователь на сплэше/согласии.
+  useEffect(() => {
+    if (profile?.id) {
+      clearReauthFlag();
+    }
+  }, [profile?.id]);
+
   useEffect(() => {
     if (!profile?.consentAcceptedAt) {
       return;
@@ -76,7 +85,31 @@ function ConsentGate({ children }: { children: JSX.Element }): JSX.Element {
     });
   }, [profile?.consentAcceptedAt, queryClient]);
 
-  if (isPending && !timedOut) {
+  // Один тихий recovery без reload: перелогин по initData + повтор профиля.
+  useEffect(() => {
+    if (!isError || profile || recoveryTried.current) {
+      return;
+    }
+    recoveryTried.current = true;
+    setRecovering(true);
+
+    void (async () => {
+      try {
+        const initData = getTelegramInitData() || (await waitForInitData(1_500));
+        if (!initData) {
+          return;
+        }
+        await loginWithTelegramInitData(initData);
+        await refetch();
+      } catch {
+        // UI покажет кнопку «Повторить»
+      } finally {
+        setRecovering(false);
+      }
+    })();
+  }, [isError, profile, refetch]);
+
+  if ((isPending || recovering) && !timedOut) {
     return <SplashScreen subtitle="Загружаем профиль…" />;
   }
 
@@ -86,15 +119,12 @@ function ConsentGate({ children }: { children: JSX.Element }): JSX.Element {
         <EmptyState
           icon="⚠️"
           title="Не удалось загрузить профиль"
-          description={
-            timedOut || failureCount > 1
-              ? 'Сессия могла устареть. Нажмите «Повторить» или откройте бота заново.'
-              : 'Проверьте соединение и попробуйте снова'
-          }
+          description="Сессия могла устареть или сервер не ответил. Нажмите «Повторить»."
         />
         <Button
           onClick={() => {
             tokenStorage.clear();
+            clearReauthFlag();
             window.location.reload();
           }}
         >

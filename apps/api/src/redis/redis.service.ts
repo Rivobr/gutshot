@@ -12,15 +12,36 @@ export class RedisService extends Redis implements OnModuleInit, OnModuleDestroy
       port: configService.get<number>('redis.port'),
       password: configService.get<string>('redis.password') || undefined,
       lazyConnect: true,
+      // Без этого при обрыве Redis команды висят вечно → вечный сплэш профиля.
+      enableOfflineQueue: false,
+      maxRetriesPerRequest: 1,
+      connectTimeout: 2_000,
+      commandTimeout: 1_500,
+      retryStrategy: (times) => Math.min(times * 200, 2_000),
+    });
+
+    this.on('error', (error) => {
+      this.logger.warn(`Redis error: ${error.message}`);
     });
   }
 
   async onModuleInit(): Promise<void> {
-    await this.connect();
-    this.logger.log('Redis connection established');
+    try {
+      await this.connect();
+      this.logger.log('Redis connection established');
+    } catch (error) {
+      // API должен жить без Redis: blacklist/кэш деградируют, но логин работает.
+      this.logger.error(
+        `Redis недоступен при старте: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 
   async onModuleDestroy(): Promise<void> {
-    this.disconnect();
+    try {
+      this.disconnect();
+    } catch {
+      // ignore
+    }
   }
 }

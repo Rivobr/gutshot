@@ -16,12 +16,27 @@ export class ProfileService {
   ) {}
 
   async getProfile(userId: string) {
-    const user = await this.prisma.user.findUnique({
+    let user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: { playerProfile: true },
     });
 
-    if (!user || !user.playerProfile) {
+    if (!user) {
+      throw new NotFoundException('Профиль не найден');
+    }
+
+    // Старые/битые записи без PlayerProfile — чиним на лету, иначе 404 и «вечная» ошибка входа.
+    if (!user.playerProfile) {
+      await this.prisma.playerProfile.create({
+        data: { userId: user.id, xp: 0 },
+      });
+      user = await this.prisma.user.findUniqueOrThrow({
+        where: { id: userId },
+        include: { playerProfile: true },
+      });
+    }
+
+    if (!user.playerProfile) {
       throw new NotFoundException('Профиль не найден');
     }
 

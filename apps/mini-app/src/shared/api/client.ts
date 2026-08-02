@@ -15,7 +15,8 @@ export const apiClient = createApiClient({
       return;
     }
 
-    // Один автоматический reload за сессию вкладки — без бесконечного цикла.
+    // Один reload за сессию. Флаг НЕ снимаем при логине — только после
+    // успешной загрузки профиля, иначе login→401→reload крутится вечно.
     try {
       if (sessionStorage.getItem(REAUTH_FLAG)) {
         return;
@@ -28,3 +29,11 @@ export const apiClient = createApiClient({
     window.location.reload();
   },
 });
+
+export function clearReauthFlag(): void {
+  try {
+    sessionStorage.removeItem(REAUTH_FLAG);
+  } catch {
+    // ignore
+  }
+}

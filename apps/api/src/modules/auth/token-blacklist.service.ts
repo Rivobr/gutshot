@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { RedisService } from '../../redis/redis.service';
 
@@ -6,6 +6,8 @@ const BLACKLIST_PREFIX = 'auth:blacklist:';
 
 @Injectable()
 export class TokenBlacklistService {
+  private readonly logger = new Logger(TokenBlacklistService.name);
+
   constructor(
     private readonly redis: RedisService,
     private readonly jwtService: JwtService,
@@ -16,26 +18,46 @@ export class TokenBlacklistService {
    * Если токен уже истек — ничего не делает.
    */
   async revoke(token: string): Promise<void> {
-    const decoded = this.jwtService.decode(token) as { exp?: number } | null;
+    try {
+      const decoded = this.jwtService.decode(token) as { exp?: number } | null;
 
-    if (!decoded?.exp) {
-      // Нет срока действия — храним фиксированные 24 часа.
-      await this.redis.set(this.key(token), '1', 'EX', 60 * 60 * 24);
-      return;
+      if (!decoded?.exp) {
+        await this.redis.set(this.key(token), '1', 'EX', 60 * 60 * 24);
+        return;
+      }
+
+      const ttlSeconds = decoded.exp - Math.floor(Date.now() / 1000);
+
+      if (ttlSeconds <= 0) {
+        return;
+      }
+
+      await this.redis.set(this.key(token), '1', 'EX', ttlSeconds);
+    } catch (error) {
+      this.logger.warn(
+        `Не удалось отозвать токен в Redis: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
     }
-
-    const ttlSeconds = decoded.exp - Math.floor(Date.now() / 1000);
-
-    if (ttlSeconds <= 0) {
-      return;
-    }
-
-    await this.redis.set(this.key(token), '1', 'EX', ttlSeconds);
   }
 
+  /**
+   * Fail-open: если Redis лежит/тормозит — считаем токен валидным.
+   * Иначе каждый /profile зависает и Mini App показывает вечную загрузку.
+   */
   async isRevoked(token: string): Promise<boolean> {
-    const value = await this.redis.get(this.key(token));
-    return value !== null;
+    try {
+      const value = await this.redis.get(this.key(token));
+      return value !== null;
+    } catch (error) {
+      this.logger.warn(
+        `Redis blacklist check failed (fail-open): ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      return false;
+    }
   }
 
   private key(token: string): string {

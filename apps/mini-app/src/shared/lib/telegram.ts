@@ -76,18 +76,8 @@ export function configureTelegramChrome(): void {
     // optional
   }
 
-  const requestFullscreen = webApp.requestFullscreen;
-  const canFullscreen =
-    typeof requestFullscreen === 'function' &&
-    (webApp.isVersionAtLeast?.('8.0') ?? true);
-
-  if (canFullscreen && !webApp.isFullscreen) {
-    try {
-      requestFullscreen.call(webApp);
-    } catch {
-      // Пользователь/клиент может отклонить fullscreen — остаётся тёмная шапка.
-    }
-  }
+  // requestFullscreen на части Android/Telegram WebView зависает навечно —
+  // не вызываем автоматически.
 
   applyTopInset(webApp);
   webApp.onEvent?.('safeAreaChanged', () => applyTopInset(webApp));
