@@ -52,7 +52,8 @@ services:
       dockerfile: apps/mini-app/Dockerfile
       network: host
       args:
-        VITE_API_URL: ${VITE_API_URL:-https://api.gutshotapp.ru/api/v1}
+        # Same-origin so Mini App works behind Cloudflare/alternate HTTPS fronts.
+        VITE_API_URL: ${VITE_API_URL:-/api/v1}
     container_name: gutshot-mini-app
     restart: unless-stopped
     ports:
