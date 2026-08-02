@@ -29,7 +29,10 @@ export class TelegramBotBootstrap implements OnModuleInit {
       return;
     }
 
-    const ok = await this.telegramService.setWebhook(webhookUrl);
+    const ok = await this.withRetries(
+      () => this.telegramService.setWebhook(webhookUrl),
+      `setWebhook ${webhookUrl}`,
+    );
     if (!ok) {
       this.logger.error(`Не удалось установить webhook: ${webhookUrl}`);
     }
@@ -42,10 +45,33 @@ export class TelegramBotBootstrap implements OnModuleInit {
       return;
     }
 
-    const menuOk = await this.telegramService.setChatMenuButton(miniAppUrl);
+    const menuOk = await this.withRetries(
+      () => this.telegramService.setChatMenuButton(miniAppUrl),
+      `setChatMenuButton ${miniAppUrl}`,
+    );
     if (!menuOk) {
       this.logger.error(`Не удалось установить menu button: ${miniAppUrl}`);
     }
+  }
+
+  /** Telegram API иногда недоступен в момент старта контейнера — пробуем несколько раз. */
+  private async withRetries(
+    action: () => Promise<boolean>,
+    label: string,
+    attempts = 5,
+  ): Promise<boolean> {
+    for (let i = 1; i <= attempts; i += 1) {
+      const ok = await action();
+      if (ok) {
+        return true;
+      }
+      if (i < attempts) {
+        const delayMs = Math.min(8000, 500 * 2 ** (i - 1));
+        this.logger.warn(`${label}: попытка ${i}/${attempts} не удалась, повтор через ${delayMs}ms`);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+    return false;
   }
 
   private resolveMiniAppUrl(): string | undefined {
