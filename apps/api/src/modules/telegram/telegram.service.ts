@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { WELCOME_CAPTION } from './welcome-message';
@@ -11,7 +12,10 @@ export class TelegramService {
   private readonly webhookSecret: string | undefined;
   private welcomePhotoFileId: string | undefined;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly jwtService: JwtService,
+  ) {
     this.botToken = this.configService.get<string>('telegram.botToken');
     this.webhookSecret = this.configService.get<string>('telegram.webhookSecret');
   }
@@ -71,12 +75,17 @@ export class TelegramService {
     // Снимаем старую reply-клавиатуру («Открыть клуб»), если она уже была у пользователя.
     const removeKeyboard = { remove_keyboard: true };
     const miniAppUrl = (
+      this.configService.get<string>('telegram.miniAppPublicUrl')?.trim() ||
       this.configService.get<string>('telegram.miniAppUrl')?.trim() ||
       'https://app.gutshotapp.ru'
     ).replace(/\/$/, '');
-    // boot.html: tiny page that auths BEFORE loading the 500KB SPA bundle.
-    // Large JS-first entry often dies on TLS keepalive before /auth/telegram.
-    const entryUrl = `${miniAppUrl}/boot.html?t=${Date.now()}`;
+    // boot.html + per-user ticket: some WebViews (CF tunnel) omit initData;
+    // ticket lets boot.html auth without Telegram.WebApp.initData.
+    const ticket = this.jwtService.sign(
+      { typ: 'miniapp_ticket', telegramId: String(chatId) },
+      { expiresIn: '15m' },
+    );
+    const entryUrl = `${miniAppUrl}/boot.html?t=${Date.now()}&ticket=${encodeURIComponent(ticket)}`;
     const openAppKeyboard = {
       inline_keyboard: [
         [{ text: '♠️ Открыть GUTSHOT', web_app: { url: entryUrl } }],
