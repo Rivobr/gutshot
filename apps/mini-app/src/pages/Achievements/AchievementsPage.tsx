@@ -171,7 +171,7 @@ export function AchievementsPage(): JSX.Element {
                 </span>
               )}
 
-              <AchievementMedallion id={item.id} locked={!done} size={58} />
+              <AchievementMedallion id={item.id} locked={!done} size={72} />
 
               <p
                 className="serif font-semibold uppercase mt-2.5"
