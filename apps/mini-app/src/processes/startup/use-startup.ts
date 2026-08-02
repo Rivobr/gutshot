@@ -7,8 +7,9 @@ import { tokenStorage } from '../../shared/lib/token-storage';
 export type StartupStatus = 'loading' | 'ready' | 'error';
 
 const INIT_WAIT_MS = 4_000;
-const HARD_TIMEOUT_MS = 25_000;
-const LOGIN_ATTEMPTS = 3;
+/** Must exceed worst-case login retries (attempts × axios timeout). */
+const HARD_TIMEOUT_MS = 90_000;
+const LOGIN_ATTEMPTS = 4;
 
 /** Telegram иногда отдаёт initData не в первый тик после открытия WebApp. */
 export async function waitForInitData(timeoutMs = INIT_WAIT_MS): Promise<string> {
@@ -56,7 +57,6 @@ function isRetryableNetworkError(error: unknown): boolean {
   if (!isAxiosError(error)) {
     return false;
   }
-  // No HTTP response = TLS/network drop; timeout = ECONNABORTED.
   return !error.response || error.code === 'ECONNABORTED';
 }
 
@@ -73,7 +73,7 @@ export async function loginWithTelegramInitData(initData: string): Promise<strin
       if (!isRetryableNetworkError(error) || attempt === LOGIN_ATTEMPTS) {
         throw error;
       }
-      await new Promise((resolve) => setTimeout(resolve, 400 * attempt));
+      await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
     }
   }
   throw lastError;
@@ -86,6 +86,7 @@ export function useStartup(): { status: StartupStatus; errorMessage?: string } {
   useEffect(() => {
     let cancelled = false;
     let finished = false;
+    let loginInFlight = false;
 
     const finish = (next: StartupStatus, message?: string) => {
       if (cancelled || finished) {
@@ -99,6 +100,10 @@ export function useStartup(): { status: StartupStatus; errorMessage?: string } {
     };
 
     const watchdog = window.setTimeout(() => {
+      // Не рвём UI, пока ещё идут попытки логина — иначе гонка с axios retry.
+      if (loginInFlight) {
+        return;
+      }
       if (tokenStorage.get()) {
         finish('ready');
         return;
@@ -116,15 +121,13 @@ export function useStartup(): { status: StartupStatus; errorMessage?: string } {
         // chrome API не должен ломать вход
       }
 
-      // Всегда предпочитаем свежий initData.
-      const immediateInit = getTelegramInitData();
-      if (immediateInit) {
+      const runLogin = async (initData: string): Promise<void> => {
+        loginInFlight = true;
         try {
-          await loginWithTelegramInitData(immediateInit);
+          await loginWithTelegramInitData(initData);
           if (!cancelled) {
             finish('ready');
           }
-          return;
         } catch (error) {
           if (tokenStorage.get()) {
             if (!cancelled) {
@@ -135,8 +138,15 @@ export function useStartup(): { status: StartupStatus; errorMessage?: string } {
           if (!cancelled) {
             finish('error', extractAuthError(error));
           }
-          return;
+        } finally {
+          loginInFlight = false;
         }
+      };
+
+      const immediateInit = getTelegramInitData();
+      if (immediateInit) {
+        await runLogin(immediateInit);
+        return;
       }
 
       if (tokenStorage.get()) {
@@ -145,7 +155,12 @@ export function useStartup(): { status: StartupStatus; errorMessage?: string } {
           try {
             const initData = await waitForInitData(2_000);
             if (initData) {
-              await loginWithTelegramInitData(initData);
+              loginInFlight = true;
+              try {
+                await loginWithTelegramInitData(initData);
+              } finally {
+                loginInFlight = false;
+              }
             }
           } catch {
             // оставляем текущий токен
@@ -160,18 +175,8 @@ export function useStartup(): { status: StartupStatus; errorMessage?: string } {
       }
 
       if (initData) {
-        try {
-          await loginWithTelegramInitData(initData);
-          if (!cancelled) {
-            finish('ready');
-          }
-          return;
-        } catch (error) {
-          if (!cancelled) {
-            finish('error', extractAuthError(error));
-          }
-          return;
-        }
+        await runLogin(initData);
+        return;
       }
 
       finish(
