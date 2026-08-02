@@ -21,6 +21,7 @@ import {
   mergeAchievementTexts,
   type AchievementContext,
 } from '../../shared/lib/achievements-catalog';
+import { AchievementMedallion } from '../../shared/ui/AchievementMedallion';
 
 interface StatItem {
   icon: string;
@@ -371,16 +372,7 @@ export function ProfilePage(): JSX.Element {
                     : '1px solid rgba(199,154,61,0.12)',
                 }}
               >
-                <span
-                  style={{
-                    fontSize: 26,
-                    filter: a.unlocked
-                      ? 'drop-shadow(0 0 8px rgba(199,154,61,0.5))'
-                      : 'grayscale(1)',
-                  }}
-                >
-                  {a.unlocked ? a.icon : '🔒'}
-                </span>
+                <AchievementMedallion id={a.id} locked={!a.unlocked} size={42} />
                 <span
                   className="sans text-center"
                   style={{ fontSize: 10, color: '#D8CEBC', lineHeight: 1.25 }}
