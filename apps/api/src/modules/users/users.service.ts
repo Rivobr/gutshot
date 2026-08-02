@@ -1,9 +1,14 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma, User } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TelegramInitDataUser } from '../../common/utils/telegram-init-data.util';
 import { generatePlayerQrCode } from '../../common/utils/player-qr.util';
 import { TelegramService } from '../telegram/telegram.service';
-import { User } from '@prisma/client';
 
 function defaultNickname(telegramUser: TelegramInitDataUser): string | null {
   const fromName = [telegramUser.first_name, telegramUser.last_name]
@@ -17,6 +22,10 @@ function defaultNickname(telegramUser: TelegramInitDataUser): string | null {
     return telegramUser.username.trim().slice(0, 32);
   }
   return null;
+}
+
+function normalizeNickname(nickname: string): string {
+  return nickname.trim().replace(/\s+/g, ' ');
 }
 
 @Injectable()
@@ -42,8 +51,12 @@ export class UsersService {
     const photoFromInit = telegramUser.photo_url ?? null;
 
     if (existing) {
-      // Никнейм не трогаем — его меняет только сам игрок.
+      // Никнейм не трогаем, если уже задан — его меняет только сам игрок.
       // QR-код тоже никогда не перегенерируется.
+      const nickname =
+        existing.nickname ??
+        (await this.allocateUniqueNickname(defaultNickname(telegramUser), existing.id));
+
       const updated = await this.prisma.user.update({
         where: { id: existing.id },
         data: {
@@ -51,7 +64,7 @@ export class UsersService {
           firstName: telegramUser.first_name,
           lastName: telegramUser.last_name,
           photoUrl: photoFromInit ?? existing.photoUrl,
-          nickname: existing.nickname ?? defaultNickname(telegramUser),
+          nickname,
         },
       });
 
@@ -60,13 +73,15 @@ export class UsersService {
       return updated.qrCode ? updated : this.ensureQrCode(updated.id);
     }
 
+    const nickname = await this.allocateUniqueNickname(defaultNickname(telegramUser));
+
     const created = await this.prisma.user.create({
       data: {
         telegramId,
         username: telegramUser.username,
         firstName: telegramUser.first_name,
         lastName: telegramUser.last_name,
-        nickname: defaultNickname(telegramUser),
+        nickname,
         photoUrl: photoFromInit,
         qrCode: generatePlayerQrCode(),
         playerProfile: { create: { xp: 0 } },
@@ -94,7 +109,7 @@ export class UsersService {
   }
 
   async updateNickname(userId: string, nickname: string): Promise<User> {
-    const normalized = nickname.trim().replace(/\s+/g, ' ');
+    const normalized = normalizeNickname(nickname);
 
     if (normalized.length < 2 || normalized.length > 32) {
       throw new BadRequestException('Никнейм должен быть от 2 до 32 символов');
@@ -109,10 +124,72 @@ export class UsersService {
       throw new NotFoundException('Пользователь не найден');
     }
 
-    return this.prisma.user.update({
-      where: { id: userId },
-      data: { nickname: normalized },
+    if (await this.isNicknameTaken(normalized, userId)) {
+      throw new ConflictException('Этот никнейм уже занят. Выберите другой');
+    }
+
+    try {
+      return await this.prisma.user.update({
+        where: { id: userId },
+        data: { nickname: normalized },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException('Этот никнейм уже занят. Выберите другой');
+      }
+      throw error;
+    }
+  }
+
+  /** Проверка занятости ника без учёта регистра. */
+  async isNicknameTaken(nickname: string, excludeUserId?: string): Promise<boolean> {
+    const normalized = normalizeNickname(nickname);
+    if (!normalized) {
+      return false;
+    }
+
+    const existing = await this.prisma.user.findFirst({
+      where: {
+        nickname: { equals: normalized, mode: 'insensitive' },
+        ...(excludeUserId ? { NOT: { id: excludeUserId } } : {}),
+      },
+      select: { id: true },
     });
+
+    return Boolean(existing);
+  }
+
+  /**
+   * Подбирает свободный ник: база, затем «база 2», «база 3»…
+   * Нужен при автосоздании из Telegram-имени, чтобы не ломать логин.
+   */
+  async allocateUniqueNickname(
+    base: string | null,
+    excludeUserId?: string,
+  ): Promise<string | null> {
+    if (!base) {
+      return null;
+    }
+
+    const normalized = normalizeNickname(base).slice(0, 32);
+    if (normalized.length < 2) {
+      return null;
+    }
+
+    for (let attempt = 0; attempt < 50; attempt += 1) {
+      const suffix = attempt === 0 ? '' : ` ${attempt + 1}`;
+      const candidate = `${normalized.slice(0, Math.max(1, 32 - suffix.length))}${suffix}`;
+
+      if (!(await this.isNicknameTaken(candidate, excludeUserId))) {
+        return candidate;
+      }
+    }
+
+    const fallback = `${normalized.slice(0, 20)} ${Date.now().toString(36)}`.slice(0, 32);
+    return fallback;
   }
 
   /**
