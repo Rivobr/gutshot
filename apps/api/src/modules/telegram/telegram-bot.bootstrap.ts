@@ -76,7 +76,9 @@ export class TelegramBotBootstrap implements OnModuleInit {
   }
 
   private resolveMiniAppUrl(): string | undefined {
-    const raw = this.configService.get<string>('telegram.miniAppUrl')?.trim();
+    const raw =
+      this.configService.get<string>('telegram.miniAppPublicUrl')?.trim() ||
+      this.configService.get<string>('telegram.miniAppUrl')?.trim();
     const url = (raw || 'https://app.gutshotapp.ru').replace(/\/$/, '');
     if (!url.startsWith('https://') || /admin/i.test(url)) {
       this.logger.error(`Некорректный MINI_APP_URL: ${raw ?? '—'}`);
