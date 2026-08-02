@@ -143,17 +143,12 @@ export function useStartup(): { status: StartupStatus; errorMessage?: string } {
         }
       };
 
-      const immediateInit = getTelegramInitData();
-      if (immediateInit) {
-        await runLogin(immediateInit);
-        return;
-      }
-
+      // boot.html already stored a fresh token — enter immediately, refresh in background.
       if (tokenStorage.get()) {
         finish('ready');
         void (async () => {
           try {
-            const initData = await waitForInitData(2_000);
+            const initData = getTelegramInitData() || (await waitForInitData(2_000));
             if (initData) {
               loginInFlight = true;
               try {
@@ -166,6 +161,12 @@ export function useStartup(): { status: StartupStatus; errorMessage?: string } {
             // оставляем текущий токен
           }
         })();
+        return;
+      }
+
+      const immediateInit = getTelegramInitData();
+      if (immediateInit) {
+        await runLogin(immediateInit);
         return;
       }
 

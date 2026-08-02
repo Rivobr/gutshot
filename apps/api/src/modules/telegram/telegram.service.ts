@@ -74,9 +74,9 @@ export class TelegramService {
       this.configService.get<string>('telegram.miniAppUrl')?.trim() ||
       'https://app.gutshotapp.ru'
     ).replace(/\/$/, '');
-    // t.html is a post-build copy of index.html. Sergey's iPhone previously
-    // loaded this path successfully (HTTP/1.1); root/go.html often never hit nginx.
-    const entryUrl = `${miniAppUrl}/t.html?t=${Date.now()}`;
+    // boot.html: tiny page that auths BEFORE loading the 500KB SPA bundle.
+    // Large JS-first entry often dies on TLS keepalive before /auth/telegram.
+    const entryUrl = `${miniAppUrl}/boot.html?t=${Date.now()}`;
     const openAppKeyboard = {
       inline_keyboard: [
         [{ text: '♠️ Открыть GUTSHOT', web_app: { url: entryUrl } }],
