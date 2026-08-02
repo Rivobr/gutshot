@@ -207,21 +207,51 @@ export function AchievementsPage(): JSX.Element {
                 {item.description}
               </p>
 
-              <p
-                className="sans num font-semibold mt-2"
-                style={{
-                  fontSize: 12,
-                  letterSpacing: '0.08em',
-                  color: done ? '#F7D98A' : '#5C5346',
-                }}
-              >
-                XP {item.xp}
-              </p>
-              {!done && item.target > 1 && (
-                <p className="sans mt-0.5" style={{ fontSize: 9, color: '#4A4338' }}>
-                  {progress}/{item.target}
-                </p>
-              )}
+              <div className="mt-2 w-full">
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <span
+                    className="sans num font-semibold"
+                    style={{
+                      fontSize: 12,
+                      letterSpacing: '0.08em',
+                      color: done ? '#F7D98A' : '#5C5346',
+                    }}
+                  >
+                    XP {item.xp}
+                  </span>
+                  <span
+                    className="sans"
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 600,
+                      color: done ? '#C89A3D' : '#6B614E',
+                    }}
+                  >
+                    {done ? 'Получено' : `${progress}/${item.target}`}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    width: '100%',
+                    height: 4,
+                    borderRadius: 99,
+                    overflow: 'hidden',
+                    background: 'rgba(199,154,61,0.12)',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${Math.min(100, Math.round((progress / item.target) * 100))}%`,
+                      height: '100%',
+                      borderRadius: 99,
+                      background: done
+                        ? 'linear-gradient(90deg, #9C6A1F, #F7D98A)'
+                        : 'linear-gradient(90deg, rgba(156,106,31,0.55), rgba(200,154,61,0.85))',
+                      transition: 'width 0.35s ease',
+                    }}
+                  />
+                </div>
+              </div>
             </motion.button>
           );
         })}
@@ -318,23 +348,45 @@ function AchievementHowToModal({
           <p className="sans mt-1" style={{ fontSize: 12, color: '#8A7A62' }}>
             {item.description}
           </p>
-          <div className="mt-2 flex items-center gap-3">
-            <span
-              className="sans num font-semibold"
-              style={{ fontSize: 13, color: '#F7D98A', letterSpacing: '0.06em' }}
-            >
-              XP {item.xp}
-            </span>
-            <span
-              className="sans"
+          <div className="mt-3 w-full">
+            <div className="flex items-center justify-between gap-3 mb-1.5">
+              <span
+                className="sans num font-semibold"
+                style={{ fontSize: 13, color: '#F7D98A', letterSpacing: '0.06em' }}
+              >
+                XP {item.xp}
+              </span>
+              <span
+                className="sans"
+                style={{
+                  fontSize: 11,
+                  color: done ? '#C89A3D' : '#6B614E',
+                  fontWeight: 600,
+                }}
+              >
+                {done ? 'Получено' : `${progress}/${item.target}`}
+              </span>
+            </div>
+            <div
               style={{
-                fontSize: 11,
-                color: done ? '#C89A3D' : '#6B614E',
-                fontWeight: 600,
+                width: '100%',
+                height: 5,
+                borderRadius: 99,
+                overflow: 'hidden',
+                background: 'rgba(199,154,61,0.12)',
               }}
             >
-              {done ? 'Получено' : `${progress}/${item.target}`}
-            </span>
+              <div
+                style={{
+                  width: `${Math.min(100, Math.round((progress / item.target) * 100))}%`,
+                  height: '100%',
+                  borderRadius: 99,
+                  background: done
+                    ? 'linear-gradient(90deg, #9C6A1F, #F7D98A)'
+                    : 'linear-gradient(90deg, rgba(156,106,31,0.55), rgba(200,154,61,0.85))',
+                }}
+              />
+            </div>
           </div>
         </div>
 
