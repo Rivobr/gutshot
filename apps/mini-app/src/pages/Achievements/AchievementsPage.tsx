@@ -2,13 +2,11 @@ import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Loader } from '@gutshot/ui';
-import {
-  useAchievementTexts,
-  useAchievements,
-  useProfile,
-} from '../../entities/player';
+import { useAchievementTexts, useAchievements, useProfile } from '../../entities/player';
 import {
   mergeAchievementTexts,
+  RARITY_STYLE,
+  sortAchievementsByAvailability,
   type AchievementContext,
 } from '../../shared/lib/achievements-catalog';
 
@@ -17,10 +15,7 @@ export function AchievementsPage(): JSX.Element {
   const { data: profile, isLoading } = useProfile();
   const { data: unlockedAchievements } = useAchievements();
   const { data: achievementTexts } = useAchievementTexts();
-  const catalog = useMemo(
-    () => mergeAchievementTexts(achievementTexts),
-    [achievementTexts],
-  );
+  const catalog = useMemo(() => mergeAchievementTexts(achievementTexts), [achievementTexts]);
 
   if (isLoading || !profile) {
     return <Loader />;
@@ -32,12 +27,12 @@ export function AchievementsPage(): JSX.Element {
     finalTables: profile.stats.finalTables ?? 0,
     winStreak: profile.stats.winStreak ?? 0,
     bounties: profile.stats.bounties ?? 0,
+    fourOfAKind: profile.stats.fourOfAKind ?? 0,
     unlockedCodes: new Set((unlockedAchievements ?? []).map((item) => item.code)),
   };
 
-  const unlockedCount = catalog.filter(
-    (item) => item.getProgress(ctx) >= item.target,
-  ).length;
+  const sorted = sortAchievementsByAvailability(catalog, ctx);
+  const unlockedCount = catalog.filter((item) => item.getProgress(ctx) >= item.target).length;
 
   return (
     <div className="flex flex-col pb-8 relative overflow-hidden">
@@ -84,9 +79,10 @@ export function AchievementsPage(): JSX.Element {
       </div>
 
       <div className="relative px-4 grid grid-cols-2 gap-2.5">
-        {catalog.map((item, index) => {
+        {sorted.map((item, index) => {
           const progress = item.getProgress(ctx);
           const done = progress >= item.target;
+          const rarity = RARITY_STYLE[item.rarity];
 
           return (
             <motion.div
@@ -96,14 +92,13 @@ export function AchievementsPage(): JSX.Element {
               transition={{ duration: 0.4, delay: index * 0.04, ease: [0.22, 1, 0.36, 1] }}
               className="relative rounded-[18px] p-3.5 flex flex-col"
               style={{
-                minHeight: 168,
+                gridColumn: item.span2 ? '1 / -1' : undefined,
+                minHeight: item.span2 ? 148 : 168,
                 background: done
-                  ? 'linear-gradient(160deg, rgba(199,154,61,0.18), rgba(14,12,9,0.96))'
+                  ? `linear-gradient(160deg, rgba(199,154,61,0.2), rgba(14,12,9,0.96))`
                   : 'linear-gradient(160deg, rgba(28,24,20,0.95), rgba(12,10,8,0.98))',
-                border: done
-                  ? '1px solid rgba(247,217,138,0.4)'
-                  : '1px solid rgba(199,154,61,0.12)',
-                boxShadow: done ? '0 0 22px rgba(199,154,61,0.12)' : 'none',
+                border: `1px solid ${done ? rarity.border : 'rgba(199,154,61,0.12)'}`,
+                boxShadow: done ? rarity.glow : 'none',
               }}
             >
               {!done && (
@@ -115,51 +110,60 @@ export function AchievementsPage(): JSX.Element {
                 </span>
               )}
 
-              <div
-                className="flex items-center justify-center rounded-[14px] mb-3"
-                style={{
-                  width: 48,
-                  height: 48,
-                  fontSize: 24,
-                  background: done
-                    ? 'rgba(199,154,61,0.14)'
-                    : 'rgba(199,154,61,0.05)',
-                  border: '1px solid rgba(199,154,61,0.2)',
-                  filter: done ? 'none' : 'grayscale(1)',
-                  opacity: done ? 1 : 0.55,
-                }}
-              >
-                {item.icon}
-              </div>
+              <div className={`flex ${item.span2 ? 'flex-row items-center gap-4' : 'flex-col'}`}>
+                <div
+                  className="flex items-center justify-center rounded-[14px] mb-3 shrink-0"
+                  style={{
+                    width: item.span2 ? 56 : 48,
+                    height: item.span2 ? 56 : 48,
+                    marginBottom: item.span2 ? 0 : undefined,
+                    fontSize: item.span2 ? 28 : 24,
+                    background: done ? 'rgba(199,154,61,0.14)' : 'rgba(199,154,61,0.05)',
+                    border: `1px solid ${rarity.border}`,
+                    filter: done ? 'none' : 'grayscale(1)',
+                    opacity: done ? 1 : 0.55,
+                  }}
+                >
+                  {item.icon}
+                </div>
 
-              <p
-                className="serif font-semibold uppercase"
-                style={{
-                  fontSize: 13,
-                  color: done ? '#F5EDD6' : '#8A7A62',
-                  letterSpacing: '0.04em',
-                  lineHeight: 1.2,
-                }}
-              >
-                {item.title}
-              </p>
-              <p
-                className="sans mt-1 flex-1"
-                style={{
-                  fontSize: 11,
-                  color: done ? '#C0B49A' : '#5C5346',
-                  lineHeight: 1.35,
-                }}
-              >
-                {item.description}
-              </p>
+                <div className="flex-1 min-w-0">
+                  <p
+                    className="sans uppercase"
+                    style={{ fontSize: 9, color: rarity.accent, letterSpacing: '0.14em' }}
+                  >
+                    {rarity.label}
+                  </p>
+                  <p
+                    className="serif font-semibold uppercase"
+                    style={{
+                      fontSize: item.span2 ? 18 : 13,
+                      color: done ? '#F5EDD6' : '#8A7A62',
+                      letterSpacing: '0.04em',
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    {item.title}
+                  </p>
+                  <p
+                    className="sans mt-1"
+                    style={{
+                      fontSize: 11,
+                      color: done ? '#C0B49A' : '#5C5346',
+                      lineHeight: 1.35,
+                    }}
+                  >
+                    {item.description}
+                  </p>
+                </div>
+              </div>
 
               <div className="mt-3 flex items-center justify-between gap-2">
                 <span
                   className="sans num font-semibold"
                   style={{
                     fontSize: 12,
-                    color: done ? '#F7D98A' : '#6B614E',
+                    color: done ? rarity.accent : '#6B614E',
                     letterSpacing: '0.04em',
                   }}
                 >

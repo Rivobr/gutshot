@@ -10,11 +10,16 @@ export function useTournament(id: string) {
     queryKey: ['tournaments', id],
     queryFn: () => tournamentApi.getById(id),
     enabled: !!id,
+    refetchInterval: 20_000,
   });
 }
 
 export function useNearestTournament() {
-  return useQuery({ queryKey: ['tournaments', 'nearest'], queryFn: tournamentApi.getNearest });
+  return useQuery({
+    queryKey: ['tournaments', 'nearest'],
+    queryFn: tournamentApi.getNearest,
+    refetchInterval: 20_000,
+  });
 }
 
 export function useTournamentParticipants(id: string) {

@@ -14,8 +14,11 @@ import { tournamentStatusLabel } from '../../shared/lib/tournament-status';
 import { TournamentActions } from './TournamentActions';
 import { TournamentFormModal } from './TournamentFormModal';
 import { FinishTournamentModal } from './FinishTournamentModal';
+import { TournamentLivePanel } from './TournamentLivePanel';
 
-function displayName(user: AdminTournamentRegistration['user'] & { nickname?: string | null }): string {
+function displayName(
+  user: AdminTournamentRegistration['user'] & { nickname?: string | null },
+): string {
   if (user.nickname?.trim()) {
     return user.nickname.trim();
   }
@@ -71,7 +74,9 @@ export function TournamentDetailsPage(): JSX.Element {
               {arrivedCount} из {registrations?.length ?? 0}
             </p>
             {tournament.description && (
-              <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{tournament.description}</p>
+              <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+                {tournament.description}
+              </p>
             )}
           </div>
 
@@ -84,6 +89,8 @@ export function TournamentDetailsPage(): JSX.Element {
           />
         </div>
       </div>
+
+      <TournamentLivePanel tournamentId={tournament.id} live={tournament.live} />
 
       <Card className="gap-4">
         <div className="flex items-center justify-between gap-3">
