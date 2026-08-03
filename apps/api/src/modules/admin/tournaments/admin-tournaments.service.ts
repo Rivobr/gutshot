@@ -15,8 +15,9 @@ import { XpService } from '../../progression/xp.service';
 import { XpSettingsService } from '../../progression/xp-settings.service';
 import { LevelsService } from '../../progression/levels.service';
 import { CreateTournamentDto } from './dto/create-tournament.dto';
-import { UpdateTournamentDto } from './dto/update-tournament.dto';
+import { UpdateTournamentDto, UpdateTournamentLiveDto } from './dto/update-tournament.dto';
 import { TournamentResultEntryDto } from './dto/finish-tournament.dto';
+import { serializeTournament } from '../../tournaments/tournament.serializer';
 
 @Injectable()
 export class AdminTournamentsService {
@@ -30,10 +31,11 @@ export class AdminTournamentsService {
   ) {}
 
   async findAll() {
-    return this.prisma.tournament.findMany({
+    const rows = await this.prisma.tournament.findMany({
       orderBy: { date: 'desc' },
       include: { _count: { select: { registrations: true } } },
     });
+    return rows.map(serializeTournament);
   }
 
   async findById(id: string) {
@@ -46,34 +48,62 @@ export class AdminTournamentsService {
       throw new NotFoundException('Турнир не найден');
     }
 
-    return tournament;
+    return serializeTournament(tournament);
   }
 
   async create(dto: CreateTournamentDto) {
-    return this.prisma.tournament.create({
+    const created = await this.prisma.tournament.create({
       data: {
         title: dto.title,
         description: dto.description,
         date: new Date(dto.date),
         buyIn: dto.buyIn,
         maxPlayers: dto.maxPlayers,
+        imageUrl: dto.imageUrl || undefined,
         registrationOpen: dto.registrationOpen ? new Date(dto.registrationOpen) : undefined,
         registrationClose: dto.registrationClose ? new Date(dto.registrationClose) : undefined,
       },
+      include: { _count: { select: { registrations: true } } },
     });
+    return serializeTournament(created);
   }
 
   async update(id: string, dto: UpdateTournamentDto) {
     await this.findById(id);
-    return this.prisma.tournament.update({
+    const updated = await this.prisma.tournament.update({
       where: { id },
       data: {
-        ...dto,
+        title: dto.title,
+        description: dto.description,
+        buyIn: dto.buyIn,
+        maxPlayers: dto.maxPlayers,
+        imageUrl: dto.imageUrl === '' ? null : dto.imageUrl,
         date: dto.date ? new Date(dto.date) : undefined,
         registrationOpen: dto.registrationOpen ? new Date(dto.registrationOpen) : undefined,
         registrationClose: dto.registrationClose ? new Date(dto.registrationClose) : undefined,
       },
+      include: { _count: { select: { registrations: true } } },
     });
+    return serializeTournament(updated);
+  }
+
+  async updateLive(id: string, dto: UpdateTournamentLiveDto) {
+    await this.findById(id);
+    const updated = await this.prisma.tournament.update({
+      where: { id },
+      data: {
+        liveIsRunning: dto.isRunning ?? undefined,
+        liveLevel: dto.level ?? undefined,
+        liveSmallBlind: dto.smallBlind ?? undefined,
+        liveBigBlind: dto.bigBlind ?? undefined,
+        liveAnte: dto.ante ?? undefined,
+        liveNextBreakInSec: dto.nextBreakInSec ?? undefined,
+        livePlayersIn: dto.playersIn ?? undefined,
+        liveUpdatedAt: new Date(),
+      },
+      include: { _count: { select: { registrations: true } } },
+    });
+    return serializeTournament(updated);
   }
 
   /**
@@ -231,7 +261,9 @@ export class AdminTournamentsService {
         });
 
         if (!registration || registration.tournamentId !== id) {
-          throw new BadRequestException(`Регистрация ${entry.registrationId} не найдена в этом турнире`);
+          throw new BadRequestException(
+            `Регистрация ${entry.registrationId} не найдена в этом турнире`,
+          );
         }
 
         // Места 1–10 берутся из настраиваемой таблицы XP,

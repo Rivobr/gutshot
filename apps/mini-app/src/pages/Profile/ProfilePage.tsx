@@ -19,6 +19,7 @@ import { formatDate } from '../../shared/lib/format';
 import { PLAYER_EVENT_LABELS, formatEventDate } from '../../shared/lib/event-labels';
 import {
   mergeAchievementTexts,
+  sortAchievementsByAvailability,
   type AchievementContext,
 } from '../../shared/lib/achievements-catalog';
 
@@ -40,10 +41,7 @@ export function ProfilePage(): JSX.Element {
   const [isEditingName, setEditingName] = useState(false);
   const [isActivityOpen, setActivityOpen] = useState(false);
   const [nicknameDraft, setNicknameDraft] = useState('');
-  const catalog = useMemo(
-    () => mergeAchievementTexts(achievementTexts),
-    [achievementTexts],
-  );
+  const catalog = useMemo(() => mergeAchievementTexts(achievementTexts), [achievementTexts]);
 
   useEffect(() => {
     if (profile) {
@@ -73,7 +71,11 @@ export function ProfilePage(): JSX.Element {
     { icon: '🃏', value: `${s.tournamentsPlayed}`, label: 'Турниров сыграно' },
     { icon: '🎖', value: `${s.itm} ITM / ${s.top10Percent}% ТОП-10`, label: 'В призах' },
     { icon: '👑', value: `${s.firstPlaces}`, label: 'Первых мест' },
-    { icon: '📈', value: s.averagePlace !== null ? `${s.averagePlace}` : '—', label: 'Среднее место' },
+    {
+      icon: '📈',
+      value: s.averagePlace !== null ? `${s.averagePlace}` : '—',
+      label: 'Среднее место',
+    },
     { icon: '📅', value: `${s.daysInClub}`, label: 'Дней в клубе' },
   ];
 
@@ -83,20 +85,23 @@ export function ProfilePage(): JSX.Element {
     finalTables: s.finalTables ?? 0,
     winStreak: s.winStreak ?? 0,
     bounties: s.bounties ?? 0,
+    fourOfAKind: s.fourOfAKind ?? 0,
     unlockedCodes,
   };
 
-  const previewAchievements = catalog.slice(0, 5).map((item) => {
-    const progress = item.getProgress(achievementCtx);
-    const unlocked = progress >= item.target;
-    return {
-      id: item.id,
-      icon: item.icon,
-      title: item.title,
-      unlocked,
-      progress: unlocked ? 'Получено' : `${progress}/${item.target}`,
-    };
-  });
+  const previewAchievements = sortAchievementsByAvailability(catalog, achievementCtx)
+    .slice(0, 6)
+    .map((item) => {
+      const progress = item.getProgress(achievementCtx);
+      const unlocked = progress >= item.target;
+      return {
+        id: item.id,
+        icon: item.icon,
+        title: item.title,
+        unlocked,
+        progress: unlocked ? 'Получено' : `${progress}/${item.target}`,
+      };
+    });
 
   return (
     <div className="flex flex-col">
@@ -174,7 +179,10 @@ export function ProfilePage(): JSX.Element {
         </div>
 
         <div className="text-center w-full">
-          <h2 className="serif font-semibold" style={{ fontSize: 24, color: '#F5EDD6', lineHeight: 1.2 }}>
+          <h2
+            className="serif font-semibold"
+            style={{ fontSize: 24, color: '#F5EDD6', lineHeight: 1.2 }}
+          >
             {name}
           </h2>
           {profile.username && (
@@ -184,42 +192,39 @@ export function ProfilePage(): JSX.Element {
           )}
         </div>
 
-        {/* KYC verification */}
+        {/* Статус — прямоугольный бейдж по центру */}
         <div
-          className="relative flex items-center gap-2 px-3.5 py-2 rounded-full mt-1"
+          className="relative flex flex-col items-center justify-center px-5 py-2.5 mt-1"
           style={{
-            background: profile.isVerified ? 'rgba(199,154,61,0.1)' : 'rgba(120,110,90,0.08)',
-            border: `1px solid ${profile.isVerified ? 'rgba(199,154,61,0.35)' : 'rgba(120,110,90,0.25)'}`,
+            minWidth: 200,
+            background: profile.isVerified
+              ? 'linear-gradient(145deg, rgba(199,154,61,0.18), rgba(20,16,10,0.92))'
+              : 'rgba(120,110,90,0.08)',
+            border: `1px solid ${profile.isVerified ? 'rgba(199,154,61,0.4)' : 'rgba(120,110,90,0.25)'}`,
+            borderRadius: 12,
           }}
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M12 2L20 5V11C20 16 16.5 20 12 22C7.5 20 4 16 4 11V5L12 2Z"
-              fill={profile.isVerified ? 'url(#shieldG)' : 'none'}
-              stroke={profile.isVerified ? 'none' : '#6B614E'}
-              strokeWidth="1.5"
-            />
-            {profile.isVerified && (
-              <path d="M8.5 12L11 14.5L15.5 9.5" stroke="#0A0A0A" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            )}
-            <defs>
-              <linearGradient id="shieldG" x1="4" y1="2" x2="20" y2="22">
-                <stop stopColor="#C89A3D" />
-                <stop offset="1" stopColor="#9C6A1F" />
-              </linearGradient>
-            </defs>
-          </svg>
-          <span className="sans" style={{ fontSize: 13, color: profile.isVerified ? '#C89A3D' : '#6B614E' }}>
-            {profile.isVerified ? 'Профиль подтверждён' : 'Профиль не подтверждён'}
-          </span>
+          <p
+            className="sans uppercase"
+            style={{ fontSize: 9, color: '#8A7A62', letterSpacing: '0.16em' }}
+          >
+            Статус
+          </p>
+          <p
+            className="serif font-semibold"
+            style={{ fontSize: 15, color: profile.isVerified ? '#F7D98A' : '#6B614E' }}
+          >
+            {profile.isVerified ? 'Подтверждён' : 'Не подтверждён'}
+          </p>
         </div>
 
         {/* Уровень + XP — крупно и читаемо */}
         <div
           className="w-full mt-3 rounded-[20px] p-4 relative overflow-hidden"
           style={{
-            background: 'linear-gradient(145deg, rgba(199,154,61,0.14), rgba(14,12,9,0.95))',
-            border: '1px solid rgba(199,154,61,0.28)',
+            background: 'linear-gradient(145deg, rgba(199,154,61,0.18), rgba(14,12,9,0.95))',
+            border: '1px solid rgba(247,217,138,0.35)',
+            boxShadow: '0 0 28px rgba(199,154,61,0.12)',
           }}
         >
           <div className="absolute inset-0 deco-lines opacity-30 pointer-events-none" />
@@ -231,7 +236,10 @@ export function ProfilePage(): JSX.Element {
               >
                 Уровень
               </p>
-              <p className="serif font-semibold gold-text" style={{ fontSize: 36, lineHeight: 1.05 }}>
+              <p
+                className="serif font-semibold gold-text"
+                style={{ fontSize: 36, lineHeight: 1.05 }}
+              >
                 {profile.level}
               </p>
             </div>
@@ -253,8 +261,12 @@ export function ProfilePage(): JSX.Element {
             </span>
           </div>
           <div
-            className="relative rounded-full overflow-hidden"
-            style={{ height: 10, background: 'rgba(199,154,61,0.12)' }}
+            className="relative rounded-[12px] overflow-hidden"
+            style={{
+              height: 14,
+              background: 'rgba(199,154,61,0.12)',
+              border: '1px solid rgba(199,154,61,0.2)',
+            }}
           >
             <motion.div
               initial={{ width: 0 }}
@@ -263,12 +275,15 @@ export function ProfilePage(): JSX.Element {
               style={{
                 height: '100%',
                 background: 'linear-gradient(90deg,#9C6A1F,#C89A3D,#F7D98A)',
-                borderRadius: 99,
-                boxShadow: '0 0 12px rgba(199,154,61,0.35)',
+                borderRadius: 10,
+                boxShadow: '0 0 16px rgba(199,154,61,0.45)',
               }}
             />
           </div>
-          <p className="relative sans num mt-2.5 text-center" style={{ fontSize: 13, color: '#C0B49A' }}>
+          <p
+            className="relative sans num mt-2.5 text-center"
+            style={{ fontSize: 13, color: '#C0B49A' }}
+          >
             Ещё {Math.max(profile.nextLevelXp - profile.xp, 0).toLocaleString('ru-RU')} XP до уровня{' '}
             {profile.level + 1}
           </p>
@@ -463,7 +478,10 @@ export function ProfilePage(): JSX.Element {
                           >
                             {PLAYER_EVENT_LABELS[event.type]}
                           </p>
-                          <p className="sans num truncate" style={{ fontSize: 10, color: '#6B614E' }}>
+                          <p
+                            className="sans num truncate"
+                            style={{ fontSize: 10, color: '#6B614E' }}
+                          >
                             {formatEventDate(event.createdAt)}
                             {event.tournament ? ` · ${event.tournament.title}` : ''}
                           </p>
@@ -509,7 +527,10 @@ export function ProfilePage(): JSX.Element {
                   style={{ borderColor: 'rgba(199,154,61,0.1)' }}
                 >
                   <div>
-                    <p className="serif" style={{ fontSize: 14, color: '#F5EDD6', lineHeight: 1.35 }}>
+                    <p
+                      className="serif"
+                      style={{ fontSize: 14, color: '#F5EDD6', lineHeight: 1.35 }}
+                    >
                       {registration.tournament?.title ?? 'Турнир'}
                     </p>
                     {registration.tournament && (
@@ -568,7 +589,10 @@ export function ProfilePage(): JSX.Element {
                 <h3 className="serif font-semibold" style={{ fontSize: 20, color: '#F5EDD6' }}>
                   Никнейм
                 </h3>
-                <p className="sans mt-1 mb-4" style={{ fontSize: 12, color: '#6B614E', lineHeight: 1.5 }}>
+                <p
+                  className="sans mt-1 mb-4"
+                  style={{ fontSize: 12, color: '#6B614E', lineHeight: 1.5 }}
+                >
                   Так вас будут видеть другие игроки в клубе
                 </p>
                 <input

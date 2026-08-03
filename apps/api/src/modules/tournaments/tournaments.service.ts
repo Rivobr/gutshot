@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Tournament, TournamentStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { calculateLevel } from '../../common/utils/level.util';
+import { serializeTournament } from './tournament.serializer';
 
 @Injectable()
 export class TournamentsService {
@@ -29,8 +30,7 @@ export class TournamentsService {
     return registrations.map((reg) => {
       const results = reg.user.tournamentResults;
       const itm = results.filter((r) => r.place <= 10).length;
-      const top10Percent =
-        results.length > 0 ? Math.round((itm / results.length) * 100) : 0;
+      const top10Percent = results.length > 0 ? Math.round((itm / results.length) * 100) : 0;
 
       return {
         userId: reg.user.id,
@@ -46,8 +46,8 @@ export class TournamentsService {
     });
   }
 
-  async findAll(filters: { status?: TournamentStatus; date?: string }): Promise<Tournament[]> {
-    return this.prisma.tournament.findMany({
+  async findAll(filters: { status?: TournamentStatus; date?: string }) {
+    const rows = await this.prisma.tournament.findMany({
       where: {
         status: filters.status,
         date: filters.date
@@ -60,9 +60,10 @@ export class TournamentsService {
       orderBy: { date: 'asc' },
       include: { _count: { select: { registrations: true } } },
     });
+    return rows.map(serializeTournament);
   }
 
-  async findById(id: string): Promise<Tournament> {
+  async findById(id: string) {
     const tournament = await this.prisma.tournament.findUnique({
       where: { id },
       include: { _count: { select: { registrations: true } } },
@@ -72,18 +73,25 @@ export class TournamentsService {
       throw new NotFoundException('Турнир не найден');
     }
 
-    return tournament;
+    return serializeTournament(tournament);
   }
 
-  async findNearest(): Promise<Tournament | null> {
-    return this.prisma.tournament.findFirst({
+  async findNearest() {
+    const tournament = await this.prisma.tournament.findFirst({
       where: {
         date: { gte: new Date() },
-        status: { in: [TournamentStatus.REGISTRATION_OPEN, TournamentStatus.REGISTRATION_CLOSED] },
+        status: {
+          in: [
+            TournamentStatus.REGISTRATION_OPEN,
+            TournamentStatus.REGISTRATION_CLOSED,
+            TournamentStatus.IN_PROGRESS,
+          ],
+        },
       },
       orderBy: { date: 'asc' },
       include: { _count: { select: { registrations: true } } },
     });
+    return tournament ? serializeTournament(tournament) : null;
   }
 
   async create(data: {

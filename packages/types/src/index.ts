@@ -1,19 +1,8 @@
 export type TournamentStatus =
-  | 'DRAFT'
-  | 'REGISTRATION_OPEN'
-  | 'REGISTRATION_CLOSED'
-  | 'IN_PROGRESS'
-  | 'FINISHED'
-  | 'ARCHIVED';
+  'DRAFT' | 'REGISTRATION_OPEN' | 'REGISTRATION_CLOSED' | 'IN_PROGRESS' | 'FINISHED' | 'ARCHIVED';
 
 export type RegistrationStatus =
-  | 'REGISTERED'
-  | 'CHECKED_IN'
-  | 'PLAYING'
-  | 'FINISHED'
-  | 'CANCELLED'
-  | 'NO_SHOW'
-  | 'WAITING';
+  'REGISTERED' | 'CHECKED_IN' | 'PLAYING' | 'FINISHED' | 'CANCELLED' | 'NO_SHOW' | 'WAITING';
 
 export type AdminRole = 'OWNER' | 'ADMIN' | 'MANAGER';
 
@@ -62,6 +51,8 @@ export interface PlayerProfileDto {
     finalTables: number;
     /** Максимальная серия побед подряд (1 места). */
     winStreak: number;
+    /** Число событий «Каре» (для прогрессивных достижений). */
+    fourOfAKind: number;
   };
 }
 
@@ -77,6 +68,17 @@ export interface TournamentParticipant {
   status: RegistrationStatus;
 }
 
+export interface TournamentLiveState {
+  isRunning: boolean;
+  level?: number | null;
+  smallBlind?: number | null;
+  bigBlind?: number | null;
+  ante?: number | null;
+  nextBreakInSec?: number | null;
+  playersIn?: number | null;
+  updatedAt?: string | null;
+}
+
 export interface Tournament {
   id: string;
   title: string;
@@ -87,6 +89,9 @@ export interface Tournament {
   status: TournamentStatus;
   registrationOpen?: string | null;
   registrationClose?: string | null;
+  /** Обложка турнира (URL). */
+  imageUrl?: string | null;
+  live?: TournamentLiveState | null;
   _count?: { registrations: number };
 }
 
@@ -303,10 +308,7 @@ export function buildPlaceRatingScale(
 }
 
 export type LegalDocumentType =
-  | 'CLUB_RULES'
-  | 'USER_AGREEMENT'
-  | 'PERSONAL_DATA_CONSENT'
-  | 'MEDIA_CONSENT';
+  'CLUB_RULES' | 'USER_AGREEMENT' | 'PERSONAL_DATA_CONSENT' | 'MEDIA_CONSENT';
 
 export interface PlayerEventDto {
   id: string;
