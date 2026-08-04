@@ -31,14 +31,20 @@ export function BrandMark({ height = 26 }: { height?: number }): JSX.Element {
 
 export function Logo({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }): JSX.Element {
   const cfg = {
-    sm: { title: 14, sub: 7, gap: 4, mark: 15 },
-    md: { title: 19, sub: 8.5, gap: 5, mark: 20 },
-    lg: { title: 27, sub: 11, gap: 7, mark: 30 },
+    sm: { title: 14, sub: 7, gap: 4, mark: 36 },
+    md: { title: 19, sub: 8.5, gap: 5, mark: 56 },
+    lg: { title: 27, sub: 11, gap: 7, mark: 88 },
   }[size];
 
   return (
     <div className="flex flex-col items-center" style={{ gap: cfg.gap }}>
-      <BrandMark height={cfg.mark} />
+      <img
+        src="/gutshot-logo.png"
+        alt="GUTSHOT"
+        width={cfg.mark}
+        height={cfg.mark}
+        style={{ width: cfg.mark, height: cfg.mark, objectFit: 'contain' }}
+      />
       <span
         className="gold-text serif font-semibold"
         style={{ fontSize: cfg.title, letterSpacing: '0.16em', lineHeight: 1 }}
@@ -63,11 +69,9 @@ export function Logo({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }): JSX.Elemen
 const SUIT_PATHS: Record<string, string> = {
   spade:
     'M32 6C22 18 10 26 10 38a11 11 0 0 0 19 8c-1 6-3 9-7 12h20c-4-3-6-6-7-12a11 11 0 0 0 19-8c0-12-12-20-22-32Z',
-  club:
-    'M32 8a10 10 0 0 0-8 16 11 11 0 1 0-2 21c3 0 6-1 8-3-1 5-3 8-6 12h16c-3-4-5-7-6-12 2 2 5 3 8 3a11 11 0 1 0-2-21 10 10 0 0 0-8-16Z',
+  club: 'M32 8a10 10 0 0 0-8 16 11 11 0 1 0-2 21c3 0 6-1 8-3-1 5-3 8-6 12h16c-3-4-5-7-6-12 2 2 5 3 8 3a11 11 0 1 0-2-21 10 10 0 0 0-8-16Z',
   diamond: 'M32 4 54 34 32 64 10 34Z',
-  heart:
-    'M32 58C12 44 8 30 8 22a12 12 0 0 1 24-4 12 12 0 0 1 24 4c0 8-4 22-24 36Z',
+  heart: 'M32 58C12 44 8 30 8 22a12 12 0 0 1 24-4 12 12 0 0 1 24 4c0 8-4 22-24 36Z',
 };
 
 export function SuitWatermark({
@@ -80,13 +84,7 @@ export function SuitWatermark({
   style?: React.CSSProperties;
 }): JSX.Element {
   return (
-    <svg
-      viewBox="0 0 64 68"
-      className={className}
-      style={style}
-      fill="none"
-      aria-hidden
-    >
+    <svg viewBox="0 0 64 68" className={className} style={style} fill="none" aria-hidden>
       <path d={SUIT_PATHS[suit]} fill="url(#suitGrad)" />
       <defs>
         <linearGradient id="suitGrad" x1="0" y1="0" x2="64" y2="68">

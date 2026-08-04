@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <title>GUTSHOT</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #090909;
+        color: #c9a227;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      #s {
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 24px;
+        text-align: center;
+      }
+      #s {
+        background: radial-gradient(ellipse at 50% 35%, rgba(199, 154, 61, 0.12) 0%, transparent 58%);
+      }
+      .logo {
+        width: min(64vw, 240px);
+        height: auto;
+        display: block;
+        filter: drop-shadow(0 8px 28px rgba(199, 154, 61, 0.22));
+      }
+      .msg {
+        font-size: 14px;
+        opacity: 0.85;
+        max-width: 280px;
+        line-height: 1.4;
+      }
+      .spin {
+        width: 28px;
+        height: 28px;
+        border: 3px solid rgba(255, 255, 255, 0.12);
+        border-top-color: #c9a227;
+        border-radius: 50%;
+        animation: r 0.8s linear infinite;
+      }
+      @keyframes r {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .btn {
+        display: none;
+        margin-top: 8px;
+        padding: 12px 20px;
+        border: 0;
+        border-radius: 12px;
+        background: #c9a227;
+        color: #111;
+        font-weight: 700;
+        font-size: 15px;
+      }
+      .btn.show {
+        display: inline-block;
+      }
+    </style>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  </head>
+  <body>
+    <div id="s">
+      <img class="logo" src="/gutshot-logo.png" alt="GUTSHOT" />
+      <div class="spin" id="sp"></div>
+      <div class="msg" id="m">Входим…</div>
+      <button class="btn" id="b" type="button">Повторить</button>
+    </div>
+    <script>
+      (function () {
+        var TOKEN_KEY = "gutshot_access_token";
+        var params = new URLSearchParams(location.search);
+        var ticket = params.get("ticket") || "";
+        var m = document.getElementById("m");
+        var b = document.getElementById("b");
+        var sp = document.getElementById("sp");
+        var done = false;
+
+        function appUrl() {
+          // Новый entry URL (не кэш Telegram от старого boot/t.html).
+          return "/?from=enter&t=" + Date.now() + (location.hash || "");
+        }
+
+        function goApp() {
+          if (done) return;
+          done = true;
+          location.replace(appUrl());
+        }
+
+        function fail(text) {
+          sp.style.display = "none";
+          m.textContent = text;
+          b.classList.add("show");
+        }
+
+        function readyTg() {
+          try {
+            var tg = window.Telegram && Telegram.WebApp;
+            if (!tg) return null;
+            tg.ready();
+            tg.expand();
+            if (tg.setHeaderColor) tg.setHeaderColor("#090909");
+            if (tg.setBackgroundColor) tg.setBackgroundColor("#090909");
+            if (tg.disableVerticalSwipes) tg.disableVerticalSwipes();
+            return tg;
+          } catch (e) {
+            return null;
+          }
+        }
+
+        function getInitData() {
+          try {
+            return (window.Telegram && Telegram.WebApp && Telegram.WebApp.initData) || "";
+          } catch (e) {
+            return "";
+          }
+        }
+
+        function postLogin(path, body, attempt) {
+          attempt = attempt || 1;
+          m.textContent = attempt > 1 ? "Повтор входа… " + attempt : "Входим…";
+          return fetch(path, {
+            method: "POST",
+            cache: "no-store",
+            credentials: "omit",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          })
+            .then(function (r) {
+              if (!r.ok) throw new Error("http " + r.status);
+              return r.json();
+            })
+            .then(function (json) {
+              var token = json && json.data && json.data.accessToken;
+              if (!token) throw new Error("no token");
+              try {
+                localStorage.setItem(TOKEN_KEY, token);
+              } catch (e) {}
+              m.textContent = "Открываем клуб…";
+              goApp();
+            })
+            .catch(function (err) {
+              if (attempt < 4) {
+                return new Promise(function (resolve) {
+                  setTimeout(resolve, 400 * attempt);
+                }).then(function () {
+                  return postLogin(path, body, attempt + 1);
+                });
+              }
+              throw err;
+            });
+        }
+
+        function loginWithInitData(initData) {
+          return postLogin("/api/v1/auth/telegram", { initData: initData });
+        }
+
+        function loginWithTicket(value) {
+          return postLogin("/api/v1/auth/telegram/ticket", { ticket: value });
+        }
+
+        b.onclick = function () {
+          done = false;
+          sp.style.display = "block";
+          b.classList.remove("show");
+          start();
+        };
+
+        function start() {
+          readyTg();
+
+          // Fast path: ticket from bot button (works even without initData).
+          if (ticket) {
+            loginWithTicket(ticket).catch(function () {
+              // Fall through to initData wait.
+              waitInitDataOrFail();
+            });
+            return;
+          }
+
+          waitInitDataOrFail();
+        }
+
+        function waitInitDataOrFail() {
+          var tries = 0;
+          var timer = setInterval(function () {
+            tries += 1;
+            readyTg();
+            var initData = getInitData();
+            if (initData) {
+              clearInterval(timer);
+              loginWithInitData(initData).catch(function () {
+                fail("Не удалось войти. Закройте и откройте кнопкой из бота.");
+              });
+              return;
+            }
+            if (tries >= 80) {
+              clearInterval(timer);
+              if (ticket) {
+                loginWithTicket(ticket).catch(function () {
+                  fail("Нет данных Telegram. Откройте приложение кнопкой из бота.");
+                });
+                return;
+              }
+              fail("Откройте приложение кнопкой из бота (не из меню браузера).");
+            }
+          }, 50);
+        }
+
+        start();
+      })();
+    </script>
+  </body>
+</html>

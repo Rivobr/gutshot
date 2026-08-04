@@ -1,3 +1,4 @@
+import './normalize-spa-path';
 import { createBrowserRouter } from 'react-router-dom';
 import { Layout } from '../providers/layout';
 import { HomePage } from '../../pages/Home/HomePage';

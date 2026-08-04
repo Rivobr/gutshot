@@ -1,19 +1,8 @@
 export type TournamentStatus =
-  | 'DRAFT'
-  | 'REGISTRATION_OPEN'
-  | 'REGISTRATION_CLOSED'
-  | 'IN_PROGRESS'
-  | 'FINISHED'
-  | 'ARCHIVED';
+  'DRAFT' | 'REGISTRATION_OPEN' | 'REGISTRATION_CLOSED' | 'IN_PROGRESS' | 'FINISHED' | 'ARCHIVED';
 
 export type RegistrationStatus =
-  | 'REGISTERED'
-  | 'CHECKED_IN'
-  | 'PLAYING'
-  | 'FINISHED'
-  | 'CANCELLED'
-  | 'NO_SHOW'
-  | 'WAITING';
+  'REGISTERED' | 'CHECKED_IN' | 'PLAYING' | 'FINISHED' | 'CANCELLED' | 'NO_SHOW' | 'WAITING';
 
 export type AdminRole = 'OWNER' | 'ADMIN' | 'MANAGER';
 
@@ -46,6 +35,8 @@ export interface PlayerProfileDto {
   /** Постоянный персональный QR-код игрока. */
   qrCode: string;
   consentAcceptedAt?: string | null;
+  /** Достижения, закреплённые игроком в профиле (id из каталога). */
+  pinnedAchievements: string[];
   stats: {
     tournamentsPlayed: number;
     wins: number;
@@ -62,6 +53,8 @@ export interface PlayerProfileDto {
     finalTables: number;
     /** Максимальная серия побед подряд (1 места). */
     winStreak: number;
+    /** Число событий «Каре» (для прогрессивных достижений). */
+    fourOfAKind: number;
   };
 }
 
@@ -73,8 +66,73 @@ export interface TournamentParticipant {
   username?: string | null;
   photoUrl?: string | null;
   level: number;
+  /** Витрина достижений игрока (id из каталога). */
+  pinnedAchievements: string[];
   top10Percent: number;
   status: RegistrationStatus;
+}
+
+export interface TournamentLiveState {
+  isRunning: boolean;
+  level?: number | null;
+  smallBlind?: number | null;
+  bigBlind?: number | null;
+  ante?: number | null;
+  nextBreakInSec?: number | null;
+  playersIn?: number | null;
+  updatedAt?: string | null;
+  /** Момент смены уровня — клиент тикает локально между запросами. */
+  levelEndsAt?: string | null;
+  levelSecondsLeft?: number | null;
+  isBreak?: boolean;
+  serverTime?: string | null;
+}
+
+export type ClockStatus = 'IDLE' | 'RUNNING' | 'PAUSED' | 'FINISHED';
+
+/** Уровень структуры турнира: блайнды либо перерыв. */
+export interface BlindLevel {
+  idx: number;
+  isBreak: boolean;
+  smallBlind?: number | null;
+  bigBlind?: number | null;
+  ante?: number | null;
+  durationSec: number;
+}
+
+export interface TournamentClockLevel extends BlindLevel {
+  /** Номер игрового уровня; у перерывов null. */
+  number: number | null;
+}
+
+export interface TournamentClock {
+  status: ClockStatus;
+  isRunning: boolean;
+  current?: TournamentClockLevel | null;
+  next?: TournamentClockLevel | null;
+  secondsLeft?: number | null;
+  secondsToBreak?: number | null;
+  levelEndsAt?: string | null;
+  breakAt?: string | null;
+  playersIn?: number | null;
+  levelsTotal: number;
+  serverTime: string;
+}
+
+/** Ответ публичного табло для TV-экрана. */
+export interface TournamentBoard {
+  tournament: {
+    id: string;
+    title: string;
+    date: string;
+    buyIn: number;
+    maxPlayers: number;
+    status: TournamentStatus;
+    imageUrl?: string | null;
+    registered: number;
+  };
+  clock: TournamentClock;
+  levels: BlindLevel[];
 }
 
 export interface Tournament {
@@ -87,6 +145,9 @@ export interface Tournament {
   status: TournamentStatus;
   registrationOpen?: string | null;
   registrationClose?: string | null;
+  /** Обложка турнира (URL). */
+  imageUrl?: string | null;
+  live?: TournamentLiveState | null;
   _count?: { registrations: number };
 }
 
@@ -99,6 +160,11 @@ export interface Registration {
   checkedInAt?: string | null;
   cancelledAt?: string | null;
   tournament?: Tournament;
+  /**
+   * Заполняется при записи, если предыдущая активная регистрация
+   * была автоматически отменена (один турнир на игрока).
+   */
+  cancelledPrevious?: { tournamentId: string; title: string } | null;
 }
 
 export interface RatingEntry {
@@ -138,8 +204,11 @@ export interface AdminPlayerListItem {
   firstName?: string | null;
   lastName?: string | null;
   photoUrl?: string | null;
+  nickname?: string | null;
   isBlocked: boolean;
   isVerified: boolean;
+  /** Постоянный персональный QR-код игрока. */
+  qrCode?: string | null;
   xp: number;
   level: number;
   visits: number;
@@ -303,10 +372,7 @@ export function buildPlaceRatingScale(
 }
 
 export type LegalDocumentType =
-  | 'CLUB_RULES'
-  | 'USER_AGREEMENT'
-  | 'PERSONAL_DATA_CONSENT'
-  | 'MEDIA_CONSENT';
+  'CLUB_RULES' | 'USER_AGREEMENT' | 'PERSONAL_DATA_CONSENT' | 'MEDIA_CONSENT';
 
 export interface PlayerEventDto {
   id: string;

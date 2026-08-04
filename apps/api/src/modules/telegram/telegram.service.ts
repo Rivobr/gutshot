@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { WELCOME_CAPTION } from './welcome-message';
@@ -11,7 +12,10 @@ export class TelegramService {
   private readonly webhookSecret: string | undefined;
   private welcomePhotoFileId: string | undefined;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly jwtService: JwtService,
+  ) {
     this.botToken = this.configService.get<string>('telegram.botToken');
     this.webhookSecret = this.configService.get<string>('telegram.webhookSecret');
   }
@@ -24,11 +28,7 @@ export class TelegramService {
     return join(process.cwd(), 'assets', 'welcome-club.png');
   }
 
-  async sendMessage(
-    telegramId: string,
-    text: string,
-    replyMarkup?: object,
-  ): Promise<boolean> {
+  async sendMessage(telegramId: string, text: string, replyMarkup?: object): Promise<boolean> {
     if (!this.botToken) {
       this.logger.warn('TELEGRAM_BOT_TOKEN не задан — сообщение не отправлено');
       return false;
@@ -70,6 +70,21 @@ export class TelegramService {
 
     // Снимаем старую reply-клавиатуру («Открыть клуб»), если она уже была у пользователя.
     const removeKeyboard = { remove_keyboard: true };
+    const miniAppUrl = (
+      this.configService.get<string>('telegram.miniAppPublicUrl')?.trim() ||
+      this.configService.get<string>('telegram.miniAppUrl')?.trim() ||
+      'https://app.gutshotapp.ru'
+    ).replace(/\/$/, '');
+    // boot.html + per-user ticket: some WebViews (CF tunnel) omit initData;
+    // ticket lets boot.html auth without Telegram.WebApp.initData.
+    const ticket = this.jwtService.sign(
+      { typ: 'miniapp_ticket', telegramId: String(chatId) },
+      { expiresIn: '15m' },
+    );
+    const entryUrl = `${miniAppUrl}/enter.html?t=${Date.now()}&ticket=${encodeURIComponent(ticket)}`;
+    const openAppKeyboard = {
+      inline_keyboard: [[{ text: '♠️ Открыть GUTSHOT', web_app: { url: entryUrl } }]],
+    };
 
     try {
       const photoSent = await this.sendWelcomePhoto(chatId);
@@ -77,9 +92,15 @@ export class TelegramService {
         this.logger.warn(`Welcome photo не отправлено в chat ${chatId}, шлём только текст`);
       }
 
-      const textOk = await this.sendMessage(chatId, WELCOME_CAPTION, removeKeyboard);
-      if (!textOk) {
-        this.logger.error(`Welcome text не отправлен в chat ${chatId}`);
+      // Сначала убираем старую reply-клавиатуру, затем шлём кнопку web_app.
+      await this.sendMessage(chatId, WELCOME_CAPTION, removeKeyboard);
+      const buttonOk = await this.sendMessage(
+        chatId,
+        'Нажмите кнопку, чтобы открыть приложение:',
+        openAppKeyboard,
+      );
+      if (!buttonOk) {
+        this.logger.error(`Welcome button не отправлена в chat ${chatId}`);
         return false;
       }
 
@@ -87,7 +108,7 @@ export class TelegramService {
       return true;
     } catch (error) {
       this.logger.error(`Ошибка отправки welcome в chat ${chatId}`, error as Error);
-      return this.sendMessage(chatId, WELCOME_CAPTION, removeKeyboard);
+      return this.sendMessage(chatId, WELCOME_CAPTION, openAppKeyboard);
     }
   }
 
@@ -131,7 +152,9 @@ export class TelegramService {
 
       return true;
     } catch (error) {
-      this.logger.error(`Не удалось прочитать/отправить welcome photo: ${(error as Error).message}`);
+      this.logger.error(
+        `Не удалось прочитать/отправить welcome photo: ${(error as Error).message}`,
+      );
       return false;
     }
   }
@@ -197,14 +220,20 @@ export class TelegramService {
 
       return `https://api.telegram.org/file/bot${this.botToken}/${filePayload.result.file_path}`;
     } catch (error) {
-      this.logger.warn(`Не удалось получить аватар Telegram ${telegramId}: ${(error as Error).message}`);
+      this.logger.warn(
+        `Не удалось получить аватар Telegram ${telegramId}: ${(error as Error).message}`,
+      );
       return undefined;
     } finally {
       clearTimeout(timer);
     }
   }
 
-  async getWebhookInfo(): Promise<{ url?: string; lastErrorMessage?: string; pendingUpdateCount?: number } | null> {
+  async getWebhookInfo(): Promise<{
+    url?: string;
+    lastErrorMessage?: string;
+    pendingUpdateCount?: number;
+  } | null> {
     if (!this.botToken) {
       return null;
     }
