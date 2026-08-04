@@ -35,6 +35,8 @@ export interface PlayerProfileDto {
   /** Постоянный персональный QR-код игрока. */
   qrCode: string;
   consentAcceptedAt?: string | null;
+  /** Достижения, закреплённые игроком в профиле (id из каталога). */
+  pinnedAchievements: string[];
   stats: {
     tournamentsPlayed: number;
     wins: number;
@@ -64,6 +66,8 @@ export interface TournamentParticipant {
   username?: string | null;
   photoUrl?: string | null;
   level: number;
+  /** Витрина достижений игрока (id из каталога). */
+  pinnedAchievements: string[];
   top10Percent: number;
   status: RegistrationStatus;
 }

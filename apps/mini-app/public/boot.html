@@ -27,11 +27,14 @@
         padding: 24px;
         text-align: center;
       }
+      #s {
+        background: radial-gradient(ellipse at 50% 35%, rgba(199, 154, 61, 0.12) 0%, transparent 58%);
+      }
       .logo {
-        font-size: 26px;
-        font-weight: 800;
-        letter-spacing: 0.08em;
-        color: #f5f5f5;
+        width: min(64vw, 240px);
+        height: auto;
+        display: block;
+        filter: drop-shadow(0 8px 28px rgba(199, 154, 61, 0.22));
       }
       .msg {
         font-size: 14px;
@@ -71,7 +74,7 @@
   </head>
   <body>
     <div id="s">
-      <div class="logo">GUTSHOT</div>
+      <img class="logo" src="/gutshot-logo.png" alt="GUTSHOT" />
       <div class="spin" id="sp"></div>
       <div class="msg" id="m">Входим…</div>
       <button class="btn" id="b" type="button">Повторить</button>
@@ -111,6 +114,7 @@
             tg.expand();
             if (tg.setHeaderColor) tg.setHeaderColor("#090909");
             if (tg.setBackgroundColor) tg.setBackgroundColor("#090909");
+            if (tg.disableVerticalSwipes) tg.disableVerticalSwipes();
             return tg;
           } catch (e) {
             return null;

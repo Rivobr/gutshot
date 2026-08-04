@@ -152,6 +152,7 @@ export class TournamentsService {
         username: reg.user.username,
         photoUrl: reg.user.photoUrl,
         level: calculateLevel(reg.user.playerProfile?.xp ?? 0),
+        pinnedAchievements: reg.user.pinnedAchievements,
         top10Percent,
         status: reg.status,
       };

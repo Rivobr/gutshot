@@ -39,7 +39,10 @@ export function useXpHistory() {
 }
 
 export function useTournamentHistory() {
-  return useQuery({ queryKey: ['profile', 'tournaments'], queryFn: playerApi.getTournamentHistory });
+  return useQuery({
+    queryKey: ['profile', 'tournaments'],
+    queryFn: playerApi.getTournamentHistory,
+  });
 }
 
 export function useNotifications() {
@@ -79,8 +82,7 @@ async function acceptConsentWithRetry(): Promise<{ consentAcceptedAt: string }> 
         return playerApi.acceptConsent();
       }
       // Сетевой обрыв (часто iOS WebView + SSL keepalive) — короткая пауза и повтор.
-      const isNetwork =
-        isAxiosError(error) && !error.response;
+      const isNetwork = isAxiosError(error) && !error.response;
       if (!isNetwork || attempt === 3) {
         throw error;
       }
@@ -106,6 +108,20 @@ export function useAcceptConsent() {
         };
       });
       void queryClient.invalidateQueries({ queryKey: ['profile'] });
+    },
+  });
+}
+
+export function usePinAchievements() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (achievementIds: string[]) => playerApi.setPinnedAchievements(achievementIds),
+    onSuccess: (result) => {
+      queryClient.setQueryData(['profile'], (current: PlayerProfileDto | undefined) =>
+        current ? { ...current, pinnedAchievements: result.pinnedAchievements } : current,
+      );
+      void queryClient.invalidateQueries({ queryKey: ['tournaments'] });
     },
   });
 }

@@ -31,6 +31,42 @@ interface StatItem {
   label: string;
 }
 
+/** Квадратный бейдж уровня по краям XP-полосы: текущий слева, следующий справа. */
+function LevelBadge({ level, current = false }: { level: number; current?: boolean }): JSX.Element {
+  return (
+    <div
+      className="flex shrink-0 flex-col items-center justify-center"
+      style={{
+        width: current ? 52 : 44,
+        height: current ? 52 : 44,
+        borderRadius: 14,
+        background: current
+          ? 'linear-gradient(145deg, rgba(199,154,61,0.28), rgba(20,16,10,0.95))'
+          : 'rgba(9,9,9,0.5)',
+        border: `1px solid ${current ? 'rgba(247,217,138,0.5)' : 'rgba(199,154,61,0.18)'}`,
+        boxShadow: current ? '0 0 18px rgba(199,154,61,0.25)' : 'none',
+      }}
+    >
+      <span
+        className="sans uppercase"
+        style={{ fontSize: 7, letterSpacing: '0.14em', color: '#8A7A62' }}
+      >
+        Ур.
+      </span>
+      <span
+        className="serif num font-semibold"
+        style={{
+          fontSize: current ? 22 : 18,
+          lineHeight: 1,
+          color: current ? '#F7D98A' : '#A89878',
+        }}
+      >
+        {level}
+      </span>
+    </div>
+  );
+}
+
 export function ProfilePage(): JSX.Element {
   const navigate = useNavigate();
   const { data: profile, isLoading } = useProfile();
@@ -109,7 +145,13 @@ export function ProfilePage(): JSX.Element {
     unlockedCodes,
   };
 
-  const previewAchievements = sortAchievementsByAvailability(catalog, achievementCtx)
+  const pinnedIds = profile.pinnedAchievements ?? [];
+  const sortedAchievements = sortAchievementsByAvailability(catalog, achievementCtx);
+  // Закреплённые игроком достижения — витрина, поэтому идут первыми.
+  const previewAchievements = [
+    ...sortedAchievements.filter((item) => pinnedIds.includes(item.id)),
+    ...sortedAchievements.filter((item) => !pinnedIds.includes(item.id)),
+  ]
     .slice(0, 6)
     .map((item) => {
       const progress = item.getProgress(achievementCtx);
@@ -119,6 +161,7 @@ export function ProfilePage(): JSX.Element {
         icon: item.icon,
         title: item.title,
         unlocked,
+        pinned: pinnedIds.includes(item.id),
         progress: unlocked ? 'Получено' : `${progress}/${item.target}`,
       };
     });
@@ -212,30 +255,29 @@ export function ProfilePage(): JSX.Element {
           )}
         </div>
 
-        {/* Статус — прямоугольный бейдж по центру */}
+        {/* Статус — компактный бейдж под ником */}
         <div
-          className="relative flex flex-col items-center justify-center px-5 py-2.5 mt-1"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1"
           style={{
-            minWidth: 200,
-            background: profile.isVerified
-              ? 'linear-gradient(145deg, rgba(199,154,61,0.18), rgba(20,16,10,0.92))'
-              : 'rgba(120,110,90,0.08)',
-            border: `1px solid ${profile.isVerified ? 'rgba(199,154,61,0.4)' : 'rgba(120,110,90,0.25)'}`,
-            borderRadius: 12,
+            background: profile.isVerified ? 'rgba(199,154,61,0.10)' : 'rgba(120,110,90,0.06)',
+            border: `1px solid ${profile.isVerified ? 'rgba(199,154,61,0.25)' : 'rgba(120,110,90,0.18)'}`,
+            borderRadius: 999,
           }}
         >
-          <p
-            className="sans uppercase"
-            style={{ fontSize: 9, color: '#8A7A62', letterSpacing: '0.16em' }}
-          >
-            Статус
-          </p>
-          <p
-            className="serif font-semibold"
-            style={{ fontSize: 15, color: profile.isVerified ? '#F7D98A' : '#6B614E' }}
+          <span
+            style={{
+              width: 5,
+              height: 5,
+              borderRadius: 999,
+              background: profile.isVerified ? '#C89A3D' : '#4E483B',
+            }}
+          />
+          <span
+            className="sans"
+            style={{ fontSize: 10, color: profile.isVerified ? '#A89878' : '#6B614E' }}
           >
             {profile.isVerified ? 'Подтверждён' : 'Не подтверждён'}
-          </p>
+          </span>
         </div>
 
         {/* Уровень + XP — крупно и читаемо */}
@@ -248,65 +290,47 @@ export function ProfilePage(): JSX.Element {
           }}
         >
           <div className="absolute inset-0 deco-lines opacity-30 pointer-events-none" />
-          <div className="relative flex items-center justify-between gap-3 mb-3">
-            <div>
-              <p
-                className="sans uppercase"
-                style={{ fontSize: 11, color: '#8A7A62', letterSpacing: '0.16em' }}
+          <div className="relative flex items-center gap-3">
+            <LevelBadge level={profile.level} current />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-baseline justify-between mb-1.5">
+                <span
+                  className="sans num"
+                  style={{ fontSize: 12, color: '#C89A3D', fontWeight: 600 }}
+                >
+                  {profile.xp.toLocaleString('ru-RU')} XP
+                </span>
+                <span className="sans num" style={{ fontSize: 12, color: '#8A7A62' }}>
+                  {profile.nextLevelXp.toLocaleString('ru-RU')} XP
+                </span>
+              </div>
+              <div
+                className="relative rounded-full overflow-hidden"
+                style={{
+                  height: 12,
+                  background: 'rgba(199,154,61,0.12)',
+                  border: '1px solid rgba(199,154,61,0.2)',
+                }}
               >
-                Уровень
-              </p>
-              <p
-                className="serif font-semibold gold-text"
-                style={{ fontSize: 36, lineHeight: 1.05 }}
-              >
-                {profile.level}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="sans" style={{ fontSize: 12, color: '#8A7A62' }}>
-                Прогресс
-              </p>
-              <p className="sans num font-semibold" style={{ fontSize: 18, color: '#F5EDD6' }}>
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${xpPct}%` }}
+                  transition={{ duration: 1.4, ease: 'easeOut', delay: 0.2 }}
+                  style={{
+                    height: '100%',
+                    background: 'linear-gradient(90deg,#9C6A1F,#C89A3D,#F7D98A)',
+                    borderRadius: 999,
+                    boxShadow: '0 0 16px rgba(199,154,61,0.45)',
+                  }}
+                />
+              </div>
+              <p className="sans num mt-1.5" style={{ fontSize: 11, color: '#8A7A62' }}>
+                Ещё {Math.max(profile.nextLevelXp - profile.xp, 0).toLocaleString('ru-RU')} XP ·{' '}
                 {xpPct}%
               </p>
             </div>
+            <LevelBadge level={profile.level + 1} />
           </div>
-          <div className="relative flex justify-between mb-2">
-            <span className="sans num" style={{ fontSize: 13, color: '#C89A3D', fontWeight: 600 }}>
-              {profile.xp.toLocaleString('ru-RU')} XP
-            </span>
-            <span className="sans num" style={{ fontSize: 13, color: '#A89878' }}>
-              {profile.nextLevelXp.toLocaleString('ru-RU')} XP
-            </span>
-          </div>
-          <div
-            className="relative rounded-[12px] overflow-hidden"
-            style={{
-              height: 14,
-              background: 'rgba(199,154,61,0.12)',
-              border: '1px solid rgba(199,154,61,0.2)',
-            }}
-          >
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${xpPct}%` }}
-              transition={{ duration: 1.4, ease: 'easeOut', delay: 0.2 }}
-              style={{
-                height: '100%',
-                background: 'linear-gradient(90deg,#9C6A1F,#C89A3D,#F7D98A)',
-                borderRadius: 10,
-                boxShadow: '0 0 16px rgba(199,154,61,0.45)',
-              }}
-            />
-          </div>
-          <p
-            className="relative sans num mt-2.5 text-center"
-            style={{ fontSize: 13, color: '#C0B49A' }}
-          >
-            Ещё {Math.max(profile.nextLevelXp - profile.xp, 0).toLocaleString('ru-RU')} XP до уровня{' '}
-            {profile.level + 1}
-          </p>
         </div>
       </div>
 
@@ -396,16 +420,27 @@ export function ProfilePage(): JSX.Element {
                   delay: 0.18 + index * 0.06,
                 }}
                 whileTap={{ scale: 0.96 }}
-                className="shrink-0 flex flex-col items-center gap-2 p-3 rounded-[16px]"
+                className="relative shrink-0 flex flex-col items-center gap-2 p-3 rounded-[16px]"
                 style={{
                   width: 100,
                   cursor: 'pointer',
-                  background: 'rgba(9,9,9,0.45)',
-                  border: a.unlocked
-                    ? '1px solid rgba(199,154,61,0.32)'
-                    : '1px solid rgba(199,154,61,0.12)',
+                  background: a.pinned ? 'rgba(199,154,61,0.10)' : 'rgba(9,9,9,0.45)',
+                  border: a.pinned
+                    ? '1px solid rgba(247,217,138,0.5)'
+                    : a.unlocked
+                      ? '1px solid rgba(199,154,61,0.32)'
+                      : '1px solid rgba(199,154,61,0.12)',
                 }}
               >
+                {a.pinned && (
+                  <span
+                    className="sans absolute top-1.5 right-2"
+                    style={{ fontSize: 10, color: '#F7D98A' }}
+                    aria-label="В витрине профиля"
+                  >
+                    ★
+                  </span>
+                )}
                 <AchievementMedallion id={a.id} locked={!a.unlocked} size={42} />
                 <span
                   className="sans text-center"

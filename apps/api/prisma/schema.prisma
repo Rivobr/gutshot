@@ -158,6 +158,10 @@ model User {
   /// Принятие пользовательских соглашений при первом входе в Mini App.
   consentAcceptedAt DateTime?
 
+  /// Витрина достижений: id из клиентского каталога, которые игрок закрепил
+  /// в профиле. Видны другим игрокам в списке участников турнира.
+  pinnedAchievements String[] @default([])
+
   playerProfile     PlayerProfile?
   registrations     Registration[]
   tournamentResults TournamentResult[]

@@ -11,6 +11,7 @@ import {
 import { goldButtonStyle } from '../../shared/ui/figma';
 import { PlayersFillBar } from '../../shared/ui/PlayersFillBar';
 import { PlayerAvatar } from '../../shared/ui/PlayerAvatar';
+import { AchievementMedallion } from '../../shared/ui/AchievementMedallion';
 import { showToast } from '../../shared/ui/toast';
 import { displayNameOf } from '../../shared/lib/display-name';
 import { formatDate, formatTime } from '../../shared/lib/format';
@@ -341,6 +342,13 @@ export function TournamentPage(): JSX.Element {
                       </span>
                     </div>
                   </div>
+                  {p.pinnedAchievements && p.pinnedAchievements.length > 0 && (
+                    <div className="flex shrink-0 items-center gap-1">
+                      {p.pinnedAchievements.slice(0, 3).map((achievementId) => (
+                        <AchievementMedallion key={achievementId} id={achievementId} size={24} />
+                      ))}
+                    </div>
+                  )}
                 </motion.div>
               ))}
             </div>

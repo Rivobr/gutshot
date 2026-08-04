@@ -31,31 +31,48 @@ export interface AchievementContext {
 
 export const RARITY_STYLE: Record<
   AchievementRarity,
-  { border: string; glow: string; accent: string; label: string }
+  {
+    border: string;
+    glow: string;
+    accent: string;
+    label: string;
+    /** Фон карточки открытого достижения */
+    fill: string;
+    /** Фон плашки редкости */
+    chip: string;
+  }
 > = {
   common: {
-    border: 'rgba(160,150,130,0.28)',
+    border: 'rgba(170,160,140,0.35)',
     glow: 'none',
-    accent: '#B6A98F',
+    accent: '#C6BAA0',
     label: 'Обычное',
+    fill: 'linear-gradient(150deg, rgba(150,142,124,0.14), rgba(12,12,12,0.9))',
+    chip: 'rgba(170,160,140,0.16)',
   },
   rare: {
-    border: 'rgba(80,140,220,0.45)',
-    glow: '0 0 18px rgba(80,140,220,0.18)',
-    accent: '#7EB6F0',
+    border: 'rgba(74,150,255,0.7)',
+    glow: '0 0 26px rgba(74,150,255,0.32)',
+    accent: '#6FB4FF',
     label: 'Редкое',
+    fill: 'linear-gradient(150deg, rgba(50,120,225,0.26), rgba(9,12,20,0.94))',
+    chip: 'rgba(74,150,255,0.22)',
   },
   epic: {
-    border: 'rgba(180,90,220,0.45)',
-    glow: '0 0 20px rgba(180,90,220,0.2)',
-    accent: '#C79BEC',
+    border: 'rgba(186,85,255,0.75)',
+    glow: '0 0 30px rgba(186,85,255,0.36)',
+    accent: '#D39BFF',
     label: 'Эпическое',
+    fill: 'linear-gradient(150deg, rgba(150,60,220,0.28), rgba(14,9,20,0.94))',
+    chip: 'rgba(186,85,255,0.24)',
   },
   legend: {
-    border: 'rgba(247,217,138,0.55)',
-    glow: '0 0 28px rgba(199,154,61,0.28)',
-    accent: '#F7D98A',
+    border: 'rgba(255,196,74,0.9)',
+    glow: '0 0 42px rgba(255,178,40,0.5)',
+    accent: '#FFD873',
     label: 'Легенда',
+    fill: 'linear-gradient(150deg, rgba(255,178,40,0.34), rgba(120,60,10,0.28) 45%, rgba(16,11,4,0.96))',
+    chip: 'rgba(255,196,74,0.28)',
   },
 };
 
@@ -208,18 +225,22 @@ export const ACHIEVEMENTS_CATALOG: AchievementDef[] = [
   },
 ];
 
-/** Сортировка: сначала открытые, потом закрытые; легенда ближе к верху среди открытых. */
+/** Сортировка: сначала открытые, потом закрытые; «Легенда Гатшот» всегда в самом низу. */
 export function sortAchievementsByAvailability(
   items: AchievementDef[],
   ctx: AchievementContext,
 ): AchievementDef[] {
   return [...items].sort((a, b) => {
+    if (Boolean(a.span2) !== Boolean(b.span2)) return a.span2 ? 1 : -1;
     const aDone = a.getProgress(ctx) >= a.target ? 1 : 0;
     const bDone = b.getProgress(ctx) >= b.target ? 1 : 0;
     if (aDone !== bDone) return bDone - aDone;
-    if (Boolean(a.span2) !== Boolean(b.span2)) return a.span2 ? -1 : 1;
     return 0;
   });
+}
+
+export function isAchievementUnlocked(def: AchievementDef, ctx: AchievementContext): boolean {
+  return def.getProgress(ctx) >= def.target;
 }
 
 /** Подставляет тексты из админки поверх каталога (логика прогресса не меняется). */

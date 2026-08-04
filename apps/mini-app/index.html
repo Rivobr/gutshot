@@ -18,12 +18,24 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 14px;
-        background: #000;
+        gap: 40px;
+        background: #000
+          radial-gradient(ellipse at 50% 35%, rgba(199, 154, 61, 0.12) 0%, transparent 58%);
         color: #8A7A62;
         font-family: system-ui, -apple-system, sans-serif;
         font-size: 13px;
         letter-spacing: 0.06em;
+      }
+      #boot img {
+        width: min(72vw, 280px);
+        height: auto;
+        display: block;
+        filter: drop-shadow(0 8px 28px rgba(199, 154, 61, 0.22));
+        animation: boot-pulse 2.4s ease-in-out infinite;
+      }
+      @keyframes boot-pulse {
+        0%, 100% { opacity: 0.88; transform: scale(0.985); }
+        50% { opacity: 1; transform: scale(1); }
       }
       #boot-bar {
         width: 120px;
@@ -119,7 +131,7 @@
   <body>
     <div id="root">
       <div id="boot">
-        <span>GUTSHOT</span>
+        <img src="/gutshot-logo.png" alt="GUTSHOT" />
         <div id="boot-bar"><i></i></div>
       </div>
     </div>

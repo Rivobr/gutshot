@@ -5,6 +5,9 @@ import { PlayerEventsService } from '../../progression/player-events.service';
 import { AchievementsService } from '../../progression/achievements.service';
 import { UsersService } from '../users.service';
 
+/** Сколько достижений игрок может закрепить в профиле. */
+export const MAX_PINNED_ACHIEVEMENTS = 3;
+
 @Injectable()
 export class ProfileService {
   constructor(
@@ -117,6 +120,7 @@ export class ProfileService {
       isVerified: user.isVerified,
       qrCode,
       consentAcceptedAt: user.consentAcceptedAt,
+      pinnedAchievements: user.pinnedAchievements,
       ...levelProgress,
       stats: {
         tournamentsPlayed,
@@ -134,6 +138,16 @@ export class ProfileService {
         fourOfAKind,
       },
     };
+  }
+
+  /** Витрина достижений в профиле: показывается другим игрокам. */
+  async setPinnedAchievements(userId: string, achievementIds: string[]) {
+    const unique = Array.from(new Set(achievementIds)).slice(0, MAX_PINNED_ACHIEVEMENTS);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { pinnedAchievements: unique },
+    });
+    return { pinnedAchievements: unique };
   }
 
   /** Постоянный персональный QR-код игрока. */

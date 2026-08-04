@@ -3,7 +3,12 @@ import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Loader } from '@gutshot/ui';
-import { useAchievementTexts, useAchievements, useProfile } from '../../entities/player';
+import {
+  useAchievementTexts,
+  useAchievements,
+  usePinAchievements,
+  useProfile,
+} from '../../entities/player';
 import {
   mergeAchievementTexts,
   RARITY_STYLE,
@@ -13,16 +18,17 @@ import {
 } from '../../shared/lib/achievements-catalog';
 import { AchievementMedallion } from '../../shared/ui/AchievementMedallion';
 
+/** Столько же, сколько принимает API (MAX_PINNED_ACHIEVEMENTS). */
+const MAX_PINNED = 3;
+
 export function AchievementsPage(): JSX.Element {
   const navigate = useNavigate();
   const { data: profile, isLoading } = useProfile();
   const { data: unlockedAchievements } = useAchievements();
   const { data: achievementTexts } = useAchievementTexts();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const catalog = useMemo(
-    () => mergeAchievementTexts(achievementTexts),
-    [achievementTexts],
-  );
+  const pinAchievements = usePinAchievements();
+  const catalog = useMemo(() => mergeAchievementTexts(achievementTexts), [achievementTexts]);
 
   if (isLoading || !profile) {
     return <Loader />;
@@ -41,11 +47,18 @@ export function AchievementsPage(): JSX.Element {
   const sorted = sortAchievementsByAvailability(catalog, ctx);
   const unlockedCount = catalog.filter((item) => item.getProgress(ctx) >= item.target).length;
 
-  const selected = selectedId
-    ? catalog.find((item) => item.id === selectedId) ?? null
-    : null;
+  const selected = selectedId ? (catalog.find((item) => item.id === selectedId) ?? null) : null;
   const selectedProgress = selected ? selected.getProgress(ctx) : 0;
   const selectedDone = selected ? selectedProgress >= selected.target : false;
+
+  const pinnedIds = profile.pinnedAchievements ?? [];
+
+  const togglePinned = (id: string) => {
+    const next = pinnedIds.includes(id)
+      ? pinnedIds.filter((item) => item !== id)
+      : [...pinnedIds, id].slice(-MAX_PINNED);
+    pinAchievements.mutate(next);
+  };
 
   return (
     <div
@@ -158,16 +171,24 @@ export function AchievementsPage(): JSX.Element {
                 borderRadius: 16,
                 cursor: 'pointer',
                 background: done
-                  ? 'linear-gradient(165deg, rgba(72,48,14,0.75) 0%, rgba(18,14,10,0.96) 55%, rgba(10,8,6,0.98) 100%)'
+                  ? rarity.fill
                   : 'linear-gradient(165deg, rgba(32,26,18,0.92) 0%, rgba(12,10,8,0.98) 100%)',
-                border: done
-                  ? `1px solid ${rarity.border}`
-                  : '1px solid rgba(120,95,50,0.28)',
+                border: done ? `1.5px solid ${rarity.border}` : '1px solid rgba(120,95,50,0.28)',
                 boxShadow: done
-                  ? `${rarity.glow}, inset 0 1px 0 rgba(247,217,138,0.18)`
+                  ? `${rarity.glow}, inset 0 1px 0 rgba(255,255,255,0.12)`
                   : 'inset 0 1px 0 rgba(255,255,255,0.03)',
               }}
             >
+              {pinnedIds.includes(item.id) && (
+                <span
+                  className="sans absolute top-2 left-2"
+                  style={{ fontSize: 11, color: rarity.accent }}
+                  aria-label="В профиле"
+                >
+                  ★
+                </span>
+              )}
+
               {!done && (
                 <span
                   className="absolute top-2 right-2 flex items-center justify-center"
@@ -188,14 +209,18 @@ export function AchievementsPage(): JSX.Element {
 
               <AchievementMedallion id={item.id} locked={!done} size={span2 ? 64 : 72} />
 
-              <div className={`flex flex-col ${span2 ? 'items-start text-left flex-1 min-w-0' : 'items-center w-full'}`}>
+              <div
+                className={`flex flex-col ${span2 ? 'items-start text-left flex-1 min-w-0' : 'items-center w-full'}`}
+              >
                 <p
-                  className="sans uppercase"
+                  className="sans uppercase px-1.5 py-0.5"
                   style={{
                     fontSize: 9,
                     color: rarity.accent,
                     letterSpacing: '0.14em',
                     marginTop: span2 ? 0 : 10,
+                    borderRadius: 999,
+                    background: done ? rarity.chip : 'transparent',
                   }}
                 >
                   {rarity.label}
@@ -301,6 +326,10 @@ export function AchievementsPage(): JSX.Element {
               item={selected}
               progress={selectedProgress}
               done={selectedDone}
+              pinned={pinnedIds.includes(selected.id)}
+              canPin={selectedDone}
+              pinLimitReached={pinnedIds.length >= MAX_PINNED}
+              onTogglePin={() => togglePinned(selected.id)}
               onClose={() => setSelectedId(null)}
             />
           )}
@@ -315,11 +344,19 @@ function AchievementHowToModal({
   item,
   progress,
   done,
+  pinned,
+  canPin,
+  pinLimitReached,
+  onTogglePin,
   onClose,
 }: {
   item: AchievementDef;
   progress: number;
   done: boolean;
+  pinned: boolean;
+  canPin: boolean;
+  pinLimitReached: boolean;
+  onTogglePin: () => void;
   onClose: () => void;
 }): JSX.Element {
   const rarity = RARITY_STYLE[item.rarity];
@@ -427,18 +464,40 @@ function AchievementHowToModal({
           >
             Как открыть
           </p>
-          <p
-            className="sans mt-2"
-            style={{ fontSize: 13, color: '#D8CEBC', lineHeight: 1.55 }}
-          >
+          <p className="sans mt-2" style={{ fontSize: 13, color: '#D8CEBC', lineHeight: 1.55 }}>
             {item.howTo}
           </p>
         </div>
 
+        {canPin && (
+          <>
+            <button
+              type="button"
+              onClick={onTogglePin}
+              disabled={!pinned && pinLimitReached}
+              className="w-full mt-4 py-3 rounded-[14px] sans font-semibold"
+              style={{
+                background: pinned ? 'rgba(199,154,61,0.14)' : 'transparent',
+                border: `1px solid ${rarity.border}`,
+                color: rarity.accent,
+                fontSize: 13,
+                cursor: !pinned && pinLimitReached ? 'not-allowed' : 'pointer',
+                opacity: !pinned && pinLimitReached ? 0.45 : 1,
+              }}
+            >
+              {pinned ? '★ Убрать из профиля' : '☆ Добавить в профиль'}
+            </button>
+            <p className="sans text-center mt-2" style={{ fontSize: 11, color: '#6B614E' }}>
+              Достижения из профиля видны другим игрокам в списке участников турнира. Максимум{' '}
+              {MAX_PINNED}.
+            </p>
+          </>
+        )}
+
         <button
           type="button"
           onClick={onClose}
-          className="w-full mt-4 py-3 rounded-[14px] sans font-semibold"
+          className="w-full mt-3 py-3 rounded-[14px] sans font-semibold"
           style={{
             background: 'linear-gradient(135deg,#9C6A1F,#C89A3D)',
             border: 'none',
