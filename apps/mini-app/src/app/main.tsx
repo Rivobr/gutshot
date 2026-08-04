@@ -3,10 +3,9 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import './styles/index.css';
 
-// SPA-шелл раздаётся ещё и как /t.html (вход из бота через boot.html):
-// без нормализации роутер видит несуществующий путь и открывает NotFound.
-if (/\.html$/.test(window.location.pathname)) {
-  window.history.replaceState(null, '', `/${window.location.hash}`);
+// Дубль нормализации пути (основная — inline в index.html и в router/normalize-spa-path).
+if (/\.html$/i.test(window.location.pathname)) {
+  window.history.replaceState(null, '', `/${window.location.search}${window.location.hash}`);
 }
 
 const root = createRoot(document.getElementById('root')!);

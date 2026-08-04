@@ -135,6 +135,16 @@
         <div id="boot-bar"><i></i></div>
       </div>
     </div>
+    <!-- До любого ES-модуля: /t.html → /, иначе React Router открывает NotFound. -->
+    <script>
+      (function () {
+        try {
+          if (/\.html$/i.test(location.pathname)) {
+            history.replaceState(null, '', '/' + location.search + location.hash);
+          }
+        } catch (e) {}
+      })();
+    </script>
     <script type="module" src="/src/app/main.tsx"></script>
   </body>
 </html>
