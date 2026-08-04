@@ -1,3 +1,4 @@
+import { isAxiosError } from 'axios';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,6 +11,21 @@ const schema = z.object({
 });
 
 type FormValues = z.infer<typeof schema>;
+
+/** Сетевой сбой и отказ сервера — разные проблемы, и чинят их по-разному. */
+function loginErrorMessage(error: unknown): string {
+  if (!isAxiosError(error)) {
+    return 'Не удалось войти. Попробуйте ещё раз.';
+  }
+  if (!error.response) {
+    return 'Нет связи с сервером. Проверьте интернет и повторите.';
+  }
+  if (error.response.status === 401) {
+    return 'Неверный email или пароль';
+  }
+  const message = (error.response.data as { message?: string } | undefined)?.message;
+  return message ?? `Ошибка сервера (${error.response.status}). Попробуйте позже.`;
+}
 
 export function LoginPage(): JSX.Element {
   const loginMutation = useAdminLogin();
@@ -29,7 +45,12 @@ export function LoginPage(): JSX.Element {
 
         <form
           className="flex flex-col gap-4"
-          onSubmit={handleSubmit((values) => loginMutation.mutate(values))}
+          onSubmit={handleSubmit((values) =>
+            loginMutation.mutate({
+              email: values.email.trim().toLowerCase(),
+              password: values.password,
+            }),
+          )}
         >
           <div className="flex flex-col gap-1.5">
             <label className="text-sm text-muted-foreground">Email</label>
@@ -39,7 +60,9 @@ export function LoginPage(): JSX.Element {
               placeholder="admin@gutshot.club"
               {...register('email')}
             />
-            {errors.email && <span className="text-xs text-destructive">{errors.email.message}</span>}
+            {errors.email && (
+              <span className="text-xs text-destructive">{errors.email.message}</span>
+            )}
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -50,11 +73,13 @@ export function LoginPage(): JSX.Element {
               placeholder="********"
               {...register('password')}
             />
-            {errors.password && <span className="text-xs text-destructive">{errors.password.message}</span>}
+            {errors.password && (
+              <span className="text-xs text-destructive">{errors.password.message}</span>
+            )}
           </div>
 
           {loginMutation.isError && (
-            <p className="text-sm text-destructive">Неверный email или пароль</p>
+            <p className="text-sm text-destructive">{loginErrorMessage(loginMutation.error)}</p>
           )}
 
           <Button type="submit" isLoading={loginMutation.isPending}>

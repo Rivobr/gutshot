@@ -8,11 +8,15 @@ import {
   useCurrentRegistration,
   useRegister,
 } from '../../entities/registration';
-import { InfoCard, goldButtonStyle } from '../../shared/ui/figma';
+import { goldButtonStyle } from '../../shared/ui/figma';
+import { PlayersFillBar } from '../../shared/ui/PlayersFillBar';
 import { PlayerAvatar } from '../../shared/ui/PlayerAvatar';
+import { AchievementMedallion } from '../../shared/ui/AchievementMedallion';
+import { showToast } from '../../shared/ui/toast';
 import { displayNameOf } from '../../shared/lib/display-name';
-import { formatDate, formatTime, seatsWord } from '../../shared/lib/format';
+import { formatDate, formatTime } from '../../shared/lib/format';
 import { club } from '../../shared/config/club';
+import { TournamentLiveBlock } from '../../widgets/TournamentLive/TournamentLiveBlock';
 
 const UPCOMING_STATUSES = ['DRAFT', 'REGISTRATION_OPEN', 'REGISTRATION_CLOSED', 'IN_PROGRESS'];
 
@@ -34,9 +38,23 @@ export function TournamentPage(): JSX.Element {
 
   const registrationsCount = tournament._count?.registrations ?? 0;
   const seats = Math.max(tournament.maxPlayers - registrationsCount, 0);
-  const pct = Math.min(Math.round((registrationsCount / tournament.maxPlayers) * 100), 100);
   const upcoming = UPCOMING_STATUSES.includes(tournament.status);
   const isMine = currentRegistration?.tournamentId === tournament.id;
+
+  const handleRegister = (): void => {
+    registerMutation.mutate(tournament.id, {
+      onSuccess: () => showToast('Вы записаны на турнир'),
+      onError: () => showToast('Не удалось зарегистрироваться', 'error'),
+    });
+  };
+
+  const handleCancel = (): void => {
+    if (!currentRegistration) return;
+    cancelMutation.mutate(currentRegistration.id, {
+      onSuccess: () => showToast('Регистрация отменена', 'info'),
+      onError: () => showToast('Не удалось отменить регистрацию', 'error'),
+    });
+  };
 
   return (
     <motion.div
@@ -45,7 +63,6 @@ export function TournamentPage(): JSX.Element {
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
       className="flex flex-col pb-6"
     >
-      {/* Шапка с геометрической фигурой */}
       <div
         className="relative px-5 pt-5 pb-6 overflow-hidden"
         style={{
@@ -53,6 +70,18 @@ export function TournamentPage(): JSX.Element {
           borderBottom: '1px solid rgba(199,154,61,0.18)',
         }}
       >
+        {tournament.imageUrl && (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0"
+            style={{
+              backgroundImage: `url(${tournament.imageUrl})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              opacity: 0.22,
+            }}
+          />
+        )}
         <div
           aria-hidden
           className="pointer-events-none absolute"
@@ -65,19 +94,6 @@ export function TournamentPage(): JSX.Element {
               'linear-gradient(145deg, rgba(200,154,61,0.28) 0%, rgba(200,154,61,0.06) 55%, transparent 70%)',
             clipPath: 'polygon(35% 0%, 100% 0%, 100% 70%, 55% 100%, 0% 45%)',
             transform: 'rotate(8deg)',
-          }}
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute"
-          style={{
-            right: 18,
-            top: 28,
-            width: 72,
-            height: 72,
-            border: '1px solid rgba(199,154,61,0.35)',
-            transform: 'rotate(28deg)',
-            borderRadius: 10,
           }}
         />
 
@@ -114,7 +130,6 @@ export function TournamentPage(): JSX.Element {
         </p>
       </div>
 
-      {/* Вкладки-боксы */}
       <div className="px-5 pt-4 flex gap-2">
         {(
           [
@@ -153,14 +168,15 @@ export function TournamentPage(): JSX.Element {
 
       {tab === 'about' ? (
         <>
-          <div className="px-5 pt-5 grid grid-cols-2 gap-3">
-            <InfoCard
-              label="Игроки"
-              value={`${registrationsCount} / ${tournament.maxPlayers}`}
-              icon="👥"
-            />
-            <InfoCard label="Мест осталось" value={seats.toString()} icon={seats <= 3 ? '🔴' : '🟢'} />
+          <div className="px-5 pt-5">
+            <PlayersFillBar taken={registrationsCount} max={tournament.maxPlayers} />
           </div>
+
+          {tournament.live && (
+            <div className="px-5 mt-4">
+              <TournamentLiveBlock live={tournament.live} />
+            </div>
+          )}
 
           <div className="px-5 mt-4">
             <div
@@ -179,25 +195,38 @@ export function TournamentPage(): JSX.Element {
             </div>
           </div>
 
-          {upcoming && (
-            <div className="px-5 mt-4">
-              <div
-                className="rounded-full overflow-hidden"
-                style={{ height: 3, background: 'rgba(199,154,61,0.1)' }}
-              >
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${pct}%` }}
-                  transition={{ duration: 1.2, ease: 'easeOut' }}
-                  style={{
-                    height: '100%',
-                    background: 'linear-gradient(90deg, #9C6A1F, #C89A3D, #F7D98A)',
-                    borderRadius: 99,
-                  }}
-                />
-              </div>
-            </div>
-          )}
+          <div className="px-5 mt-4 grid grid-cols-2 gap-2.5">
+            <a
+              href={club.supportUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="vip-card rounded-[16px] px-4 py-3.5 sans text-center"
+              style={{
+                fontSize: 13,
+                color: '#F5EDD6',
+                border: '1px solid rgba(199,154,61,0.22)',
+                textDecoration: 'none',
+                fontWeight: 600,
+              }}
+            >
+              Поддержка
+            </a>
+            <a
+              href={club.mapsUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="vip-card rounded-[16px] px-4 py-3.5 sans text-center"
+              style={{
+                fontSize: 13,
+                color: '#F5EDD6',
+                border: '1px solid rgba(199,154,61,0.22)',
+                textDecoration: 'none',
+                fontWeight: 600,
+              }}
+            >
+              Как пройти
+            </a>
+          </div>
 
           {tournament.description && (
             <div className="px-5 mt-5">
@@ -211,7 +240,7 @@ export function TournamentPage(): JSX.Element {
                 >
                   Подробнее
                 </p>
-                <p className="serif" style={{ fontSize: 15, color: '#C0B49A', lineHeight: 1.7 }}>
+                <p className="serif" style={{ fontSize: 19, color: '#D8CEBC', lineHeight: 1.65 }}>
                   {tournament.description}
                 </p>
               </div>
@@ -231,7 +260,7 @@ export function TournamentPage(): JSX.Element {
                 <button
                   type="button"
                   disabled={cancelMutation.isPending}
-                  onClick={() => cancelMutation.mutate(currentRegistration.id)}
+                  onClick={handleCancel}
                   className="w-full py-3.5 rounded-[18px] sans font-medium disabled:opacity-50"
                   style={{
                     background: 'rgba(192,57,43,0.12)',
@@ -250,7 +279,7 @@ export function TournamentPage(): JSX.Element {
               <button
                 type="button"
                 disabled={tournament.status !== 'REGISTRATION_OPEN' || registerMutation.isPending}
-                onClick={() => registerMutation.mutate(tournament.id)}
+                onClick={handleRegister}
                 className="btn-shine w-full py-4 rounded-[18px] serif font-semibold tracking-widest disabled:opacity-50"
                 style={goldButtonStyle()}
               >
@@ -260,17 +289,7 @@ export function TournamentPage(): JSX.Element {
               </button>
               {tournament.status === 'REGISTRATION_OPEN' && (
                 <p className="sans text-center mt-2.5" style={{ fontSize: 10, color: '#6B614E' }}>
-                  {seats} {seatsWord(seats)} · Регистрация закрывается за 2 часа до начала
-                </p>
-              )}
-              {registerMutation.isError && (
-                <p className="sans text-center mt-2.5" style={{ fontSize: 11, color: '#C0392B' }}>
-                  Не удалось зарегистрироваться. Попробуйте снова.
-                </p>
-              )}
-              {registerMutation.isSuccess && (
-                <p className="sans text-center mt-2.5" style={{ fontSize: 11, color: '#C89A3D' }}>
-                  Вы успешно зарегистрированы!
+                  Свободно {seats} · Регистрация закрывается за 2 часа до начала
                 </p>
               )}
             </div>
@@ -315,11 +334,21 @@ export function TournamentPage(): JSX.Element {
                           @{p.username}
                         </span>
                       )}
-                      <span className="sans" style={{ fontSize: 10, color: 'rgba(199,154,61,0.6)' }}>
+                      <span
+                        className="sans"
+                        style={{ fontSize: 10, color: 'rgba(199,154,61,0.6)' }}
+                      >
                         Уровень {p.level}
                       </span>
                     </div>
                   </div>
+                  {p.pinnedAchievements && p.pinnedAchievements.length > 0 && (
+                    <div className="flex shrink-0 items-center gap-1">
+                      {p.pinnedAchievements.slice(0, 3).map((achievementId) => (
+                        <AchievementMedallion key={achievementId} id={achievementId} size={24} />
+                      ))}
+                    </div>
+                  )}
                 </motion.div>
               ))}
             </div>

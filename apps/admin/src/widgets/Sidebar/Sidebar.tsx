@@ -16,6 +16,14 @@ const ITEMS = [
   { to: '/settings', label: 'Настройки', icon: '⚙️' },
 ];
 
+/** Частые действия в зале: вынесены в нижнюю панель на телефоне. */
+const BOTTOM_ITEMS = [
+  { to: '/scanner', label: 'Скан', icon: '🔍' },
+  { to: '/tournaments', label: 'Турниры', icon: '🏆' },
+  { to: '/players', label: 'Игроки', icon: '👥' },
+  { to: '/', label: 'Обзор', icon: '📊' },
+];
+
 function NavItems({ onNavigate }: { onNavigate?: () => void }): JSX.Element {
   const logout = useLogout();
   return (
@@ -63,6 +71,32 @@ export function Sidebar(): JSX.Element {
     <aside className="hidden h-screen w-64 shrink-0 border-r border-border bg-sidebar px-4 py-6 md:block">
       <NavItems />
     </aside>
+  );
+}
+
+export function MobileTabBar(): JSX.Element {
+  return (
+    <nav
+      className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-background/95 backdrop-blur md:hidden"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
+      {BOTTOM_ITEMS.map((item) => (
+        <NavLink
+          key={item.to}
+          to={item.to}
+          end={item.to === '/'}
+          className={({ isActive }) =>
+            cn(
+              'flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition-colors',
+              isActive ? 'text-primary' : 'text-muted-foreground',
+            )
+          }
+        >
+          <span className="text-lg leading-none">{item.icon}</span>
+          {item.label}
+        </NavLink>
+      ))}
+    </nav>
   );
 }
 

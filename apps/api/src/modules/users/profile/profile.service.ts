@@ -5,6 +5,9 @@ import { PlayerEventsService } from '../../progression/player-events.service';
 import { AchievementsService } from '../../progression/achievements.service';
 import { UsersService } from '../users.service';
 
+/** Сколько достижений игрок может закрепить в профиле. */
+export const MAX_PINNED_ACHIEVEMENTS = 3;
+
 @Injectable()
 export class ProfileService {
   constructor(
@@ -52,6 +55,7 @@ export class ProfileService {
       finalTables,
       placeAvg,
       visits,
+      fourOfAKind,
       placeHistory,
       levelProgress,
     ] = await Promise.all([
@@ -73,6 +77,9 @@ export class ProfileService {
       this.prisma.playerEvent.count({
         where: { userId, type: 'ARRIVED' },
       }),
+      this.prisma.playerEvent.count({
+        where: { userId, type: 'FOUR_OF_A_KIND' },
+      }),
       this.prisma.tournamentResult.findMany({
         where: { userId },
         select: { place: true, tournament: { select: { date: true } } },
@@ -93,10 +100,8 @@ export class ProfileService {
     }
 
     const firstPlaces = wins;
-    const top10Percent =
-      resultsCount > 0 ? Math.round((itm / resultsCount) * 100) : 0;
-    const averagePlace =
-      placeAvg._avg.place != null ? Math.round(placeAvg._avg.place) : null;
+    const top10Percent = resultsCount > 0 ? Math.round((itm / resultsCount) * 100) : 0;
+    const averagePlace = placeAvg._avg.place != null ? Math.round(placeAvg._avg.place) : null;
     const daysInClub = Math.max(
       0,
       Math.floor((Date.now() - user.createdAt.getTime()) / 86_400_000),
@@ -115,6 +120,7 @@ export class ProfileService {
       isVerified: user.isVerified,
       qrCode,
       consentAcceptedAt: user.consentAcceptedAt,
+      pinnedAchievements: user.pinnedAchievements,
       ...levelProgress,
       stats: {
         tournamentsPlayed,
@@ -129,8 +135,19 @@ export class ProfileService {
         visits,
         finalTables,
         winStreak,
+        fourOfAKind,
       },
     };
+  }
+
+  /** Витрина достижений в профиле: показывается другим игрокам. */
+  async setPinnedAchievements(userId: string, achievementIds: string[]) {
+    const unique = Array.from(new Set(achievementIds)).slice(0, MAX_PINNED_ACHIEVEMENTS);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { pinnedAchievements: unique },
+    });
+    return { pinnedAchievements: unique };
   }
 
   /** Постоянный персональный QR-код игрока. */
