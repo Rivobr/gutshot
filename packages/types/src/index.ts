@@ -199,8 +199,11 @@ export interface AdminPlayerListItem {
   firstName?: string | null;
   lastName?: string | null;
   photoUrl?: string | null;
+  nickname?: string | null;
   isBlocked: boolean;
   isVerified: boolean;
+  /** Постоянный персональный QR-код игрока. */
+  qrCode?: string | null;
   xp: number;
   level: number;
   visits: number;
