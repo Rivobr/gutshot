@@ -38,10 +38,7 @@ export class AuthService {
    * front like Cloudflare quick tunnel). Issued by the bot when sending the open button.
    */
   createMiniAppTicket(telegramId: string): string {
-    return this.jwtService.sign(
-      { typ: 'miniapp_ticket', telegramId },
-      { expiresIn: '15m' },
-    );
+    return this.jwtService.sign({ typ: 'miniapp_ticket', telegramId }, { expiresIn: '15m' });
   }
 
   async loginWithTicket(ticket: string) {
@@ -49,7 +46,9 @@ export class AuthService {
     try {
       payload = this.jwtService.verify(ticket) as { typ?: string; telegramId?: string };
     } catch {
-      throw new UnauthorizedException('Ссылка входа устарела. Откройте приложение кнопкой из бота снова.');
+      throw new UnauthorizedException(
+        'Ссылка входа устарела. Откройте приложение кнопкой из бота снова.',
+      );
     }
 
     if (payload.typ !== 'miniapp_ticket' || !payload.telegramId) {
@@ -99,7 +98,11 @@ export class AuthService {
   }
 
   async loginAdmin(email: string, password: string) {
-    const admin = await this.prisma.adminUser.findUnique({ where: { email } });
+    // Почту вводят с телефона, где часто включена автозаглавная буква,
+    // поэтому ищем без учёта регистра и лишних пробелов.
+    const admin = await this.prisma.adminUser.findFirst({
+      where: { email: { equals: email.trim(), mode: 'insensitive' } },
+    });
 
     if (!admin) {
       throw new UnauthorizedException('Неверный email или пароль');
