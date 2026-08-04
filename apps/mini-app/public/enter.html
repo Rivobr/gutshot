@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <title>GUTSHOT</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #090909;
+        color: #c9a227;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      }
+      #s {
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 24px;
+        text-align: center;
+        background: radial-gradient(ellipse at 50% 35%, rgba(199, 154, 61, 0.12) 0%, transparent 58%);
+      }
+      .logo {
+        width: min(64vw, 240px);
+        height: auto;
+        display: block;
+        filter: drop-shadow(0 8px 28px rgba(199, 154, 61, 0.22));
+      }
+      .msg {
+        font-size: 14px;
+        opacity: 0.85;
+      }
+      .spin {
+        width: 28px;
+        height: 28px;
+        border: 3px solid rgba(255, 255, 255, 0.12);
+        border-top-color: #c9a227;
+        border-radius: 50%;
+        animation: r 0.8s linear infinite;
+      }
+      @keyframes r {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  </head>
+  <body>
+    <div id="s">
+      <img class="logo" src="/gutshot-logo.png" alt="GUTSHOT" />
+      <div class="spin"></div>
+      <div class="msg">Открываем клуб…</div>
+    </div>
+    <script>
+      (function () {
+        try {
+          var tg = window.Telegram && Telegram.WebApp;
+          if (tg) {
+            tg.ready();
+            tg.expand();
+            if (tg.setHeaderColor) tg.setHeaderColor('#090909');
+            if (tg.setBackgroundColor) tg.setBackgroundColor('#090909');
+          }
+        } catch (e) {}
+        // Новый entry без кэша старого /t.html (NotFound в Telegram WebView).
+        location.replace('/?from=enter&t=' + Date.now() + (location.hash || ''));
+      })();
+    </script>
+  </body>
+</html>

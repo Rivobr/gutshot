@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <title>GUTSHOT</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: #000;
+      }
+    </style>
+    <script>
+      // Старый entry из кэша Telegram: жёсткий переход на «/», не SPA на /t.html.
+      (function () {
+        var q = location.search ? location.search + '&from=t' : '?from=t';
+        location.replace('/' + q + '&t=' + Date.now() + (location.hash || ''));
+      })();
+    </script>
+  </head>
+  <body></body>
+</html>

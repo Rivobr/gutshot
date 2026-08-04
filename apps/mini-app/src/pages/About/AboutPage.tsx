@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { PageHeader } from '../../widgets/PageHeader/PageHeader';
 import { InfoCard, Logo } from '../../shared/ui/figma';
 import { club } from '../../shared/config/club';
@@ -30,11 +31,50 @@ export function AboutPage(): JSX.Element {
           <InfoCard icon="🏙" label="Город" value={club.city} />
         </div>
 
+        <Link
+          to="/directions"
+          className="vip-card rounded-[18px] px-5 py-4 flex items-center justify-between"
+          style={{ textDecoration: 'none' }}
+        >
+          <span className="flex flex-col">
+            <span
+              className="sans uppercase"
+              style={{ fontSize: 8.5, color: '#6B614E', letterSpacing: '0.18em' }}
+            >
+              Маршрут
+            </span>
+            <span className="serif font-semibold" style={{ fontSize: 15, color: '#F5EDD6' }}>
+              Как найти Gutshot
+            </span>
+          </span>
+          <span style={{ color: 'rgba(199,154,61,0.6)', fontSize: 20 }}>›</span>
+        </Link>
+
+        <Link
+          to="/rules"
+          className="vip-card rounded-[18px] px-5 py-4 flex items-center justify-between"
+          style={{ textDecoration: 'none' }}
+        >
+          <span className="flex flex-col">
+            <span
+              className="sans uppercase"
+              style={{ fontSize: 8.5, color: '#6B614E', letterSpacing: '0.18em' }}
+            >
+              Документы
+            </span>
+            <span className="serif font-semibold" style={{ fontSize: 15, color: '#F5EDD6' }}>
+              Правила клуба
+            </span>
+          </span>
+          <span style={{ color: 'rgba(199,154,61,0.6)', fontSize: 20 }}>›</span>
+        </Link>
+
         <a
           href={club.channelUrl}
           target="_blank"
           rel="noreferrer"
           className="vip-card rounded-[18px] px-5 py-4 flex items-center justify-between"
+          style={{ textDecoration: 'none' }}
         >
           <span className="flex flex-col">
             <span

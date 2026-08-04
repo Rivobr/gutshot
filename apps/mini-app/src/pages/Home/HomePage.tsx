@@ -164,9 +164,11 @@ export function HomePage(): JSX.Element {
         <RatingBanner delay={0.15} />
 
         <div className="grid grid-cols-2 gap-3">
-          <HomeTile title="О клубе" suit="diamond" to="/about" delay={0.2} />
-          <HomeTile title="Поддержка" suit="heart" to="/support" delay={0.25} />
-          <HomeTile title="Q&A" suit="club" to="/faq" wide delay={0.3} />
+          <HomeTile title="Как найти" suit="diamond" to="/directions" delay={0.18} />
+          <HomeTile title="Правила" suit="club" to="/rules" delay={0.22} />
+          <HomeTile title="О клубе" suit="spade" to="/about" delay={0.26} />
+          <HomeTile title="Поддержка" suit="heart" to="/support" delay={0.3} />
+          <HomeTile title="Q&A" suit="club" to="/faq" wide delay={0.34} />
         </div>
 
         <div className="flex flex-col items-center gap-2 pt-3">
