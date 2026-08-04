@@ -59,7 +59,7 @@
           }
         } catch (e) {}
         // Immediate redirect — no health fetch (fetch itself can hang on flaky TLS).
-        location.replace("/t.html?from=go&t=" + Date.now());
+        location.replace("/?from=go&t=" + Date.now());
       })();
     </script>
   </head>

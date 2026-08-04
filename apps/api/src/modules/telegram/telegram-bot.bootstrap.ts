@@ -2,8 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TelegramService } from './telegram.service';
 
-const PRODUCTION_WEBHOOK =
-  'https://api.gutshotapp.ru/api/v1/telegram/webhook';
+const PRODUCTION_WEBHOOK = 'https://api.gutshotapp.ru/api/v1/telegram/webhook';
 
 @Injectable()
 export class TelegramBotBootstrap implements OnModuleInit {
@@ -45,7 +44,8 @@ export class TelegramBotBootstrap implements OnModuleInit {
       return;
     }
 
-    const entryUrl = `${miniAppUrl}/boot.html`;
+    // enter.html — новый entry без кэша старого /t.html (NotFound в Telegram WebView).
+    const entryUrl = `${miniAppUrl}/enter.html`;
     const menuOk = await this.withRetries(
       () => this.telegramService.setChatMenuButton(entryUrl),
       `setChatMenuButton ${entryUrl}`,
@@ -68,7 +68,9 @@ export class TelegramBotBootstrap implements OnModuleInit {
       }
       if (i < attempts) {
         const delayMs = Math.min(8000, 500 * 2 ** (i - 1));
-        this.logger.warn(`${label}: попытка ${i}/${attempts} не удалась, повтор через ${delayMs}ms`);
+        this.logger.warn(
+          `${label}: попытка ${i}/${attempts} не удалась, повтор через ${delayMs}ms`,
+        );
         await new Promise((resolve) => setTimeout(resolve, delayMs));
       }
     }

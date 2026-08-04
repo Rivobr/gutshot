@@ -6,6 +6,16 @@
     <meta name="gutshot-app" content="mini-app" />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <title>GUTSHOT Poker Club</title>
+    <script>
+      // В самом <head>, до Vite-бандла: /t.html и прочие *.html → «/».
+      (function () {
+        try {
+          if (/\.html$/i.test(location.pathname)) {
+            history.replaceState(null, '', '/' + location.search + location.hash);
+          }
+        } catch (e) {}
+      })();
+    </script>
     <style>
       html, body, #root {
         margin: 0;
@@ -135,16 +145,6 @@
         <div id="boot-bar"><i></i></div>
       </div>
     </div>
-    <!-- До любого ES-модуля: /t.html → /, иначе React Router открывает NotFound. -->
-    <script>
-      (function () {
-        try {
-          if (/\.html$/i.test(location.pathname)) {
-            history.replaceState(null, '', '/' + location.search + location.hash);
-          }
-        } catch (e) {}
-      })();
-    </script>
     <script type="module" src="/src/app/main.tsx"></script>
   </body>
 </html>

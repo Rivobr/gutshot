@@ -90,8 +90,8 @@
         var done = false;
 
         function appUrl() {
-          // Сразу на «/»: /t.html ломал React Router (NotFound) и кэшировался в Telegram.
-          return "/?from=boot&t=" + Date.now() + (location.hash || "");
+          // Новый entry URL (не кэш Telegram от старого boot/t.html).
+          return "/?from=enter&t=" + Date.now() + (location.hash || "");
         }
 
         function goApp() {

@@ -28,11 +28,7 @@ export class TelegramService {
     return join(process.cwd(), 'assets', 'welcome-club.png');
   }
 
-  async sendMessage(
-    telegramId: string,
-    text: string,
-    replyMarkup?: object,
-  ): Promise<boolean> {
+  async sendMessage(telegramId: string, text: string, replyMarkup?: object): Promise<boolean> {
     if (!this.botToken) {
       this.logger.warn('TELEGRAM_BOT_TOKEN не задан — сообщение не отправлено');
       return false;
@@ -85,11 +81,9 @@ export class TelegramService {
       { typ: 'miniapp_ticket', telegramId: String(chatId) },
       { expiresIn: '15m' },
     );
-    const entryUrl = `${miniAppUrl}/boot.html?t=${Date.now()}&ticket=${encodeURIComponent(ticket)}`;
+    const entryUrl = `${miniAppUrl}/enter.html?t=${Date.now()}&ticket=${encodeURIComponent(ticket)}`;
     const openAppKeyboard = {
-      inline_keyboard: [
-        [{ text: '♠️ Открыть GUTSHOT', web_app: { url: entryUrl } }],
-      ],
+      inline_keyboard: [[{ text: '♠️ Открыть GUTSHOT', web_app: { url: entryUrl } }]],
     };
 
     try {
@@ -158,7 +152,9 @@ export class TelegramService {
 
       return true;
     } catch (error) {
-      this.logger.error(`Не удалось прочитать/отправить welcome photo: ${(error as Error).message}`);
+      this.logger.error(
+        `Не удалось прочитать/отправить welcome photo: ${(error as Error).message}`,
+      );
       return false;
     }
   }
@@ -224,14 +220,20 @@ export class TelegramService {
 
       return `https://api.telegram.org/file/bot${this.botToken}/${filePayload.result.file_path}`;
     } catch (error) {
-      this.logger.warn(`Не удалось получить аватар Telegram ${telegramId}: ${(error as Error).message}`);
+      this.logger.warn(
+        `Не удалось получить аватар Telegram ${telegramId}: ${(error as Error).message}`,
+      );
       return undefined;
     } finally {
       clearTimeout(timer);
     }
   }
 
-  async getWebhookInfo(): Promise<{ url?: string; lastErrorMessage?: string; pendingUpdateCount?: number } | null> {
+  async getWebhookInfo(): Promise<{
+    url?: string;
+    lastErrorMessage?: string;
+    pendingUpdateCount?: number;
+  } | null> {
     if (!this.botToken) {
       return null;
     }
