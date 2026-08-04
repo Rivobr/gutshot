@@ -21,7 +21,7 @@ import { AdminTournamentsService } from './admin-tournaments.service';
 import { AttendanceService } from '../attendance/attendance.service';
 import { MarkAttendanceDto } from '../scanner/dto/scanner.dto';
 import { CreateTournamentDto } from './dto/create-tournament.dto';
-import { UpdateTournamentDto } from './dto/update-tournament.dto';
+import { UpdateTournamentDto, UpdateTournamentLiveDto } from './dto/update-tournament.dto';
 import { TournamentResultEntryDto } from './dto/finish-tournament.dto';
 
 @ApiTags('Admin / Tournaments')
@@ -48,6 +48,12 @@ export class AdminTournamentsController {
   @Post()
   create(@Body() dto: CreateTournamentDto) {
     return this.adminTournamentsService.create(dto);
+  }
+
+  @Roles(AdminRole.OWNER, AdminRole.ADMIN)
+  @Patch(':id/live')
+  updateLive(@Param('id') id: string, @Body() dto: UpdateTournamentLiveDto) {
+    return this.adminTournamentsService.updateLive(id, dto);
   }
 
   @Roles(AdminRole.OWNER, AdminRole.ADMIN)

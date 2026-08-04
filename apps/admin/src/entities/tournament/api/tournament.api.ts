@@ -11,6 +11,17 @@ export interface CreateTournamentPayload {
   maxPlayers: number;
   registrationOpen?: string;
   registrationClose?: string;
+  imageUrl?: string;
+}
+
+export interface UpdateTournamentLivePayload {
+  isRunning?: boolean;
+  level?: number;
+  smallBlind?: number;
+  bigBlind?: number;
+  ante?: number;
+  nextBreakInSec?: number;
+  playersIn?: number;
 }
 
 export const adminTournamentsApi = {
@@ -28,6 +39,10 @@ export const adminTournamentsApi = {
   },
   async update(id: string, payload: Partial<CreateTournamentPayload>) {
     const { data } = await apiClient.patch(`/admin/tournaments/${id}`, payload);
+    return data.data;
+  },
+  async updateLive(id: string, payload: UpdateTournamentLivePayload) {
+    const { data } = await apiClient.patch(`/admin/tournaments/${id}/live`, payload);
     return data.data;
   },
   async remove(id: string) {

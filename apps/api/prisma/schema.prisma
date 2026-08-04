@@ -134,7 +134,8 @@ model User {
   username  String?
   firstName String?
   lastName  String?
-  /// Отображаемое имя в клубе. Игрок может менять самостоятельно.
+  /// Отображаемое имя в клубе. Уникально без учёта регистра
+  /// (индекс User_nickname_lower_key в миграции). Игрок меняет сам.
   nickname  String?
   photoUrl  String?
   isBlocked Boolean  @default(false)
@@ -185,6 +186,17 @@ model Tournament {
   registrationOpen   DateTime?
   registrationClose  DateTime?
   reminderSentAt     DateTime?
+  /// URL обложки турнира (админка).
+  imageUrl           String?
+  /// Live-состояние стола (блайнды / перерывы).
+  liveIsRunning      Boolean          @default(false)
+  liveLevel          Int?
+  liveSmallBlind     Int?
+  liveBigBlind       Int?
+  liveAnte           Int?
+  liveNextBreakInSec Int?
+  livePlayersIn      Int?
+  liveUpdatedAt      DateTime?
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
 
