@@ -160,6 +160,11 @@ export interface Registration {
   checkedInAt?: string | null;
   cancelledAt?: string | null;
   tournament?: Tournament;
+  /**
+   * Заполняется при записи, если предыдущая активная регистрация
+   * была автоматически отменена (один турнир на игрока).
+   */
+  cancelledPrevious?: { tournamentId: string; title: string } | null;
 }
 
 export interface RatingEntry {

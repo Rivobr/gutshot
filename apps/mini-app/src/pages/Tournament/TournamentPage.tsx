@@ -43,8 +43,22 @@ export function TournamentPage(): JSX.Element {
 
   const handleRegister = (): void => {
     registerMutation.mutate(tournament.id, {
-      onSuccess: () => showToast('Вы записаны на турнир'),
-      onError: () => showToast('Не удалось зарегистрироваться', 'error'),
+      onSuccess: (result) => {
+        if (result.cancelledPrevious?.title) {
+          showToast(
+            `Записаны. Предыдущая запись на «${result.cancelledPrevious.title}» отменена`,
+            'info',
+          );
+          return;
+        }
+        showToast('Вы записаны на турнир');
+      },
+      onError: (error) => {
+        const message =
+          (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+          'Не удалось зарегистрироваться';
+        showToast(message, 'error');
+      },
     });
   };
 
