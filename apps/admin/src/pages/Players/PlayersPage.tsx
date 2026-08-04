@@ -1,6 +1,13 @@
-import type { CSSProperties } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
+import type { AdminPlayerListItem } from '@gutshot/types';
 import { Avatar, Badge, Button, Loader } from '@gutshot/ui';
 import { usePlayers, useTogglePlayerBlock, useTogglePlayerVerify } from '../../entities/player';
+import { PlayerQrModal } from '../../widgets/PlayerQrModal/PlayerQrModal';
+
+function playerName(player: AdminPlayerListItem): string {
+  const full = [player.firstName, player.lastName].filter(Boolean).join(' ').trim();
+  return player.nickname || full || `@${player.username ?? 'player'}`;
+}
 
 function verifyBadgeStyle(verified: boolean): CSSProperties {
   return verified
@@ -18,6 +25,18 @@ export function PlayersPage(): JSX.Element {
   const { data: players, isLoading } = usePlayers();
   const toggleBlock = useTogglePlayerBlock();
   const toggleVerify = useTogglePlayerVerify();
+  const [search, setSearch] = useState('');
+  const [qrPlayer, setQrPlayer] = useState<AdminPlayerListItem | null>(null);
+
+  const filtered = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return players ?? [];
+    return (players ?? []).filter((player) =>
+      [playerName(player), player.username, player.qrCode, player.telegramId]
+        .filter(Boolean)
+        .some((field) => String(field).toLowerCase().includes(query)),
+    );
+  }, [players, search]);
 
   if (isLoading) {
     return <Loader />;
@@ -25,7 +44,18 @@ export function PlayersPage(): JSX.Element {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-medium sm:text-2xl">Игроки</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-xl font-medium sm:text-2xl">
+          Игроки
+          <span className="ml-2 text-sm text-muted-foreground">{filtered.length}</span>
+        </h1>
+        <input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Поиск по имени, @username или QR"
+          className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary sm:max-w-xs"
+        />
+      </div>
 
       {/* Desktop table */}
       <div className="hidden overflow-x-auto rounded-lg border border-border md:block">
@@ -44,7 +74,7 @@ export function PlayersPage(): JSX.Element {
             </tr>
           </thead>
           <tbody>
-            {players?.map((player) => (
+            {filtered.map((player) => (
               <tr key={player.id} className="border-t border-border">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
@@ -74,6 +104,13 @@ export function PlayersPage(): JSX.Element {
                 <td className="px-4 py-3">
                   <div className="flex gap-2">
                     <Button
+                      variant="secondary"
+                      className="px-3 py-1.5 text-xs"
+                      onClick={() => setQrPlayer(player)}
+                    >
+                      QR
+                    </Button>
+                    <Button
                       variant={player.isVerified ? 'secondary' : 'primary'}
                       className="px-3 py-1.5 text-xs"
                       isLoading={toggleVerify.isPending}
@@ -87,7 +124,9 @@ export function PlayersPage(): JSX.Element {
                       variant={player.isBlocked ? 'secondary' : 'destructive'}
                       className="px-3 py-1.5 text-xs"
                       isLoading={toggleBlock.isPending}
-                      onClick={() => toggleBlock.mutate({ id: player.id, blocked: player.isBlocked })}
+                      onClick={() =>
+                        toggleBlock.mutate({ id: player.id, blocked: player.isBlocked })
+                      }
                     >
                       {player.isBlocked ? 'Разблокировать' : 'Заблокировать'}
                     </Button>
@@ -101,7 +140,7 @@ export function PlayersPage(): JSX.Element {
 
       {/* Mobile cards */}
       <div className="flex flex-col gap-3 md:hidden">
-        {players?.map((player) => (
+        {filtered.map((player) => (
           <div key={player.id} className="rounded-lg border border-border bg-card p-4">
             <div className="flex items-center gap-3">
               <Avatar
@@ -147,6 +186,13 @@ export function PlayersPage(): JSX.Element {
 
             <div className="mt-3 flex flex-col gap-2">
               <Button
+                variant="secondary"
+                className="w-full py-2 text-xs"
+                onClick={() => setQrPlayer(player)}
+              >
+                QR-код · печать
+              </Button>
+              <Button
                 variant={player.isVerified ? 'secondary' : 'primary'}
                 className="w-full py-2 text-xs"
                 isLoading={toggleVerify.isPending}
@@ -166,6 +212,20 @@ export function PlayersPage(): JSX.Element {
           </div>
         ))}
       </div>
+
+      {filtered.length === 0 && (
+        <p className="rounded-lg border border-border bg-card px-4 py-8 text-center text-sm text-muted-foreground">
+          Игроки не найдены
+        </p>
+      )}
+
+      <PlayerQrModal
+        open={qrPlayer !== null}
+        qrCode={qrPlayer?.qrCode ?? null}
+        playerName={qrPlayer ? playerName(qrPlayer) : ''}
+        username={qrPlayer?.username}
+        onClose={() => setQrPlayer(null)}
+      />
     </div>
   );
 }

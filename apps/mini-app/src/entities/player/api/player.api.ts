@@ -37,6 +37,10 @@ export const playerApi = {
     const { data } = await apiClient.get('/profile/achievements');
     return data.data;
   },
+  async setPinnedAchievements(achievementIds: string[]): Promise<{ pinnedAchievements: string[] }> {
+    const { data } = await apiClient.put('/profile/achievements/pinned', { achievementIds });
+    return data.data;
+  },
   async acceptConsent(): Promise<{ consentAcceptedAt: string }> {
     // Явно шлём {} — пустой POST с Content-Type JSON даёт 400 на Nest.
     const { data } = await apiClient.post('/profile/consent', {});

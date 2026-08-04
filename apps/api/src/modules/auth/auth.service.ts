@@ -30,13 +30,58 @@ export class AuthService {
     }
 
     const user = await this.usersService.findOrCreateFromTelegram(parsed.user);
+    return this.issuePlayerToken(user);
+  }
 
+  /**
+   * Ticket for WebViews where Telegram initData is missing (e.g. alternate HTTPS
+   * front like Cloudflare quick tunnel). Issued by the bot when sending the open button.
+   */
+  createMiniAppTicket(telegramId: string): string {
+    return this.jwtService.sign({ typ: 'miniapp_ticket', telegramId }, { expiresIn: '15m' });
+  }
+
+  async loginWithTicket(ticket: string) {
+    let payload: { typ?: string; telegramId?: string };
+    try {
+      payload = this.jwtService.verify(ticket) as { typ?: string; telegramId?: string };
+    } catch {
+      throw new UnauthorizedException(
+        'Ссылка входа устарела. Откройте приложение кнопкой из бота снова.',
+      );
+    }
+
+    if (payload.typ !== 'miniapp_ticket' || !payload.telegramId) {
+      throw new UnauthorizedException('Недействительный билет входа');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { telegramId: String(payload.telegramId) },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Сначала напишите /start боту, затем откройте приложение');
+    }
+
+    return this.issuePlayerToken(user);
+  }
+
+  private issuePlayerToken(user: {
+    id: string;
+    telegramId: string;
+    username: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    nickname: string | null;
+    photoUrl: string | null;
+    isBlocked: boolean;
+  }) {
     if (user.isBlocked) {
       throw new UnauthorizedException('Пользователь заблокирован');
     }
 
-    const payload: JwtPayload = { sub: user.id, telegramId: user.telegramId };
-    const accessToken = this.jwtService.sign(payload);
+    const jwtPayload: JwtPayload = { sub: user.id, telegramId: user.telegramId };
+    const accessToken = this.jwtService.sign(jwtPayload);
 
     return {
       accessToken,
@@ -53,7 +98,11 @@ export class AuthService {
   }
 
   async loginAdmin(email: string, password: string) {
-    const admin = await this.prisma.adminUser.findUnique({ where: { email } });
+    // Почту вводят с телефона, где часто включена автозаглавная буква,
+    // поэтому ищем без учёта регистра и лишних пробелов.
+    const admin = await this.prisma.adminUser.findFirst({
+      where: { email: { equals: email.trim(), mode: 'insensitive' } },
+    });
 
     if (!admin) {
       throw new UnauthorizedException('Неверный email или пароль');

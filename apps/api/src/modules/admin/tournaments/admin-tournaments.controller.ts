@@ -8,6 +8,7 @@ import {
   ParseArrayPipe,
   Patch,
   Post,
+  Put,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
@@ -21,8 +22,9 @@ import { AdminTournamentsService } from './admin-tournaments.service';
 import { AttendanceService } from '../attendance/attendance.service';
 import { MarkAttendanceDto } from '../scanner/dto/scanner.dto';
 import { CreateTournamentDto } from './dto/create-tournament.dto';
-import { UpdateTournamentDto } from './dto/update-tournament.dto';
+import { UpdateTournamentDto, UpdateTournamentLiveDto } from './dto/update-tournament.dto';
 import { TournamentResultEntryDto } from './dto/finish-tournament.dto';
+import { ClockActionDto, UpdateBlindStructureDto } from './dto/blind-structure.dto';
 
 @ApiTags('Admin / Tournaments')
 @ApiBearerAuth()
@@ -48,6 +50,59 @@ export class AdminTournamentsController {
   @Post()
   create(@Body() dto: CreateTournamentDto) {
     return this.adminTournamentsService.create(dto);
+  }
+
+  @Roles(AdminRole.OWNER, AdminRole.ADMIN)
+  @Patch(':id/live')
+  updateLive(@Param('id') id: string, @Body() dto: UpdateTournamentLiveDto) {
+    return this.adminTournamentsService.updateLive(id, dto);
+  }
+
+  @Get(':id/clock')
+  getClock(@Param('id') id: string) {
+    return this.adminTournamentsService.getClock(id);
+  }
+
+  @Roles(AdminRole.OWNER, AdminRole.ADMIN)
+  @Put(':id/blind-structure')
+  updateBlindStructure(@Param('id') id: string, @Body() dto: UpdateBlindStructureDto) {
+    return this.adminTournamentsService.updateBlindStructure(id, dto);
+  }
+
+  @Roles(AdminRole.OWNER, AdminRole.ADMIN)
+  @Post(':id/blind-structure/default')
+  applyDefaultStructure(@Param('id') id: string) {
+    return this.adminTournamentsService.applyDefaultStructure(id);
+  }
+
+  @Roles(AdminRole.OWNER, AdminRole.ADMIN)
+  @Post(':id/clock/start')
+  startClock(@Param('id') id: string, @Body() dto: ClockActionDto) {
+    return this.adminTournamentsService.startClock(id, dto);
+  }
+
+  @Roles(AdminRole.OWNER, AdminRole.ADMIN)
+  @Post(':id/clock/pause')
+  pauseClock(@Param('id') id: string) {
+    return this.adminTournamentsService.pauseClock(id);
+  }
+
+  @Roles(AdminRole.OWNER, AdminRole.ADMIN)
+  @Post(':id/clock/resume')
+  resumeClock(@Param('id') id: string) {
+    return this.adminTournamentsService.resumeClock(id);
+  }
+
+  @Roles(AdminRole.OWNER, AdminRole.ADMIN)
+  @Post(':id/clock/level/:levelIdx')
+  setClockLevel(@Param('id') id: string, @Param('levelIdx') levelIdx: string) {
+    return this.adminTournamentsService.setClockLevel(id, Number(levelIdx));
+  }
+
+  @Roles(AdminRole.OWNER, AdminRole.ADMIN)
+  @Post(':id/clock/stop')
+  stopClock(@Param('id') id: string) {
+    return this.adminTournamentsService.stopClock(id);
   }
 
   @Roles(AdminRole.OWNER, AdminRole.ADMIN)

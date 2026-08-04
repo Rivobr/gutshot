@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { isAxiosError } from 'axios';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Loader } from '@gutshot/ui';
@@ -19,13 +20,51 @@ import { formatDate } from '../../shared/lib/format';
 import { PLAYER_EVENT_LABELS, formatEventDate } from '../../shared/lib/event-labels';
 import {
   mergeAchievementTexts,
+  sortAchievementsByAvailability,
   type AchievementContext,
 } from '../../shared/lib/achievements-catalog';
+import { AchievementMedallion } from '../../shared/ui/AchievementMedallion';
 
 interface StatItem {
   icon: string;
   value: string;
   label: string;
+}
+
+/** Квадратный бейдж уровня по краям XP-полосы: текущий слева, следующий справа. */
+function LevelBadge({ level, current = false }: { level: number; current?: boolean }): JSX.Element {
+  return (
+    <div
+      className="flex shrink-0 flex-col items-center justify-center"
+      style={{
+        width: current ? 52 : 44,
+        height: current ? 52 : 44,
+        borderRadius: 14,
+        background: current
+          ? 'linear-gradient(145deg, rgba(199,154,61,0.28), rgba(20,16,10,0.95))'
+          : 'rgba(9,9,9,0.5)',
+        border: `1px solid ${current ? 'rgba(247,217,138,0.5)' : 'rgba(199,154,61,0.18)'}`,
+        boxShadow: current ? '0 0 18px rgba(199,154,61,0.25)' : 'none',
+      }}
+    >
+      <span
+        className="sans uppercase"
+        style={{ fontSize: 7, letterSpacing: '0.14em', color: '#8A7A62' }}
+      >
+        Ур.
+      </span>
+      <span
+        className="serif num font-semibold"
+        style={{
+          fontSize: current ? 22 : 18,
+          lineHeight: 1,
+          color: current ? '#F7D98A' : '#A89878',
+        }}
+      >
+        {level}
+      </span>
+    </div>
+  );
 }
 
 export function ProfilePage(): JSX.Element {
@@ -40,10 +79,7 @@ export function ProfilePage(): JSX.Element {
   const [isEditingName, setEditingName] = useState(false);
   const [isActivityOpen, setActivityOpen] = useState(false);
   const [nicknameDraft, setNicknameDraft] = useState('');
-  const catalog = useMemo(
-    () => mergeAchievementTexts(achievementTexts),
-    [achievementTexts],
-  );
+  const catalog = useMemo(() => mergeAchievementTexts(achievementTexts), [achievementTexts]);
 
   useEffect(() => {
     if (profile) {
@@ -68,12 +104,34 @@ export function ProfilePage(): JSX.Element {
     });
   };
 
+  const nicknameErrorMessage = (() => {
+    if (!updateNickname.isError) {
+      return null;
+    }
+    const error = updateNickname.error;
+    if (isAxiosError(error)) {
+      const payload = error.response?.data as { message?: string | string[] } | undefined;
+      const message = payload?.message;
+      if (typeof message === 'string' && message.trim()) {
+        return message;
+      }
+      if (Array.isArray(message) && message[0]) {
+        return String(message[0]);
+      }
+    }
+    return 'Не удалось сохранить никнейм. Проверьте длину (2–32) и символы.';
+  })();
+
   const stats: StatItem[] = [
     { icon: '🏆', value: `${s.wins}`, label: 'Побед' },
     { icon: '🃏', value: `${s.tournamentsPlayed}`, label: 'Турниров сыграно' },
     { icon: '🎖', value: `${s.itm} ITM / ${s.top10Percent}% ТОП-10`, label: 'В призах' },
     { icon: '👑', value: `${s.firstPlaces}`, label: 'Первых мест' },
-    { icon: '📈', value: s.averagePlace !== null ? `${s.averagePlace}` : '—', label: 'Среднее место' },
+    {
+      icon: '📈',
+      value: s.averagePlace !== null ? `${s.averagePlace}` : '—',
+      label: 'Среднее место',
+    },
     { icon: '📅', value: `${s.daysInClub}`, label: 'Дней в клубе' },
   ];
 
@@ -83,20 +141,30 @@ export function ProfilePage(): JSX.Element {
     finalTables: s.finalTables ?? 0,
     winStreak: s.winStreak ?? 0,
     bounties: s.bounties ?? 0,
+    fourOfAKind: s.fourOfAKind ?? 0,
     unlockedCodes,
   };
 
-  const previewAchievements = catalog.slice(0, 5).map((item) => {
-    const progress = item.getProgress(achievementCtx);
-    const unlocked = progress >= item.target;
-    return {
-      id: item.id,
-      icon: item.icon,
-      title: item.title,
-      unlocked,
-      progress: unlocked ? 'Получено' : `${progress}/${item.target}`,
-    };
-  });
+  const pinnedIds = profile.pinnedAchievements ?? [];
+  const sortedAchievements = sortAchievementsByAvailability(catalog, achievementCtx);
+  // Закреплённые игроком достижения — витрина, поэтому идут первыми.
+  const previewAchievements = [
+    ...sortedAchievements.filter((item) => pinnedIds.includes(item.id)),
+    ...sortedAchievements.filter((item) => !pinnedIds.includes(item.id)),
+  ]
+    .slice(0, 6)
+    .map((item) => {
+      const progress = item.getProgress(achievementCtx);
+      const unlocked = progress >= item.target;
+      return {
+        id: item.id,
+        icon: item.icon,
+        title: item.title,
+        unlocked,
+        pinned: pinnedIds.includes(item.id),
+        progress: unlocked ? 'Получено' : `${progress}/${item.target}`,
+      };
+    });
 
   return (
     <div className="flex flex-col">
@@ -174,7 +242,10 @@ export function ProfilePage(): JSX.Element {
         </div>
 
         <div className="text-center w-full">
-          <h2 className="serif font-semibold" style={{ fontSize: 24, color: '#F5EDD6', lineHeight: 1.2 }}>
+          <h2
+            className="serif font-semibold"
+            style={{ fontSize: 24, color: '#F5EDD6', lineHeight: 1.2 }}
+          >
             {name}
           </h2>
           {profile.username && (
@@ -184,33 +255,28 @@ export function ProfilePage(): JSX.Element {
           )}
         </div>
 
-        {/* KYC verification */}
+        {/* Статус — компактный бейдж под ником */}
         <div
-          className="relative flex items-center gap-2 px-3.5 py-2 rounded-full mt-1"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1"
           style={{
-            background: profile.isVerified ? 'rgba(199,154,61,0.1)' : 'rgba(120,110,90,0.08)',
-            border: `1px solid ${profile.isVerified ? 'rgba(199,154,61,0.35)' : 'rgba(120,110,90,0.25)'}`,
+            background: profile.isVerified ? 'rgba(199,154,61,0.10)' : 'rgba(120,110,90,0.06)',
+            border: `1px solid ${profile.isVerified ? 'rgba(199,154,61,0.25)' : 'rgba(120,110,90,0.18)'}`,
+            borderRadius: 999,
           }}
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M12 2L20 5V11C20 16 16.5 20 12 22C7.5 20 4 16 4 11V5L12 2Z"
-              fill={profile.isVerified ? 'url(#shieldG)' : 'none'}
-              stroke={profile.isVerified ? 'none' : '#6B614E'}
-              strokeWidth="1.5"
-            />
-            {profile.isVerified && (
-              <path d="M8.5 12L11 14.5L15.5 9.5" stroke="#0A0A0A" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            )}
-            <defs>
-              <linearGradient id="shieldG" x1="4" y1="2" x2="20" y2="22">
-                <stop stopColor="#C89A3D" />
-                <stop offset="1" stopColor="#9C6A1F" />
-              </linearGradient>
-            </defs>
-          </svg>
-          <span className="sans" style={{ fontSize: 13, color: profile.isVerified ? '#C89A3D' : '#6B614E' }}>
-            {profile.isVerified ? 'Профиль подтверждён' : 'Профиль не подтверждён'}
+          <span
+            style={{
+              width: 5,
+              height: 5,
+              borderRadius: 999,
+              background: profile.isVerified ? '#C89A3D' : '#4E483B',
+            }}
+          />
+          <span
+            className="sans"
+            style={{ fontSize: 10, color: profile.isVerified ? '#A89878' : '#6B614E' }}
+          >
+            {profile.isVerified ? 'Подтверждён' : 'Не подтверждён'}
           </span>
         </div>
 
@@ -218,60 +284,53 @@ export function ProfilePage(): JSX.Element {
         <div
           className="w-full mt-3 rounded-[20px] p-4 relative overflow-hidden"
           style={{
-            background: 'linear-gradient(145deg, rgba(199,154,61,0.14), rgba(14,12,9,0.95))',
-            border: '1px solid rgba(199,154,61,0.28)',
+            background: 'linear-gradient(145deg, rgba(199,154,61,0.18), rgba(14,12,9,0.95))',
+            border: '1px solid rgba(247,217,138,0.35)',
+            boxShadow: '0 0 28px rgba(199,154,61,0.12)',
           }}
         >
           <div className="absolute inset-0 deco-lines opacity-30 pointer-events-none" />
-          <div className="relative flex items-center justify-between gap-3 mb-3">
-            <div>
-              <p
-                className="sans uppercase"
-                style={{ fontSize: 11, color: '#8A7A62', letterSpacing: '0.16em' }}
+          <div className="relative flex items-center gap-3">
+            <LevelBadge level={profile.level} current />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-baseline justify-between mb-1.5">
+                <span
+                  className="sans num"
+                  style={{ fontSize: 12, color: '#C89A3D', fontWeight: 600 }}
+                >
+                  {profile.xp.toLocaleString('ru-RU')} XP
+                </span>
+                <span className="sans num" style={{ fontSize: 12, color: '#8A7A62' }}>
+                  {profile.nextLevelXp.toLocaleString('ru-RU')} XP
+                </span>
+              </div>
+              <div
+                className="relative rounded-full overflow-hidden"
+                style={{
+                  height: 12,
+                  background: 'rgba(199,154,61,0.12)',
+                  border: '1px solid rgba(199,154,61,0.2)',
+                }}
               >
-                Уровень
-              </p>
-              <p className="serif font-semibold gold-text" style={{ fontSize: 36, lineHeight: 1.05 }}>
-                {profile.level}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="sans" style={{ fontSize: 12, color: '#8A7A62' }}>
-                Прогресс
-              </p>
-              <p className="sans num font-semibold" style={{ fontSize: 18, color: '#F5EDD6' }}>
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${xpPct}%` }}
+                  transition={{ duration: 1.4, ease: 'easeOut', delay: 0.2 }}
+                  style={{
+                    height: '100%',
+                    background: 'linear-gradient(90deg,#9C6A1F,#C89A3D,#F7D98A)',
+                    borderRadius: 999,
+                    boxShadow: '0 0 16px rgba(199,154,61,0.45)',
+                  }}
+                />
+              </div>
+              <p className="sans num mt-1.5" style={{ fontSize: 11, color: '#8A7A62' }}>
+                Ещё {Math.max(profile.nextLevelXp - profile.xp, 0).toLocaleString('ru-RU')} XP ·{' '}
                 {xpPct}%
               </p>
             </div>
+            <LevelBadge level={profile.level + 1} />
           </div>
-          <div className="relative flex justify-between mb-2">
-            <span className="sans num" style={{ fontSize: 13, color: '#C89A3D', fontWeight: 600 }}>
-              {profile.xp.toLocaleString('ru-RU')} XP
-            </span>
-            <span className="sans num" style={{ fontSize: 13, color: '#A89878' }}>
-              {profile.nextLevelXp.toLocaleString('ru-RU')} XP
-            </span>
-          </div>
-          <div
-            className="relative rounded-full overflow-hidden"
-            style={{ height: 10, background: 'rgba(199,154,61,0.12)' }}
-          >
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${xpPct}%` }}
-              transition={{ duration: 1.4, ease: 'easeOut', delay: 0.2 }}
-              style={{
-                height: '100%',
-                background: 'linear-gradient(90deg,#9C6A1F,#C89A3D,#F7D98A)',
-                borderRadius: 99,
-                boxShadow: '0 0 12px rgba(199,154,61,0.35)',
-              }}
-            />
-          </div>
-          <p className="relative sans num mt-2.5 text-center" style={{ fontSize: 13, color: '#C0B49A' }}>
-            Ещё {Math.max(profile.nextLevelXp - profile.xp, 0).toLocaleString('ru-RU')} XP до уровня{' '}
-            {profile.level + 1}
-          </p>
         </div>
       </div>
 
@@ -361,26 +420,28 @@ export function ProfilePage(): JSX.Element {
                   delay: 0.18 + index * 0.06,
                 }}
                 whileTap={{ scale: 0.96 }}
-                className="shrink-0 flex flex-col items-center gap-2 p-3 rounded-[16px]"
+                className="relative shrink-0 flex flex-col items-center gap-2 p-3 rounded-[16px]"
                 style={{
                   width: 100,
                   cursor: 'pointer',
-                  background: 'rgba(9,9,9,0.45)',
-                  border: a.unlocked
-                    ? '1px solid rgba(199,154,61,0.32)'
-                    : '1px solid rgba(199,154,61,0.12)',
+                  background: a.pinned ? 'rgba(199,154,61,0.10)' : 'rgba(9,9,9,0.45)',
+                  border: a.pinned
+                    ? '1px solid rgba(247,217,138,0.5)'
+                    : a.unlocked
+                      ? '1px solid rgba(199,154,61,0.32)'
+                      : '1px solid rgba(199,154,61,0.12)',
                 }}
               >
-                <span
-                  style={{
-                    fontSize: 26,
-                    filter: a.unlocked
-                      ? 'drop-shadow(0 0 8px rgba(199,154,61,0.5))'
-                      : 'grayscale(1)',
-                  }}
-                >
-                  {a.unlocked ? a.icon : '🔒'}
-                </span>
+                {a.pinned && (
+                  <span
+                    className="sans absolute top-1.5 right-2"
+                    style={{ fontSize: 10, color: '#F7D98A' }}
+                    aria-label="В витрине профиля"
+                  >
+                    ★
+                  </span>
+                )}
+                <AchievementMedallion id={a.id} locked={!a.unlocked} size={42} />
                 <span
                   className="sans text-center"
                   style={{ fontSize: 10, color: '#D8CEBC', lineHeight: 1.25 }}
@@ -463,7 +524,10 @@ export function ProfilePage(): JSX.Element {
                           >
                             {PLAYER_EVENT_LABELS[event.type]}
                           </p>
-                          <p className="sans num truncate" style={{ fontSize: 10, color: '#6B614E' }}>
+                          <p
+                            className="sans num truncate"
+                            style={{ fontSize: 10, color: '#6B614E' }}
+                          >
                             {formatEventDate(event.createdAt)}
                             {event.tournament ? ` · ${event.tournament.title}` : ''}
                           </p>
@@ -509,7 +573,10 @@ export function ProfilePage(): JSX.Element {
                   style={{ borderColor: 'rgba(199,154,61,0.1)' }}
                 >
                   <div>
-                    <p className="serif" style={{ fontSize: 14, color: '#F5EDD6', lineHeight: 1.35 }}>
+                    <p
+                      className="serif"
+                      style={{ fontSize: 14, color: '#F5EDD6', lineHeight: 1.35 }}
+                    >
                       {registration.tournament?.title ?? 'Турнир'}
                     </p>
                     {registration.tournament && (
@@ -568,12 +635,20 @@ export function ProfilePage(): JSX.Element {
                 <h3 className="serif font-semibold" style={{ fontSize: 20, color: '#F5EDD6' }}>
                   Никнейм
                 </h3>
-                <p className="sans mt-1 mb-4" style={{ fontSize: 12, color: '#6B614E', lineHeight: 1.5 }}>
+                <p
+                  className="sans mt-1 mb-4"
+                  style={{ fontSize: 12, color: '#6B614E', lineHeight: 1.5 }}
+                >
                   Так вас будут видеть другие игроки в клубе
                 </p>
                 <input
                   value={nicknameDraft}
-                  onChange={(event) => setNicknameDraft(event.target.value)}
+                  onChange={(event) => {
+                    setNicknameDraft(event.target.value);
+                    if (updateNickname.isError) {
+                      updateNickname.reset();
+                    }
+                  }}
                   maxLength={32}
                   autoFocus
                   className="w-full rounded-[14px] px-4 py-3 sans"
@@ -585,9 +660,9 @@ export function ProfilePage(): JSX.Element {
                     outline: 'none',
                   }}
                 />
-                {updateNickname.isError && (
+                {nicknameErrorMessage && (
                   <p className="sans mt-2" style={{ fontSize: 12, color: '#E07A6E' }}>
-                    Не удалось сохранить никнейм. Проверьте длину (2–32) и символы.
+                    {nicknameErrorMessage}
                   </p>
                 )}
                 <div className="mt-4 flex gap-2">

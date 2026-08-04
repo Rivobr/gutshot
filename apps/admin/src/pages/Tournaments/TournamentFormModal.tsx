@@ -10,6 +10,7 @@ interface FormValues {
   description?: string;
   date: string;
   maxPlayers: number;
+  imageUrl?: string;
 }
 
 export interface TournamentFormModalProps {
@@ -46,6 +47,7 @@ export function TournamentFormModal({
         description: tournament.description ?? '',
         date: toLocalInputValue(tournament.date),
         maxPlayers: tournament.maxPlayers,
+        imageUrl: tournament.imageUrl ?? '',
       });
       return;
     }
@@ -55,6 +57,7 @@ export function TournamentFormModal({
       description: '',
       date: '',
       maxPlayers: 30,
+      imageUrl: '',
     });
   }, [open, tournament, reset]);
 
@@ -65,6 +68,7 @@ export function TournamentFormModal({
       buyIn: 0,
       maxPlayers: Number(values.maxPlayers),
       date: new Date(values.date).toISOString(),
+      imageUrl: values.imageUrl?.trim() || undefined,
     };
 
     if (tournament) {
@@ -118,6 +122,11 @@ export function TournamentFormModal({
                 placeholder="Описание"
                 rows={3}
                 {...register('description')}
+              />
+              <input
+                className="rounded-md border border-border bg-secondary px-3 py-2.5"
+                placeholder="URL фото / обложки"
+                {...register('imageUrl')}
               />
               <input
                 type="datetime-local"

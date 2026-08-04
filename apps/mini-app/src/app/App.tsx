@@ -16,8 +16,9 @@ import { clearReauthFlag } from '../shared/api/client';
 import { tokenStorage } from '../shared/lib/token-storage';
 import { getTelegramInitData } from '../shared/lib/telegram';
 import { SplashScreen } from '../widgets/SplashScreen/SplashScreen';
+import { ToastHost } from '../shared/ui/toast';
 
-const PROFILE_WAIT_MS = 6_000;
+const PROFILE_WAIT_MS = 25_000;
 
 export function App(): JSX.Element {
   const { status, errorMessage } = useStartup();
@@ -45,6 +46,7 @@ export function App(): JSX.Element {
 
   return (
     <QueryProvider>
+      <ToastHost />
       <ConsentGate>
         <RouterProvider router={router} />
       </ConsentGate>
@@ -123,9 +125,26 @@ function ConsentGate({ children }: { children: JSX.Element }): JSX.Element {
         />
         <Button
           onClick={() => {
-            tokenStorage.clear();
-            clearReauthFlag();
-            window.location.reload();
+            void (async () => {
+              setTimedOut(false);
+              setRecovering(true);
+              recoveryTried.current = false;
+              try {
+                tokenStorage.clear();
+                clearReauthFlag();
+                const initData = getTelegramInitData() || (await waitForInitData(3_000));
+                if (initData) {
+                  await loginWithTelegramInitData(initData);
+                }
+                await refetch();
+              } catch {
+                tokenStorage.clear();
+                clearReauthFlag();
+                window.location.reload();
+              } finally {
+                setRecovering(false);
+              }
+            })();
           }}
         >
           Повторить

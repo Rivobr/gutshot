@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="gutshot-app" content="mini-app" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <title>GUTSHOT Poker Club</title>
     <style>
       html, body, #root {
@@ -17,12 +18,24 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 14px;
-        background: #000;
+        gap: 40px;
+        background: #000
+          radial-gradient(ellipse at 50% 35%, rgba(199, 154, 61, 0.12) 0%, transparent 58%);
         color: #8A7A62;
         font-family: system-ui, -apple-system, sans-serif;
         font-size: 13px;
         letter-spacing: 0.06em;
+      }
+      #boot img {
+        width: min(72vw, 280px);
+        height: auto;
+        display: block;
+        filter: drop-shadow(0 8px 28px rgba(199, 154, 61, 0.22));
+        animation: boot-pulse 2.4s ease-in-out infinite;
+      }
+      @keyframes boot-pulse {
+        0%, 100% { opacity: 0.88; transform: scale(0.985); }
+        50% { opacity: 1; transform: scale(1); }
       }
       #boot-bar {
         width: 120px;
@@ -44,37 +57,81 @@
         100% { transform: translateX(280%); }
       }
     </style>
-    <!-- Сразу снимаем скелетон Telegram — до загрузки React-бандла -->
+    <!--
+      Не грузим telegram.org/js/telegram-web-app.js синхронно:
+      на части сетей/VPN скрипт зависает навечно и оставляет
+      нативный скелетон Telegram / чёрный boot без React.
+      Внутри Telegram bridge уже инжектится клиентом.
+    -->
     <script>
       (function () {
-        try {
-          var tg = window.Telegram && window.Telegram.WebApp;
-          if (tg) {
+        var APP_BG = '#090909';
+        var pinged = false;
+
+        function pingBoot(stage) {
+          if (pinged) return;
+          pinged = true;
+          try {
+            var img = new Image();
+            img.src =
+              '/__boot.gif?s=' +
+              encodeURIComponent(stage) +
+              '&tg=' +
+              (window.Telegram && window.Telegram.WebApp ? '1' : '0') +
+              '&t=' +
+              Date.now();
+          } catch (e) {}
+        }
+
+        function applyChrome(tg) {
+          try {
             tg.ready();
             tg.expand();
-            if (tg.setHeaderColor) tg.setHeaderColor('#090909');
-            if (tg.setBackgroundColor) tg.setBackgroundColor('#090909');
-          }
-        } catch (e) {}
-      })();
-    </script>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script>
-      (function () {
-        try {
+            if (tg.setHeaderColor) tg.setHeaderColor(APP_BG);
+            if (tg.setBackgroundColor) tg.setBackgroundColor(APP_BG);
+          } catch (e) {}
+        }
+
+        function tryReady(stage) {
           var tg = window.Telegram && window.Telegram.WebApp;
-          if (tg) {
-            tg.ready();
-            tg.expand();
-          }
-        } catch (e) {}
+          if (!tg) return false;
+          applyChrome(tg);
+          pingBoot(stage);
+          return true;
+        }
+
+        if (tryReady('early')) {
+          // ok
+        } else {
+          // Ретраи: bridge иногда появляется чуть позже первого тика.
+          var tries = 0;
+          var timer = setInterval(function () {
+            tries += 1;
+            if (tryReady('retry-' + tries) || tries >= 25) {
+              clearInterval(timer);
+              if (!window.Telegram || !window.Telegram.WebApp) {
+                // Фоллбек: асинхронный SDK, не блокирует React.
+                var s = document.createElement('script');
+                s.src = 'https://telegram.org/js/telegram-web-app.js';
+                s.async = true;
+                s.onload = function () {
+                  tryReady('async-sdk');
+                };
+                s.onerror = function () {
+                  pingBoot('sdk-fail');
+                };
+                document.head.appendChild(s);
+              }
+            }
+          }, 80);
+        }
       })();
     </script>
   </head>
   <body>
     <div id="root">
       <div id="boot">
-        <span>GUTSHOT</span>
+        <img src="/gutshot-logo.png" alt="GUTSHOT" />
         <div id="boot-bar"><i></i></div>
       </div>
     </div>

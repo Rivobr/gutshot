@@ -19,6 +19,8 @@ interface TelegramWebApp {
   isFullscreen?: boolean;
   isVersionAtLeast?: (version: string) => boolean;
   disableVerticalSwipes?: () => void;
+  enableClosingConfirmation?: () => void;
+  platform?: string;
   safeAreaInset?: TelegramSafeArea;
   contentSafeAreaInset?: TelegramSafeArea;
   onEvent?: (eventType: string, callback: () => void) => void;
@@ -50,6 +52,25 @@ function applyTopInset(webApp: TelegramWebApp): void {
   document.documentElement.style.setProperty('--app-top-pad', `${pad}px`);
 }
 
+const FULLSCREEN_PLATFORMS = ['android', 'android_x', 'ios'];
+
+/**
+ * Полноэкранный режим появился в Bot API 8.0 и стабильно работает только
+ * на мобильных клиентах: на desktop/web вызов молча ломает верстку шапки.
+ */
+function requestFullscreenIfSupported(webApp: TelegramWebApp): void {
+  if (!webApp.requestFullscreen) return;
+  if (webApp.isVersionAtLeast && !webApp.isVersionAtLeast('8.0')) return;
+  if (!FULLSCREEN_PLATFORMS.includes(webApp.platform ?? '')) return;
+  if (webApp.isFullscreen) return;
+
+  try {
+    webApp.requestFullscreen();
+  } catch {
+    // Клиент может отклонить запрос — остаёмся в expand().
+  }
+}
+
 /** Тёмная шапка, safe-area и максимум экрана. */
 export function configureTelegramChrome(): void {
   const webApp = getTelegramWebApp();
@@ -76,8 +97,13 @@ export function configureTelegramChrome(): void {
     // optional
   }
 
-  // requestFullscreen на части Android/Telegram WebView зависает навечно —
-  // не вызываем автоматически.
+  try {
+    webApp.enableClosingConfirmation?.();
+  } catch {
+    // optional
+  }
+
+  requestFullscreenIfSupported(webApp);
 
   applyTopInset(webApp);
   webApp.onEvent?.('safeAreaChanged', () => applyTopInset(webApp));
