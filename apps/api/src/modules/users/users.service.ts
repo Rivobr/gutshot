@@ -115,7 +115,7 @@ export class UsersService {
       throw new BadRequestException('Никнейм должен быть от 2 до 32 символов');
     }
 
-    if (!/^[\p{L}\p{N} _.\-]+$/u.test(normalized)) {
+    if (!/^[\p{L}\p{N} _.-]+$/u.test(normalized)) {
       throw new BadRequestException('Никнейм содержит недопустимые символы');
     }
 
@@ -134,10 +134,7 @@ export class UsersService {
         data: { nickname: normalized },
       });
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new ConflictException('Этот никнейм уже занят. Выберите другой');
       }
       throw error;
