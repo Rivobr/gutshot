@@ -1,5 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { adminTournamentsApi, CreateTournamentPayload } from '../api/tournament.api';
+import {
+  adminTournamentsApi,
+  CreateTournamentPayload,
+  UpdateTournamentLivePayload,
+} from '../api/tournament.api';
 
 export function useAdminTournaments() {
   return useQuery({ queryKey: ['admin', 'tournaments'], queryFn: adminTournamentsApi.getAll });
@@ -48,6 +52,18 @@ export function useUpdateTournament() {
   return useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: Partial<CreateTournamentPayload> }) =>
       adminTournamentsApi.update(id, payload),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments', variables.id] });
+    },
+  });
+}
+
+export function useUpdateTournamentLive() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: UpdateTournamentLivePayload }) =>
+      adminTournamentsApi.updateLive(id, payload),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments', variables.id] });

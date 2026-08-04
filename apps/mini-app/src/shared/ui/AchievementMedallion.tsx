@@ -4,6 +4,7 @@ const ICON_SRC: Record<string, string> = {
   first_visit: '/achievements/first_visit.png',
   visit_5: '/achievements/visit_5.png',
   four_kind: '/achievements/four_kind.png',
+  four_kind_5: '/achievements/four_kind.png',
   first_knockout: '/achievements/first_knockout.png',
   royal_flush: '/achievements/royal_flush.png',
   visit_10: '/achievements/visit_10.png',
@@ -11,6 +12,7 @@ const ICON_SRC: Record<string, string> = {
   straight_flush: '/achievements/straight_flush.png',
   final_table: '/achievements/final_table.png',
   win_streak: '/achievements/win_streak.png',
+  legend_gutshot: '/achievements/first_win.png',
 };
 
 export function AchievementMedallion({

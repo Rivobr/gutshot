@@ -186,6 +186,17 @@ model Tournament {
   registrationOpen   DateTime?
   registrationClose  DateTime?
   reminderSentAt     DateTime?
+  /// URL обложки турнира (админка).
+  imageUrl           String?
+  /// Live-состояние стола (блайнды / перерывы).
+  liveIsRunning      Boolean          @default(false)
+  liveLevel          Int?
+  liveSmallBlind     Int?
+  liveBigBlind       Int?
+  liveAnte           Int?
+  liveNextBreakInSec Int?
+  livePlayersIn      Int?
+  liveUpdatedAt      DateTime?
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
 

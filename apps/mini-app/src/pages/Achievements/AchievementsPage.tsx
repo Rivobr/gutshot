@@ -3,13 +3,11 @@ import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Loader } from '@gutshot/ui';
-import {
-  useAchievementTexts,
-  useAchievements,
-  useProfile,
-} from '../../entities/player';
+import { useAchievementTexts, useAchievements, useProfile } from '../../entities/player';
 import {
   mergeAchievementTexts,
+  RARITY_STYLE,
+  sortAchievementsByAvailability,
   type AchievementContext,
   type AchievementDef,
 } from '../../shared/lib/achievements-catalog';
@@ -36,12 +34,12 @@ export function AchievementsPage(): JSX.Element {
     finalTables: profile.stats.finalTables ?? 0,
     winStreak: profile.stats.winStreak ?? 0,
     bounties: profile.stats.bounties ?? 0,
+    fourOfAKind: profile.stats.fourOfAKind ?? 0,
     unlockedCodes: new Set((unlockedAchievements ?? []).map((item) => item.code)),
   };
 
-  const unlockedCount = catalog.filter(
-    (item) => item.getProgress(ctx) >= item.target,
-  ).length;
+  const sorted = sortAchievementsByAvailability(catalog, ctx);
+  const unlockedCount = catalog.filter((item) => item.getProgress(ctx) >= item.target).length;
 
   const selected = selectedId
     ? catalog.find((item) => item.id === selectedId) ?? null
@@ -132,9 +130,11 @@ export function AchievementsPage(): JSX.Element {
       </div>
 
       <div className="relative px-3 grid grid-cols-2 gap-2.5">
-        {catalog.map((item, index) => {
+        {sorted.map((item, index) => {
           const progress = item.getProgress(ctx);
           const done = progress >= item.target;
+          const rarity = RARITY_STYLE[item.rarity];
+          const span2 = Boolean(item.span2);
 
           return (
             <motion.button
@@ -149,19 +149,22 @@ export function AchievementsPage(): JSX.Element {
                 ease: [0.22, 1, 0.36, 1],
               }}
               whileTap={{ scale: 0.97 }}
-              className="relative flex flex-col items-center text-center px-2.5 pt-3.5 pb-3"
+              className={`relative flex text-center px-2.5 pt-3.5 pb-3 ${
+                span2 ? 'flex-row items-center gap-3 col-span-2' : 'flex-col items-center'
+              }`}
               style={{
-                minHeight: 178,
+                gridColumn: span2 ? '1 / -1' : undefined,
+                minHeight: span2 ? 148 : 178,
                 borderRadius: 16,
                 cursor: 'pointer',
                 background: done
                   ? 'linear-gradient(165deg, rgba(72,48,14,0.75) 0%, rgba(18,14,10,0.96) 55%, rgba(10,8,6,0.98) 100%)'
                   : 'linear-gradient(165deg, rgba(32,26,18,0.92) 0%, rgba(12,10,8,0.98) 100%)',
                 border: done
-                  ? '1px solid rgba(247,217,138,0.42)'
+                  ? `1px solid ${rarity.border}`
                   : '1px solid rgba(120,95,50,0.28)',
                 boxShadow: done
-                  ? 'inset 0 1px 0 rgba(247,217,138,0.18), 0 8px 20px rgba(0,0,0,0.35)'
+                  ? `${rarity.glow}, inset 0 1px 0 rgba(247,217,138,0.18)`
                   : 'inset 0 1px 0 rgba(255,255,255,0.03)',
               }}
             >
@@ -183,73 +186,86 @@ export function AchievementsPage(): JSX.Element {
                 </span>
               )}
 
-              <AchievementMedallion id={item.id} locked={!done} size={72} />
+              <AchievementMedallion id={item.id} locked={!done} size={span2 ? 64 : 72} />
 
-              <p
-                className="serif font-semibold uppercase mt-2.5"
-                style={{
-                  fontSize: 12,
-                  letterSpacing: '0.06em',
-                  lineHeight: 1.2,
-                  color: done ? '#F5EDD6' : '#7A6E5A',
-                }}
-              >
-                {item.title}
-              </p>
-              <p
-                className="sans mt-1 flex-1"
-                style={{
-                  fontSize: 10.5,
-                  lineHeight: 1.35,
-                  color: done ? '#C0B49A' : '#564C3E',
-                }}
-              >
-                {item.description}
-              </p>
-
-              <div className="mt-2 w-full">
-                <div className="flex items-center justify-between gap-2 mb-1.5">
-                  <span
-                    className="sans num font-semibold"
-                    style={{
-                      fontSize: 12,
-                      letterSpacing: '0.08em',
-                      color: done ? '#F7D98A' : '#5C5346',
-                    }}
-                  >
-                    XP {item.xp}
-                  </span>
-                  <span
-                    className="sans"
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 600,
-                      color: done ? '#C89A3D' : '#6B614E',
-                    }}
-                  >
-                    {done ? 'Получено' : `${progress}/${item.target}`}
-                  </span>
-                </div>
-                <div
+              <div className={`flex flex-col ${span2 ? 'items-start text-left flex-1 min-w-0' : 'items-center w-full'}`}>
+                <p
+                  className="sans uppercase"
                   style={{
-                    width: '100%',
-                    height: 4,
-                    borderRadius: 99,
-                    overflow: 'hidden',
-                    background: 'rgba(199,154,61,0.12)',
+                    fontSize: 9,
+                    color: rarity.accent,
+                    letterSpacing: '0.14em',
+                    marginTop: span2 ? 0 : 10,
                   }}
                 >
+                  {rarity.label}
+                </p>
+                <p
+                  className="serif font-semibold uppercase mt-1"
+                  style={{
+                    fontSize: span2 ? 16 : 12,
+                    letterSpacing: '0.06em',
+                    lineHeight: 1.2,
+                    color: done ? '#F5EDD6' : '#7A6E5A',
+                  }}
+                >
+                  {item.title}
+                </p>
+                <p
+                  className="sans mt-1 flex-1"
+                  style={{
+                    fontSize: span2 ? 12 : 10.5,
+                    lineHeight: 1.35,
+                    color: done ? '#C0B49A' : '#564C3E',
+                  }}
+                >
+                  {item.description}
+                </p>
+
+                <div className={`mt-2 w-full ${span2 ? '' : ''}`}>
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <span
+                      className="sans num font-semibold"
+                      style={{
+                        fontSize: 12,
+                        letterSpacing: '0.08em',
+                        color: done ? '#F7D98A' : '#5C5346',
+                      }}
+                    >
+                      XP {item.xp}
+                    </span>
+                    <span
+                      className="sans"
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 600,
+                        color: done ? rarity.accent : '#6B614E',
+                      }}
+                    >
+                      {done ? 'Получено' : `${progress}/${item.target}`}
+                    </span>
+                  </div>
                   <div
                     style={{
-                      width: `${Math.min(100, Math.round((progress / item.target) * 100))}%`,
-                      height: '100%',
+                      width: '100%',
+                      height: 4,
                       borderRadius: 99,
-                      background: done
-                        ? 'linear-gradient(90deg, #9C6A1F, #F7D98A)'
-                        : 'linear-gradient(90deg, rgba(156,106,31,0.55), rgba(200,154,61,0.85))',
-                      transition: 'width 0.35s ease',
+                      overflow: 'hidden',
+                      background: 'rgba(199,154,61,0.12)',
                     }}
-                  />
+                  >
+                    <div
+                      style={{
+                        width: `${Math.min(100, Math.round((progress / item.target) * 100))}%`,
+                        height: '100%',
+                        borderRadius: 99,
+                        background: done
+                          ? 'linear-gradient(90deg, #9C6A1F, #F7D98A)'
+                          : 'linear-gradient(90deg, rgba(156,106,31,0.55), rgba(200,154,61,0.85))',
+                        transition: 'width 0.35s ease',
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
             </motion.button>
@@ -306,6 +322,8 @@ function AchievementHowToModal({
   done: boolean;
   onClose: () => void;
 }): JSX.Element {
+  const rarity = RARITY_STYLE[item.rarity];
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -332,15 +350,21 @@ function AchievementHowToModal({
         className="w-full max-w-md rounded-[22px] p-5"
         style={{
           background: 'linear-gradient(180deg, #1A1610 0%, #0E0C09 100%)',
-          border: '1px solid rgba(199,154,61,0.28)',
+          border: `1px solid ${rarity.border}`,
           boxShadow: '0 20px 50px rgba(0,0,0,0.55)',
         }}
       >
         <div className="flex flex-col items-center text-center">
           <AchievementMedallion id={item.id} locked={!done} size={88} />
+          <p
+            className="sans uppercase mt-3"
+            style={{ fontSize: 10, color: rarity.accent, letterSpacing: '0.14em' }}
+          >
+            {rarity.label}
+          </p>
           <h3
             id="achievement-howto-title"
-            className="serif font-semibold uppercase mt-3"
+            className="serif font-semibold uppercase mt-1"
             style={{ fontSize: 18, color: '#F5EDD6', letterSpacing: '0.04em' }}
           >
             {item.title}
@@ -360,7 +384,7 @@ function AchievementHowToModal({
                 className="sans"
                 style={{
                   fontSize: 11,
-                  color: done ? '#C89A3D' : '#6B614E',
+                  color: done ? rarity.accent : '#6B614E',
                   fontWeight: 600,
                 }}
               >
