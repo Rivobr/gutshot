@@ -3,6 +3,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { Public } from '../../common/decorators/public.decorator';
 import { AuthService } from './auth.service';
 import { TelegramLoginDto } from './dto/telegram-login.dto';
+import { TelegramTicketLoginDto } from './dto/telegram-ticket-login.dto';
 import { AdminLoginDto } from './dto/admin-login.dto';
 import { TokenBlacklistService } from './token-blacklist.service';
 
@@ -18,6 +19,12 @@ export class AuthController {
   @Post('telegram')
   loginWithTelegram(@Body() dto: TelegramLoginDto) {
     return this.authService.loginWithTelegram(dto.initData);
+  }
+
+  @Public()
+  @Post('telegram/ticket')
+  loginWithTicket(@Body() dto: TelegramTicketLoginDto) {
+    return this.authService.loginWithTicket(dto.ticket);
   }
 
   @Public()

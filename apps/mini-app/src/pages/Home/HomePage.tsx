@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { Loader } from '@gutshot/ui';
 import { HomeTile } from '../../widgets/HomeTile/HomeTile';
 import { RatingBanner } from '../../widgets/RatingBanner/RatingBanner';
+import { TournamentLiveBlock } from '../../widgets/TournamentLive/TournamentLiveBlock';
 import { useNearestTournament } from '../../entities/tournament';
 import { useCurrentRegistration } from '../../entities/registration';
 import { SuitWatermark, goldButtonStyle } from '../../shared/ui/figma';
-import { club } from '../../shared/config/club';
-import { formatDateShort, formatTime, seatsWord } from '../../shared/lib/format';
+import { PlayersFillBar } from '../../shared/ui/PlayersFillBar';
+import { club, clubLegalLine } from '../../shared/config/club';
+import { formatDateShort, formatTime } from '../../shared/lib/format';
 
 function Chip({ icon, children }: { icon: string; children: string }): JSX.Element {
   return (
@@ -34,7 +36,6 @@ export function HomePage(): JSX.Element {
   const { data: registration } = useCurrentRegistration();
 
   const taken = nearest?._count?.registrations ?? 0;
-  const seatsLeft = nearest ? Math.max(nearest.maxPlayers - taken, 0) : 0;
   const isRegistered = registration?.tournamentId === nearest?.id;
 
   return (
@@ -70,7 +71,18 @@ export function HomePage(): JSX.Element {
             className="vip-card-hero relative overflow-hidden rounded-[22px] w-full text-left"
             style={{ border: 'none', cursor: 'pointer', padding: 0 }}
           >
-            {/* Бегущий блик */}
+            {nearest.imageUrl && (
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  backgroundImage: `url(${nearest.imageUrl})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  opacity: 0.2,
+                }}
+              />
+            )}
             <motion.div
               aria-hidden
               className="pointer-events-none absolute inset-y-0 w-1/3"
@@ -100,7 +112,7 @@ export function HomePage(): JSX.Element {
             />
 
             <div className="relative p-5" style={{ zIndex: 3 }}>
-              <div className="flex flex-wrap items-center gap-2 mb-5">
+              <div className="flex flex-wrap items-center gap-2 mb-4">
                 <motion.span
                   className="sans inline-flex items-center gap-1.5 rounded-full px-3"
                   animate={{ opacity: [0.75, 1, 0.75] }}
@@ -114,9 +126,8 @@ export function HomePage(): JSX.Element {
                     letterSpacing: '0.06em',
                   }}
                 >
-                  ● Скоро
+                  {nearest.status === 'IN_PROGRESS' ? '● Идёт' : '● Скоро'}
                 </motion.span>
-                <Chip icon="👤">{`${seatsLeft} ${seatsWord(seatsLeft)}`}</Chip>
                 <Chip icon="🕐">{`${formatDateShort(nearest.date)} / ${formatTime(nearest.date)}`}</Chip>
               </div>
 
@@ -127,7 +138,7 @@ export function HomePage(): JSX.Element {
                 Турнир
               </p>
 
-              <div className="flex items-end justify-between gap-3 mt-1.5">
+              <div className="flex items-end justify-between gap-3 mt-1.5 mb-4">
                 <div className="min-w-0">
                   <h2
                     className="serif font-semibold uppercase"
@@ -151,6 +162,8 @@ export function HomePage(): JSX.Element {
                   {isRegistered ? 'Вы записаны' : 'Записаться'}
                 </motion.span>
               </div>
+
+              <PlayersFillBar taken={taken} max={nearest.maxPlayers} />
             </div>
           </motion.button>
         ) : (
@@ -161,21 +174,34 @@ export function HomePage(): JSX.Element {
           </div>
         )}
 
+        {/* Табло на главной — для тех, кто записан или уже отметился в клубе. */}
+        {nearest?.live && isRegistered && <TournamentLiveBlock live={nearest.live} />}
+
         <RatingBanner delay={0.15} />
 
         <div className="grid grid-cols-2 gap-3">
-          <HomeTile title="О клубе" suit="diamond" to="/about" delay={0.2} />
-          <HomeTile title="Поддержка" suit="heart" to="/support" delay={0.25} />
-          <HomeTile title="Q&A" suit="club" to="/faq" wide delay={0.3} />
+          <HomeTile title="Чат клуба" suit="spade" href={club.chatUrl} delay={0.18} />
+          <HomeTile title="Как дойти" suit="diamond" href={club.mapsUrl} delay={0.2} />
+          <HomeTile title="Правила" suit="club" href={club.docs.clubRules} delay={0.22} />
+          <HomeTile title="О клубе" suit="heart" to="/about" delay={0.24} />
+          <HomeTile title="Поддержка" suit="heart" to="/support" delay={0.26} />
+          <HomeTile title="Q&A" suit="club" to="/faq" delay={0.28} />
         </div>
 
-        <div className="flex flex-col items-center gap-2 pt-3">
+        <div className="flex flex-col items-center gap-1.5 pt-3 px-2">
           <p
             className="sans text-center"
-            style={{ fontSize: 10, color: '#3E3428', letterSpacing: '0.06em' }}
+            style={{ fontSize: 10, color: '#6B614E', letterSpacing: '0.04em', lineHeight: 1.45 }}
           >
-            {club.address} · {club.city}
+            {clubLegalLine()}
           </p>
+          <a
+            href={`tel:${club.phone.replace(/[^\d+]/g, '')}`}
+            className="sans"
+            style={{ fontSize: 11, color: '#C89A3D', textDecoration: 'none' }}
+          >
+            {club.phone}
+          </a>
         </div>
       </div>
     </div>

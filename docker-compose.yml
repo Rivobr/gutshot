@@ -1,4 +1,4 @@
-version: "3.3"
+version: '3.3'
 
 services:
   postgres:
@@ -12,7 +12,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - '${POSTGRES_PORT:-5432}:5432'
     volumes:
       - ./docker/postgres/data:/var/lib/postgresql/data
     networks:
@@ -23,7 +23,7 @@ services:
     container_name: gutshot-redis
     restart: unless-stopped
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - '${REDIS_PORT:-6379}:6379'
     volumes:
       - ./docker/redis/data:/data
     networks:
@@ -39,7 +39,7 @@ services:
     env_file:
       - .env
     ports:
-      - "${API_PORT:-3000}:3000"
+      - '${API_PORT:-3000}:3000'
     depends_on:
       - postgres
       - redis
@@ -52,11 +52,12 @@ services:
       dockerfile: apps/mini-app/Dockerfile
       network: host
       args:
-        VITE_API_URL: ${VITE_API_URL:-https://api.gutshotapp.ru/api/v1}
+        # Same-origin so Mini App works behind Cloudflare/alternate HTTPS fronts.
+        VITE_API_URL: ${VITE_API_URL:-/api/v1}
     container_name: gutshot-mini-app
     restart: unless-stopped
     ports:
-      - "8080:80"
+      - '8080:80'
     depends_on:
       - api
     networks:
@@ -72,7 +73,23 @@ services:
     container_name: gutshot-admin
     restart: unless-stopped
     ports:
-      - "8081:80"
+      - '8081:80'
+    depends_on:
+      - api
+    networks:
+      - gutshot-network
+
+  tv:
+    build:
+      context: .
+      dockerfile: apps/tv/Dockerfile
+      network: host
+      args:
+        VITE_API_URL: ${VITE_TV_API_URL:-/api/v1}
+    container_name: gutshot-tv
+    restart: unless-stopped
+    ports:
+      - '8082:80'
     depends_on:
       - api
     networks:
@@ -83,8 +100,8 @@ services:
     container_name: gutshot-nginx
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      - '80:80'
+      - '443:443'
     volumes:
       - ./docker/nginx/conf.d:/etc/nginx/conf.d
       - ./docker/nginx/certs:/etc/letsencrypt
@@ -93,8 +110,22 @@ services:
       - api
       - mini-app
       - admin
+      - tv
     networks:
       - gutshot-network
+
+  # Optional named Cloudflare Tunnel (not the temporary trycloudflare quick tunnel).
+  # Requires CLOUDFLARE_TUNNEL_TOKEN and hostnames published in Zero Trust UI.
+  # Start: docker compose --profile cloudflare up -d cloudflared
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: gutshot-cloudflared
+    restart: unless-stopped
+    profiles: ['cloudflare']
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    network_mode: host
 
 networks:
   gutshot-network:
