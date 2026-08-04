@@ -77,6 +77,58 @@ export interface TournamentLiveState {
   nextBreakInSec?: number | null;
   playersIn?: number | null;
   updatedAt?: string | null;
+  /** Момент смены уровня — клиент тикает локально между запросами. */
+  levelEndsAt?: string | null;
+  levelSecondsLeft?: number | null;
+  isBreak?: boolean;
+  serverTime?: string | null;
+}
+
+export type ClockStatus = 'IDLE' | 'RUNNING' | 'PAUSED' | 'FINISHED';
+
+/** Уровень структуры турнира: блайнды либо перерыв. */
+export interface BlindLevel {
+  idx: number;
+  isBreak: boolean;
+  smallBlind?: number | null;
+  bigBlind?: number | null;
+  ante?: number | null;
+  durationSec: number;
+}
+
+export interface TournamentClockLevel extends BlindLevel {
+  /** Номер игрового уровня; у перерывов null. */
+  number: number | null;
+}
+
+export interface TournamentClock {
+  status: ClockStatus;
+  isRunning: boolean;
+  current?: TournamentClockLevel | null;
+  next?: TournamentClockLevel | null;
+  secondsLeft?: number | null;
+  secondsToBreak?: number | null;
+  levelEndsAt?: string | null;
+  breakAt?: string | null;
+  playersIn?: number | null;
+  levelsTotal: number;
+  serverTime: string;
+}
+
+/** Ответ публичного табло для TV-экрана. */
+export interface TournamentBoard {
+  tournament: {
+    id: string;
+    title: string;
+    date: string;
+    buyIn: number;
+    maxPlayers: number;
+    status: TournamentStatus;
+    imageUrl?: string | null;
+    registered: number;
+  };
+  clock: TournamentClock;
+  levels: BlindLevel[];
 }
 
 export interface Tournament {

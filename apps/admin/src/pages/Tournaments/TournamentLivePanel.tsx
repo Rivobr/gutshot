@@ -54,9 +54,10 @@ export function TournamentLivePanel({
   return (
     <Card className="gap-4">
       <div>
-        <h2 className="font-medium">Live: блайнды и перерывы</h2>
+        <h2 className="font-medium">Ручной режим</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Эти данные показываются в mini-app на главной и в карточке турнира.
+          Запасной вариант, когда структура блайндов не задана: значения показываются в Mini App как
+          есть. Если часы запущены, приоритет у них.
         </p>
       </div>
       <form className="grid gap-3 sm:grid-cols-2" onSubmit={handleSubmit(onSubmit)}>

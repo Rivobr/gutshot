@@ -1,7 +1,9 @@
-import type { Tournament as PrismaTournament } from '@prisma/client';
+import type { BlindLevel, Tournament as PrismaTournament } from '@prisma/client';
+import { computeClock, type TournamentClockDto } from './tournament-clock';
 
 type TournamentWithCount = PrismaTournament & {
   _count?: { registrations: number };
+  blindLevels?: BlindLevel[];
 };
 
 export interface TournamentLiveDto {
@@ -13,9 +15,41 @@ export interface TournamentLiveDto {
   nextBreakInSec?: number | null;
   playersIn?: number | null;
   updatedAt?: string | null;
+  /** Момент смены уровня — клиент тикает локально, без опроса каждую секунду. */
+  levelEndsAt?: string | null;
+  levelSecondsLeft?: number | null;
+  isBreak?: boolean;
+  serverTime?: string | null;
 }
 
-export function mapTournamentLive(tournament: PrismaTournament): TournamentLiveDto | null {
+/**
+ * Live-состояние: если задана структура блайндов, источник истины — часы,
+ * иначе остаётся ручной режим (админ выставляет блайнды сам).
+ */
+export function mapTournamentLive(
+  tournament: PrismaTournament,
+  blindLevels: BlindLevel[] = [],
+): TournamentLiveDto | null {
+  if (blindLevels.length > 0 && tournament.clockStatus !== 'IDLE') {
+    const clock = computeClock(tournament, blindLevels);
+    const current = clock.current;
+
+    return {
+      isRunning: clock.isRunning,
+      level: current?.number ?? null,
+      smallBlind: current?.smallBlind ?? null,
+      bigBlind: current?.bigBlind ?? null,
+      ante: current?.ante ?? null,
+      nextBreakInSec: clock.secondsToBreak,
+      playersIn: clock.playersIn,
+      updatedAt: tournament.liveUpdatedAt?.toISOString() ?? null,
+      levelEndsAt: clock.levelEndsAt,
+      levelSecondsLeft: clock.secondsLeft,
+      isBreak: current?.isBreak ?? false,
+      serverTime: clock.serverTime,
+    };
+  }
+
   if (
     !tournament.liveIsRunning &&
     tournament.liveLevel == null &&
@@ -36,6 +70,8 @@ export function mapTournamentLive(tournament: PrismaTournament): TournamentLiveD
     nextBreakInSec: tournament.liveNextBreakInSec,
     playersIn: tournament.livePlayersIn,
     updatedAt: tournament.liveUpdatedAt?.toISOString() ?? null,
+    isBreak: false,
+    serverTime: new Date().toISOString(),
   };
 }
 
@@ -49,6 +85,11 @@ export function serializeTournament(tournament: TournamentWithCount) {
     liveNextBreakInSec: _f,
     livePlayersIn: _g,
     liveUpdatedAt: _h,
+    clockStatus: _i,
+    clockStartedAt: _j,
+    clockLevelIdx: _k,
+    clockPausedAt: _l,
+    blindLevels,
     ...rest
   } = tournament;
 
@@ -60,6 +101,14 @@ export function serializeTournament(tournament: TournamentWithCount) {
     reminderSentAt: tournament.reminderSentAt?.toISOString() ?? null,
     createdAt: tournament.createdAt.toISOString(),
     updatedAt: tournament.updatedAt.toISOString(),
-    live: mapTournamentLive(tournament),
+    live: mapTournamentLive(tournament, blindLevels ?? []),
   };
+}
+
+/** Полное состояние часов — для админки и TV-табло. */
+export function serializeClock(
+  tournament: PrismaTournament,
+  blindLevels: BlindLevel[],
+): TournamentClockDto {
+  return computeClock(tournament, blindLevels);
 }

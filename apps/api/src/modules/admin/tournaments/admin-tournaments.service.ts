@@ -17,7 +17,9 @@ import { LevelsService } from '../../progression/levels.service';
 import { CreateTournamentDto } from './dto/create-tournament.dto';
 import { UpdateTournamentDto, UpdateTournamentLiveDto } from './dto/update-tournament.dto';
 import { TournamentResultEntryDto } from './dto/finish-tournament.dto';
-import { serializeTournament } from '../../tournaments/tournament.serializer';
+import { ClockActionDto, UpdateBlindStructureDto } from './dto/blind-structure.dto';
+import { serializeClock, serializeTournament } from '../../tournaments/tournament.serializer';
+import { defaultBlindStructure } from '../../tournaments/tournament-clock';
 
 @Injectable()
 export class AdminTournamentsService {
@@ -33,7 +35,7 @@ export class AdminTournamentsService {
   async findAll() {
     const rows = await this.prisma.tournament.findMany({
       orderBy: { date: 'desc' },
-      include: { _count: { select: { registrations: true } } },
+      include: { blindLevels: true, _count: { select: { registrations: true } } },
     });
     return rows.map(serializeTournament);
   }
@@ -41,7 +43,7 @@ export class AdminTournamentsService {
   async findById(id: string) {
     const tournament = await this.prisma.tournament.findUnique({
       where: { id },
-      include: { _count: { select: { registrations: true } } },
+      include: { blindLevels: true, _count: { select: { registrations: true } } },
     });
 
     if (!tournament) {
@@ -49,6 +51,192 @@ export class AdminTournamentsService {
     }
 
     return serializeTournament(tournament);
+  }
+
+  /** Структура блайндов и состояние часов для панели управления. */
+  async getClock(id: string) {
+    const tournament = await this.prisma.tournament.findUnique({
+      where: { id },
+      include: { blindLevels: true },
+    });
+
+    if (!tournament) {
+      throw new NotFoundException('Турнир не найден');
+    }
+
+    const levels = [...tournament.blindLevels].sort((a, b) => a.idx - b.idx);
+
+    return {
+      clock: serializeClock(tournament, levels),
+      levels: levels.map((level) => ({
+        idx: level.idx,
+        isBreak: level.isBreak,
+        smallBlind: level.smallBlind,
+        bigBlind: level.bigBlind,
+        ante: level.ante,
+        durationSec: level.durationSec,
+      })),
+    };
+  }
+
+  /** Перезаписывает структуру уровней целиком (задаётся один раз до турнира). */
+  async updateBlindStructure(id: string, dto: UpdateBlindStructureDto) {
+    await this.findById(id);
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.blindLevel.deleteMany({ where: { tournamentId: id } });
+      await tx.blindLevel.createMany({
+        data: dto.levels.map((level, idx) => ({
+          tournamentId: id,
+          idx,
+          isBreak: Boolean(level.isBreak),
+          smallBlind: level.isBreak ? null : (level.smallBlind ?? null),
+          bigBlind: level.isBreak ? null : (level.bigBlind ?? null),
+          ante: level.isBreak ? null : (level.ante ?? null),
+          durationSec: level.durationSec,
+        })),
+      });
+    });
+
+    return this.getClock(id);
+  }
+
+  /** Заполняет структуру шаблоном 20-минутных уровней с перерывами. */
+  async applyDefaultStructure(id: string) {
+    await this.findById(id);
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.blindLevel.deleteMany({ where: { tournamentId: id } });
+      await tx.blindLevel.createMany({
+        data: defaultBlindStructure().map((level) => ({ ...level, tournamentId: id })),
+      });
+    });
+
+    return this.getClock(id);
+  }
+
+  /** Запуск часов: дальше уровни и перерывы переключаются сами. */
+  async startClock(id: string, dto: ClockActionDto = {}) {
+    const { levels } = await this.getClock(id);
+
+    if (levels.length === 0) {
+      throw new BadRequestException('Сначала задайте структуру блайндов');
+    }
+
+    await this.prisma.tournament.update({
+      where: { id },
+      data: {
+        clockStatus: 'RUNNING',
+        clockStartedAt: new Date(),
+        clockLevelIdx: dto.levelIdx ?? 0,
+        clockPausedAt: null,
+        liveIsRunning: true,
+        livePlayersIn: dto.playersIn ?? undefined,
+        liveUpdatedAt: new Date(),
+      },
+    });
+
+    return this.getClock(id);
+  }
+
+  async pauseClock(id: string) {
+    const { clock } = await this.getClock(id);
+
+    if (clock.status !== 'RUNNING') {
+      throw new BadRequestException('Часы не запущены');
+    }
+
+    await this.prisma.tournament.update({
+      where: { id },
+      // Фиксируем уровень и остаток, чтобы после снятия паузы продолжить с него.
+      data: {
+        clockStatus: 'PAUSED',
+        clockPausedAt: new Date(),
+        clockLevelIdx: clock.current?.idx ?? 0,
+        clockStartedAt: clock.levelEndsAt
+          ? new Date(
+              new Date(clock.levelEndsAt).getTime() - (clock.current?.durationSec ?? 0) * 1000,
+            )
+          : undefined,
+        liveUpdatedAt: new Date(),
+      },
+    });
+
+    return this.getClock(id);
+  }
+
+  async resumeClock(id: string) {
+    const tournament = await this.prisma.tournament.findUnique({
+      where: { id },
+      include: { blindLevels: true },
+    });
+
+    if (!tournament) {
+      throw new NotFoundException('Турнир не найден');
+    }
+
+    if (tournament.clockStatus !== 'PAUSED' || !tournament.clockPausedAt) {
+      throw new BadRequestException('Часы не на паузе');
+    }
+
+    // Сдвигаем старт уровня на длину простоя — остаток времени сохраняется.
+    const pausedMs = Date.now() - tournament.clockPausedAt.getTime();
+
+    await this.prisma.tournament.update({
+      where: { id },
+      data: {
+        clockStatus: 'RUNNING',
+        clockPausedAt: null,
+        clockStartedAt: tournament.clockStartedAt
+          ? new Date(tournament.clockStartedAt.getTime() + pausedMs)
+          : new Date(),
+        liveIsRunning: true,
+        liveUpdatedAt: new Date(),
+      },
+    });
+
+    return this.getClock(id);
+  }
+
+  /** Перейти на уровень вручную (пропустить или вернуться). */
+  async setClockLevel(id: string, levelIdx: number) {
+    const { levels } = await this.getClock(id);
+
+    if (levelIdx < 0 || levelIdx >= levels.length) {
+      throw new BadRequestException('Уровень вне структуры');
+    }
+
+    await this.prisma.tournament.update({
+      where: { id },
+      data: {
+        clockLevelIdx: levelIdx,
+        clockStartedAt: new Date(),
+        clockPausedAt: null,
+        clockStatus: 'RUNNING',
+        liveIsRunning: true,
+        liveUpdatedAt: new Date(),
+      },
+    });
+
+    return this.getClock(id);
+  }
+
+  async stopClock(id: string) {
+    await this.findById(id);
+
+    await this.prisma.tournament.update({
+      where: { id },
+      data: {
+        clockStatus: 'IDLE',
+        clockStartedAt: null,
+        clockPausedAt: null,
+        clockLevelIdx: 0,
+        liveIsRunning: false,
+        liveUpdatedAt: new Date(),
+      },
+    });
+
+    return this.getClock(id);
   }
 
   async create(dto: CreateTournamentDto) {
@@ -63,7 +251,7 @@ export class AdminTournamentsService {
         registrationOpen: dto.registrationOpen ? new Date(dto.registrationOpen) : undefined,
         registrationClose: dto.registrationClose ? new Date(dto.registrationClose) : undefined,
       },
-      include: { _count: { select: { registrations: true } } },
+      include: { blindLevels: true, _count: { select: { registrations: true } } },
     });
     return serializeTournament(created);
   }
@@ -82,7 +270,7 @@ export class AdminTournamentsService {
         registrationOpen: dto.registrationOpen ? new Date(dto.registrationOpen) : undefined,
         registrationClose: dto.registrationClose ? new Date(dto.registrationClose) : undefined,
       },
-      include: { _count: { select: { registrations: true } } },
+      include: { blindLevels: true, _count: { select: { registrations: true } } },
     });
     return serializeTournament(updated);
   }
@@ -101,7 +289,7 @@ export class AdminTournamentsService {
         livePlayersIn: dto.playersIn ?? undefined,
         liveUpdatedAt: new Date(),
       },
-      include: { _count: { select: { registrations: true } } },
+      include: { blindLevels: true, _count: { select: { registrations: true } } },
     });
     return serializeTournament(updated);
   }
@@ -183,6 +371,8 @@ export class AdminTournamentsService {
       throw new BadRequestException('Турнир уже начат');
     }
 
+    const levels = await this.prisma.blindLevel.count({ where: { tournamentId: id } });
+
     return this.prisma.$transaction(async (tx) => {
       await tx.registration.updateMany({
         where: { tournamentId: id, status: RegistrationStatus.CHECKED_IN },
@@ -191,7 +381,20 @@ export class AdminTournamentsService {
 
       return tx.tournament.update({
         where: { id },
-        data: { status: TournamentStatus.IN_PROGRESS },
+        data: {
+          status: TournamentStatus.IN_PROGRESS,
+          // Есть структура — часы стартуют вместе с турниром, админу ничего не нажимать.
+          ...(levels > 0
+            ? {
+                clockStatus: 'RUNNING' as const,
+                clockStartedAt: new Date(),
+                clockLevelIdx: 0,
+                clockPausedAt: null,
+                liveIsRunning: true,
+                liveUpdatedAt: new Date(),
+              }
+            : {}),
+        },
       });
     });
   }

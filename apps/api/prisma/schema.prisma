@@ -23,6 +23,14 @@ enum TournamentStatus {
   ARCHIVED
 }
 
+/// Состояние турнирных часов (структура блайндов крутится сама).
+enum ClockStatus {
+  IDLE
+  RUNNING
+  PAUSED
+  FINISHED
+}
+
 enum RegistrationStatus {
   REGISTERED
   CHECKED_IN
@@ -197,15 +205,45 @@ model Tournament {
   liveNextBreakInSec Int?
   livePlayersIn      Int?
   liveUpdatedAt      DateTime?
+
+  /// Турнирные часы. Структура уровней задаётся заранее (BlindLevel),
+  /// дальше блайнды и перерывы переключаются сами от clockStartedAt.
+  clockStatus     ClockStatus @default(IDLE)
+  /// Момент старта текущего уровня (с учётом пауз).
+  clockStartedAt  DateTime?
+  /// Индекс текущего уровня в структуре (0-based, включая перерывы).
+  clockLevelIdx   Int         @default(0)
+  /// Когда часы поставили на паузу (null, если идут).
+  clockPausedAt   DateTime?
+
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
 
   registrations     Registration[]
   tournamentResults TournamentResult[]
   events            PlayerEvent[]
+  blindLevels       BlindLevel[]
 
   @@index([date])
   @@index([status])
+}
+
+/// Уровень структуры турнира: блайнды либо перерыв.
+model BlindLevel {
+  id           String  @id @default(cuid())
+  tournamentId String
+  /// Порядок в структуре (0-based), включая перерывы.
+  idx          Int
+  isBreak      Boolean @default(false)
+  smallBlind   Int?
+  bigBlind     Int?
+  ante         Int?
+  durationSec  Int
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  @@unique([tournamentId, idx])
+  @@index([tournamentId])
 }
 
 model Registration {

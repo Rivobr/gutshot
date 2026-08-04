@@ -15,6 +15,7 @@ import { TournamentActions } from './TournamentActions';
 import { TournamentFormModal } from './TournamentFormModal';
 import { FinishTournamentModal } from './FinishTournamentModal';
 import { TournamentLivePanel } from './TournamentLivePanel';
+import { TournamentClockPanel } from './TournamentClockPanel';
 
 function displayName(
   user: AdminTournamentRegistration['user'] & { nickname?: string | null },
@@ -89,6 +90,8 @@ export function TournamentDetailsPage(): JSX.Element {
           />
         </div>
       </div>
+
+      <TournamentClockPanel tournamentId={tournament.id} />
 
       <TournamentLivePanel tournamentId={tournament.id} live={tournament.live} />
 

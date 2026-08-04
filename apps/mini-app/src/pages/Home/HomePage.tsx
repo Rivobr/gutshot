@@ -174,7 +174,8 @@ export function HomePage(): JSX.Element {
           </div>
         )}
 
-        {nearest?.live && <TournamentLiveBlock live={nearest.live} />}
+        {/* Табло на главной — для тех, кто записан или уже отметился в клубе. */}
+        {nearest?.live && isRegistered && <TournamentLiveBlock live={nearest.live} />}
 
         <RatingBanner delay={0.15} />
 
