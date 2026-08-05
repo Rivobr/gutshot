@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
 import { Loader } from '@gutshot/ui';
 import {
   useAchievementTexts,
@@ -17,12 +16,12 @@ import {
   type AchievementDef,
 } from '../../shared/lib/achievements-catalog';
 import { AchievementMedallion } from '../../shared/ui/AchievementMedallion';
+import { BackButton } from '../../shared/ui/BackButton';
 
 /** Столько же, сколько принимает API (MAX_PINNED_ACHIEVEMENTS). */
 const MAX_PINNED = 3;
 
 export function AchievementsPage(): JSX.Element {
-  const navigate = useNavigate();
   const { data: profile, isLoading } = useProfile();
   const { data: unlockedAchievements } = useAchievements();
   const { data: achievementTexts } = useAchievementTexts();
@@ -84,21 +83,9 @@ export function AchievementsPage(): JSX.Element {
       />
 
       <div className="relative px-4 pt-5 pb-3">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="sans mb-3"
-          style={{
-            color: 'rgba(199,154,61,0.75)',
-            fontSize: 12,
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: 0,
-          }}
-        >
-          ← Назад
-        </button>
+        <div className="mb-3">
+          <BackButton />
+        </div>
 
         <motion.div
           initial={{ opacity: 0, y: 10 }}

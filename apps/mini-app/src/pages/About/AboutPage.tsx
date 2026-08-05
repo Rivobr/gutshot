@@ -18,26 +18,12 @@ export function AboutPage(): JSX.Element {
   return (
     <PageHeader title="О клубе" subtitle={club.fullName}>
       <div className="flex flex-col gap-4">
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45 }}
-          className="vip-card overflow-hidden rounded-[20px]"
-        >
-          <img
-            src="/about-club.jpg"
-            alt="GUTSHOT — как нас найти"
-            className="w-full block"
-            style={{ objectFit: 'contain', background: '#0B0A08' }}
-          />
-        </motion.div>
-
         {PARAGRAPHS.map((text, i) => (
           <motion.p
             key={i}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.05 + i * 0.08 }}
+            transition={{ duration: 0.5, delay: i * 0.08 }}
             className="sans"
             style={{ fontSize: 13, lineHeight: 1.7, color: '#B6A98F' }}
           >

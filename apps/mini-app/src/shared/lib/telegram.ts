@@ -33,13 +33,12 @@ declare global {
 }
 
 const APP_BG = '#090909';
-/** Запас под кнопку «Закрыть» / Menu Telegram, когда нет content safe area. */
-const TELEGRAM_HEADER_FALLBACK_PX = 56;
 /**
- * В fullscreen Telegram оставляет компактную кнопку «Закрыть» у статус-бара.
- * Нужен заметный отступ, иначе контент и «Назад» оказываются под ней.
+ * Запас под кнопку «X Закрыть» Telegram.
+ * На iPhone с чёлкой safe-area ~47–59px + сама кнопка ~44px.
  */
-const FULLSCREEN_CLOSE_BUTTON_PX = 56;
+const CLOSE_BUTTON_RESERVE_PX = 52;
+const TOP_PAD_MIN_PX = 96;
 
 export function getTelegramWebApp(): TelegramWebApp | undefined {
   return window.Telegram?.WebApp;
@@ -53,22 +52,15 @@ function applyTopInset(webApp: TelegramWebApp): void {
   const safeTop = webApp.safeAreaInset?.top ?? 0;
   const contentTop = webApp.contentSafeAreaInset?.top ?? 0;
 
-  if (webApp.isFullscreen) {
-    // safe-area (вырез) + место под «X Закрыть», чтобы кнопки были доступны.
-    const pad = Math.max(safeTop + FULLSCREEN_CLOSE_BUTTON_PX, contentTop + 12, 72);
-    document.documentElement.style.setProperty('--app-top-pad', `${pad}px`);
-    return;
-  }
+  // contentSafeAreaInset.top в fullscreen уже включает зону под «Закрыть».
+  // Берём максимум из доступных метрик + жёсткий минимум.
+  const fromContent = contentTop > 0 ? contentTop + 8 : 0;
+  const fromSafe = safeTop + CLOSE_BUTTON_RESERVE_PX;
+  const pad = Math.max(fromContent, fromSafe, TOP_PAD_MIN_PX);
 
-  const telegramChrome = contentTop > 0 ? contentTop : TELEGRAM_HEADER_FALLBACK_PX;
-  const pad = Math.max(safeTop + telegramChrome, TELEGRAM_HEADER_FALLBACK_PX);
   document.documentElement.style.setProperty('--app-top-pad', `${pad}px`);
 }
 
-/**
- * Полноэкранный режим (Bot API 8.0+) убирает верхнюю плашку
- * «Закрыть / название / …». На desktop/web API часто нет — тогда expand().
- */
 function requestFullscreenIfSupported(webApp: TelegramWebApp): void {
   if (!webApp.requestFullscreen) return;
   if (webApp.isVersionAtLeast && !webApp.isVersionAtLeast('8.0')) return;
@@ -85,7 +77,7 @@ function requestFullscreenIfSupported(webApp: TelegramWebApp): void {
 export function configureTelegramChrome(): void {
   const webApp = getTelegramWebApp();
   if (!webApp) {
-    document.documentElement.style.setProperty('--app-top-pad', `${TELEGRAM_HEADER_FALLBACK_PX}px`);
+    document.documentElement.style.setProperty('--app-top-pad', `${TOP_PAD_MIN_PX}px`);
     return;
   }
 
@@ -114,9 +106,14 @@ export function configureTelegramChrome(): void {
   }
 
   requestFullscreenIfSupported(webApp);
-  // Повтор через тик — на части клиентов bridge готов чуть позже ready().
-  window.setTimeout(() => requestFullscreenIfSupported(webApp), 120);
-  window.setTimeout(() => requestFullscreenIfSupported(webApp), 600);
+  window.setTimeout(() => {
+    requestFullscreenIfSupported(webApp);
+    applyTopInset(webApp);
+  }, 120);
+  window.setTimeout(() => {
+    requestFullscreenIfSupported(webApp);
+    applyTopInset(webApp);
+  }, 600);
 
   applyTopInset(webApp);
   webApp.onEvent?.('safeAreaChanged', () => applyTopInset(webApp));

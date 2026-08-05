@@ -80,32 +80,6 @@ export function DirectionsPage(): JSX.Element {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45 }}
-          className="vip-card overflow-hidden rounded-[20px]"
-        >
-          <img
-            src="/how-to-find.jpg?v=3"
-            alt="Как найти Gutshot — схема входа"
-            className="w-full block"
-            style={{
-              width: '100%',
-              maxHeight: 'none',
-              objectFit: 'contain',
-              background: '#0B0A08',
-            }}
-            onError={(event) => {
-              const img = event.currentTarget;
-              if (!img.dataset.fallback) {
-                img.dataset.fallback = '1';
-                img.src = '/how-to-find.svg';
-              }
-            }}
-          />
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, delay: 0.05 }}
           className="vip-card rounded-[20px] px-4 py-3.5"
         >
           <p

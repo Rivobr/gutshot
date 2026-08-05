@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { Loader } from '@gutshot/ui';
 import { useTournament, useTournamentParticipants } from '../../entities/tournament';
 import {
@@ -9,6 +9,7 @@ import {
   useRegister,
 } from '../../entities/registration';
 import { goldButtonStyle } from '../../shared/ui/figma';
+import { BackButton } from '../../shared/ui/BackButton';
 import { PlayersFillBar } from '../../shared/ui/PlayersFillBar';
 import { PlayerAvatar } from '../../shared/ui/PlayerAvatar';
 import { AchievementMedallion } from '../../shared/ui/AchievementMedallion';
@@ -24,7 +25,6 @@ type Tab = 'about' | 'players';
 
 export function TournamentPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>('about');
   const { data: tournament, isLoading } = useTournament(id ?? '');
   const { data: participants } = useTournamentParticipants(id ?? '');
@@ -111,20 +111,9 @@ export function TournamentPage(): JSX.Element {
           }}
         />
 
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="relative flex items-center gap-1.5 mb-4 sans"
-          style={{
-            color: 'rgba(199,154,61,0.7)',
-            fontSize: 12,
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-          }}
-        >
-          ← Назад
-        </button>
+        <div className="relative mb-4">
+          <BackButton />
+        </div>
 
         <p
           className="relative sans uppercase"
