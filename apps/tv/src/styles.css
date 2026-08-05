@@ -65,11 +65,9 @@ body,
   font-size: clamp(28px, 3.6vw, 62px);
   font-weight: 700;
   letter-spacing: 0.22em;
-  background: linear-gradient(180deg, #f7d98a 0%, #c89a3d 55%, #8a5c1c 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 2px 18px rgba(199, 154, 61, 0.35));
+  /* Сплошной цвет: на Xiaomi/YaBrowser gradient+transparent текст становится невидимым */
+  color: #f7d98a;
+  text-shadow: 0 2px 18px rgba(199, 154, 61, 0.35);
 }
 
 .rule {
@@ -134,10 +132,7 @@ body,
   font-size: clamp(56px, 11vw, 200px);
   font-weight: 700;
   letter-spacing: 0.06em;
-  background: linear-gradient(180deg, #f7d98a 0%, #c89a3d 60%, #8a5c1c 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #f7d98a;
 }
 
 .stats {

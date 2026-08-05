@@ -5,10 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex" />
     <title>GUTSHOT — табло турнира</title>
-    <!-- Без Google Fonts: на ТВ в РФ они часто недоступны без VPN -->
+    <style>
+      html,
+      body,
+      #root {
+        margin: 0;
+        height: 100%;
+        background: #090907;
+        color: #f7d98a;
+        font-family: sans-serif;
+      }
+      .boot {
+        display: flex;
+        height: 100%;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 16px;
+        letter-spacing: 0.2em;
+        font-weight: 700;
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="boot">
+        <div>GUTSHOT</div>
+        <div style="opacity: 0.7; letter-spacing: 0.08em; font-weight: 400">Загрузка табло…</div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
