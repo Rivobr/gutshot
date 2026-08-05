@@ -170,15 +170,15 @@
 
 ## 7. Технические якоря
 
-| Что            | Значение                                         |
-| -------------- | ------------------------------------------------ |
-| VPS            | `159.194.208.116`                                |
-| TV контейнер   | `gutshot-tv` → host `:8082`                      |
-| HTML board API | `/api/v1/public/tournaments/board.html`          |
-| Admin          | `:8081`, логин `tvadmin` / `tvadmin`             |
-| Ветка          | `cursor/club-content-prod`                       |
-| Код HTML board | `apps/api/src/modules/tournaments/board-html.ts` |
-| TV nginx       | `apps/tv/nginx.conf`                             |
+| Что              | Значение                                         |
+| ---------------- | ------------------------------------------------ |
+| VPS              | `159.194.208.116`                                |
+| TV контейнер     | `gutshot-tv` → host `:8082`                      |
+| HTML board API   | `/api/v1/public/tournaments/board.html`          |
+| Admin (не на ТВ) | с телефона/ноута `https://admin.gutshotapp.ru`   |
+| Ветка            | `cursor/club-content-prod`                       |
+| Код HTML board   | `apps/api/src/modules/tournaments/board-html.ts` |
+| TV nginx         | `apps/tv/nginx.conf`                             |
 
 ---
 
