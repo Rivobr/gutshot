@@ -33,9 +33,6 @@ export function RulesPage(): JSX.Element {
           >
             {rules.content}
           </p>
-          <p className="sans pt-1" style={{ fontSize: 10, color: '#6B614E' }}>
-            Версия {rules.version}
-          </p>
         </motion.article>
       )}
     </PageHeader>

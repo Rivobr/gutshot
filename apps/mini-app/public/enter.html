@@ -106,6 +106,15 @@
           b.classList.add("show");
         }
 
+        function requestFs(tg) {
+          try {
+            if (!tg || !tg.requestFullscreen) return;
+            if (tg.isVersionAtLeast && !tg.isVersionAtLeast("8.0")) return;
+            if (tg.isFullscreen) return;
+            tg.requestFullscreen();
+          } catch (e) {}
+        }
+
         function readyTg() {
           try {
             var tg = window.Telegram && Telegram.WebApp;
@@ -114,7 +123,16 @@
             tg.expand();
             if (tg.setHeaderColor) tg.setHeaderColor("#090909");
             if (tg.setBackgroundColor) tg.setBackgroundColor("#090909");
+            if (tg.setBottomBarColor) tg.setBottomBarColor("#090909");
             if (tg.disableVerticalSwipes) tg.disableVerticalSwipes();
+            // Убираем верхнюю плашку Telegram («Закрыть / название»).
+            requestFs(tg);
+            setTimeout(function () {
+              requestFs(tg);
+            }, 150);
+            setTimeout(function () {
+              requestFs(tg);
+            }, 700);
             return tg;
           } catch (e) {
             return null;

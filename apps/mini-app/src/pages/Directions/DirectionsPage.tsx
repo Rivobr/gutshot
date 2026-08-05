@@ -86,7 +86,12 @@ export function DirectionsPage(): JSX.Element {
             src="/how-to-find.jpg"
             alt="Как найти Gutshot — схема входа"
             className="w-full block"
-            style={{ maxHeight: 360, objectFit: 'contain', background: '#0B0A08' }}
+            style={{
+              width: '100%',
+              maxHeight: 'none',
+              objectFit: 'contain',
+              background: '#0B0A08',
+            }}
             onError={(event) => {
               const img = event.currentTarget;
               if (!img.dataset.fallback) {
