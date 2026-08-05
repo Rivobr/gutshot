@@ -121,13 +121,15 @@ export function InfoCard({
   label,
   value,
   icon,
+  href,
 }: {
   label: string;
   value: string;
   icon: string;
+  href?: string;
 }): JSX.Element {
-  return (
-    <div className="flex flex-col gap-1.5 p-4 rounded-[18px] vip-card">
+  const content = (
+    <>
       <span style={{ fontSize: 18 }}>{icon}</span>
       <span
         className="sans font-semibold"
@@ -141,8 +143,22 @@ export function InfoCard({
       >
         {label}
       </span>
-    </div>
+    </>
   );
+
+  if (href) {
+    return (
+      <a
+        href={href}
+        className="flex flex-col gap-1.5 p-4 rounded-[18px] vip-card"
+        style={{ textDecoration: 'none', color: 'inherit' }}
+      >
+        {content}
+      </a>
+    );
+  }
+
+  return <div className="flex flex-col gap-1.5 p-4 rounded-[18px] vip-card">{content}</div>;
 }
 
 export function StatPill({

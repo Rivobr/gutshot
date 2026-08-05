@@ -93,6 +93,23 @@ export function DirectionsPage(): JSX.Element {
           </p>
         </motion.div>
 
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, delay: 0.05 }}
+          className="vip-card rounded-[20px] overflow-hidden p-0"
+        >
+          <img
+            src="/how-to-find-map.png"
+            alt="Как пройти в Gutshot"
+            style={{
+              display: 'block',
+              width: '100%',
+              height: 'auto',
+            }}
+          />
+        </motion.div>
+
         <p className="sans" style={{ fontSize: 13, lineHeight: 1.65, color: '#B6A98F' }}>
           Есть два удобных способа попасть к нам.
         </p>
