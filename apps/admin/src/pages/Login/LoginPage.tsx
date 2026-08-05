@@ -59,7 +59,7 @@ export function LoginPage(): JSX.Element {
               autoCapitalize="none"
               autoCorrect="off"
               className="rounded-md border border-border bg-secondary px-3 py-2.5 text-foreground outline-none focus:ring-2 focus:ring-primary"
-              placeholder="tvadmin"
+              placeholder="Логин"
               {...register('email')}
             />
             {errors.email && (
