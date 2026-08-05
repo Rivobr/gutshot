@@ -8,6 +8,14 @@ const FAQ: { q: string; a: string }[] = [
     a: 'Откройте карточку турнира на главной или во вкладке «Турниры» и нажмите «Записаться». Место закрепляется за вами сразу, подтверждение придёт в Telegram.',
   },
   {
+    q: 'Как найти клуб?',
+    a: 'Откройте плитку «Как найти» на главной — там два подробных маршрута от ул. Миллионная, 19 до входа в Gutshot.',
+  },
+  {
+    q: 'Где правила клуба?',
+    a: 'На главной нажмите «Правила». Текст можно менять в админ-панели: раздел «Документы» → «Правила клуба».',
+  },
+  {
     q: 'Что такое XP и уровень?',
     a: 'XP — клубный опыт. Он начисляется за участие в турнирах, выход в призы и победы. По мере накопления XP растёт уровень и позиция в рейтинге клуба.',
   },
@@ -41,7 +49,10 @@ function FaqItem({ q, a, index }: { q: string; a: string; index: number }): JSX.
         className="w-full flex items-center justify-between gap-3 px-4 py-4 text-left"
         style={{ background: 'none', border: 'none' }}
       >
-        <span className="sans font-semibold" style={{ fontSize: 13, color: '#F5EDD6', lineHeight: 1.4 }}>
+        <span
+          className="sans font-semibold"
+          style={{ fontSize: 13, color: '#F5EDD6', lineHeight: 1.4 }}
+        >
           {q}
         </span>
         <motion.span

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" fill="none">
+  <rect width="1200" height="720" fill="#0B0A08"/>
+  <rect x="40" y="40" width="1120" height="640" rx="28" fill="#14110C" stroke="#C89A3D" stroke-opacity="0.35"/>
+  <text x="80" y="110" fill="#F5EDD6" font-family="Georgia, serif" font-size="42" font-weight="600">0: =09B8 Gutshot</text>
+  <text x="80" y="155" fill="#8E7A55" font-family="system-ui, sans-serif" font-size="22">8;;8>==0O, 19 · !0=:B-5B5@1C@3</text>
+
+  <!-- Street block -->
+  <rect x="80" y="220" width="1040" height="90" rx="12" fill="#1C1812" stroke="#C89A3D" stroke-opacity="0.25"/>
+  <text x="110" y="275" fill="#C89A3D" font-family="system-ui, sans-serif" font-size="24" letter-spacing="4">#. /</text>
+
+  <!-- Building 19 -->
+  <rect x="470" y="330" width="180" height="140" rx="10" fill="#221C14" stroke="#F7D98A" stroke-width="2"/>
+  <text x="560" y="390" text-anchor="middle" fill="#F7D98A" font-family="Georgia, serif" font-size="28">19</text>
+  <text x="560" y="430" text-anchor="middle" fill="#8E7A55" font-family="system-ui, sans-serif" font-size="18">;8F520O AB>@>=0</text>
+
+  <!-- Way 1 arrow left then right -->
+  <path d="M470 400 H220 V520 H360" stroke="#C89A3D" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <circle cx="360" cy="520" r="10" fill="#C89A3D"/>
+  <text x="120" y="390" fill="#C89A3D" font-family="system-ui, sans-serif" font-size="20">!?>A>1 1</text>
+  <text x="120" y="420" fill="#B6A98F" font-family="system-ui, sans-serif" font-size="16">G5@57 >H:>2 ?5@. ’ 0@:0 «@54;8»</text>
+
+  <!-- Way 2 arrow right arch -->
+  <path d="M650 400 H860 V520 H760" stroke="#E0115F" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <circle cx="760" cy="520" r="10" fill="#E0115F"/>
+  <text x="780" y="390" fill="#E0115F" font-family="system-ui, sans-serif" font-size="20">!?>A>1 2</text>
+  <text x="780" y="420" fill="#B6A98F" font-family="system-ui, sans-serif" font-size="16">0@:0 A?@020 ’ 4><>D>= Gutshot</text>
+
+  <!-- Entrance -->
+  <rect x="420" y="560" width="360" height="70" rx="14" fill="url(#g)" />
+  <text x="600" y="605" text-anchor="middle" fill="#0A0A0A" font-family="Georgia, serif" font-size="26" font-weight="700">E>4 2 Gutshot `</text>
+
+  <defs>
+    <linearGradient id="g" x1="420" y1="560" x2="780" y2="630" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#C89A3D"/>
+      <stop offset="1" stop-color="#F7D98A"/>
+    </linearGradient>
+  </defs>
+</svg>
