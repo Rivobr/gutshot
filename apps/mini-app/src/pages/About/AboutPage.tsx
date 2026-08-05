@@ -158,36 +158,36 @@ export function AboutPage(): JSX.Element {
               </span>
             </span>
             <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 20 }}>›</span>
+          </a>
 
-            <a
-              href={club.socials.tiktok}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-[18px] px-5 py-4 flex items-center justify-between"
-              style={{
-                textDecoration: 'none',
-                background: TIKTOK_GRADIENT,
-                boxShadow: '0 8px 24px rgba(255, 0, 80, 0.22)',
-                border: '1px solid rgba(0, 242, 234, 0.35)',
-              }}
-            >
-              <span className="flex flex-col">
-                <span
-                  className="sans uppercase"
-                  style={{
-                    fontSize: 8.5,
-                    color: 'rgba(255,255,255,0.75)',
-                    letterSpacing: '0.18em',
-                  }}
-                >
-                  TikTok
-                </span>
-                <span className="serif font-semibold" style={{ fontSize: 15, color: '#FFFFFF' }}>
-                  {club.socials.tiktokHandle}
-                </span>
+          <a
+            href={club.socials.tiktok}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-[18px] px-5 py-4 flex items-center justify-between"
+            style={{
+              textDecoration: 'none',
+              background: TIKTOK_GRADIENT,
+              boxShadow: '0 8px 24px rgba(255, 0, 80, 0.22)',
+              border: '1px solid rgba(0, 242, 234, 0.35)',
+            }}
+          >
+            <span className="flex flex-col">
+              <span
+                className="sans uppercase"
+                style={{
+                  fontSize: 8.5,
+                  color: 'rgba(255,255,255,0.75)',
+                  letterSpacing: '0.18em',
+                }}
+              >
+                TikTok
               </span>
-              <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 20 }}>›</span>
-            </a>
+              <span className="serif font-semibold" style={{ fontSize: 15, color: '#FFFFFF' }}>
+                {club.socials.tiktokHandle}
+              </span>
+            </span>
+            <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 20 }}>›</span>
           </a>
         </div>
 
