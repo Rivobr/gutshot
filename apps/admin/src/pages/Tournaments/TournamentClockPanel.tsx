@@ -62,10 +62,13 @@ export function TournamentClockPanel({ tournamentId }: { tournamentId: string })
   const secondsLeft = useCountdown(clock?.levelEndsAt, running);
   const secondsToBreak = useCountdown(clock?.breakAt, running);
 
-  const tvUrl = useMemo(
-    () => `${window.location.origin.replace('admin.', 'tv.')}/?tournament=${tournamentId}`,
-    [tournamentId],
-  );
+  const tvUrl = useMemo(() => {
+    // Всегда прямой IP: tv.* сейчас за Cloudflare и без VPN на Xiaomi не открывается.
+    const base =
+      (import.meta.env.VITE_TV_BOARD_URL as string | undefined)?.replace(/\/$/, '') ||
+      'http://159.194.208.116';
+    return `${base}/?tournament=${tournamentId}`;
+  }, [tournamentId]);
 
   if (isLoading) {
     return (
