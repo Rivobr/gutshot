@@ -65,6 +65,15 @@ export function useAchievementTexts() {
   });
 }
 
+/** Каталог достижений клуба — единый источник с сервера. */
+export function useAchievementsCatalog() {
+  return useQuery({
+    queryKey: ['achievements-catalog'],
+    queryFn: playerApi.getAchievementsCatalog,
+    staleTime: 10 * 60_000,
+  });
+}
+
 async function acceptConsentWithRetry(): Promise<{ consentAcceptedAt: string }> {
   let lastError: unknown;
   for (let attempt = 1; attempt <= 3; attempt += 1) {

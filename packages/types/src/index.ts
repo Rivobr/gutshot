@@ -55,7 +55,30 @@ export interface PlayerProfileDto {
     winStreak: number;
     /** Число событий «Каре» (для прогрессивных достижений). */
     fourOfAKind: number;
+    straightFlush: number;
+    royalFlush: number;
+    /** Недели, где сыграно 3+ турнира. */
+    activeWeeks: number;
+    /** Призовые места в недельном рейтинге. */
+    weeklyTop3: number;
+    weeklyWins: number;
+    /** Финал месяца. */
+    monthlyEntries: number;
+    monthlyPrizes: number;
+    monthlyWins: number;
+    /** Особые достижения. */
+    winNoReentry: number;
+    backToBackWins: number;
+    finalTableStreak: number;
+    top10Streak: number;
+    shortStackWins: number;
+    tutorialCompleted: number;
+    friendsReferred: number;
   };
+  /** Открытые достижения каталога (id). */
+  unlockedAchievements: string[];
+  /** Прогресс по каждому достижению каталога: id → выполнено из target. */
+  achievementProgress: Record<string, number>;
 }
 
 export interface TournamentParticipant {
@@ -267,7 +290,12 @@ export type PlayerEventType =
   | 'XP_CHANGE'
   | 'LEVEL_UP'
   | 'TOURNAMENT_RESULT'
-  | 'ACHIEVEMENT_UNLOCKED';
+  | 'ACHIEVEMENT_UNLOCKED'
+  | 'WEEKLY_RATING_REWARD'
+  | 'MONTHLY_FINAL_REWARD'
+  | 'TUTORIAL_COMPLETED'
+  | 'FRIEND_REFERRED'
+  | 'SHORT_STACK_WIN';
 
 /** События, которые сотрудник клуба может отметить после сканирования QR. */
 export type ScannerEventType =
@@ -277,7 +305,10 @@ export type ScannerEventType =
   | 'BOUNTY'
   | 'FOUR_OF_A_KIND'
   | 'STRAIGHT_FLUSH'
-  | 'ROYAL_FLUSH';
+  | 'ROYAL_FLUSH'
+  | 'TUTORIAL_COMPLETED'
+  | 'FRIEND_REFERRED'
+  | 'SHORT_STACK_WIN';
 
 export type AchievementCode = 'FOUR_OF_A_KIND' | 'STRAIGHT_FLUSH' | 'ROYAL_FLUSH';
 
@@ -308,7 +339,26 @@ export type XpSettingKey =
   | 'PLACE_17'
   | 'PLACE_18'
   | 'PLACE_19'
-  | 'PLACE_20';
+  | 'PLACE_20'
+  | 'PLACE_21'
+  | 'PLACE_22'
+  | 'PLACE_23'
+  | 'PLACE_24'
+  | 'PLACE_25'
+  | 'PLACE_26'
+  | 'PLACE_27'
+  | 'PLACE_28'
+  | 'PLACE_29'
+  | 'PLACE_30'
+  | 'WEEKLY_TOP_1'
+  | 'WEEKLY_TOP_2'
+  | 'WEEKLY_TOP_3'
+  | 'MONTHLY_TOP_1'
+  | 'MONTHLY_TOP_2'
+  | 'MONTHLY_TOP_3';
+
+/** Последнее место, за которое начисляется XP (ТЗ клуба). */
+export const MAX_SCORING_PLACE = 30;
 
 /** Ключи шкалы рейтинга: место → настройка XP. */
 export const PLACE_RATING_KEY_BY_PLACE: Record<number, XpSettingKey> = {
@@ -332,7 +382,27 @@ export const PLACE_RATING_KEY_BY_PLACE: Record<number, XpSettingKey> = {
   18: 'PLACE_18',
   19: 'PLACE_19',
   20: 'PLACE_20',
+  21: 'PLACE_21',
+  22: 'PLACE_22',
+  23: 'PLACE_23',
+  24: 'PLACE_24',
+  25: 'PLACE_25',
+  26: 'PLACE_26',
+  27: 'PLACE_27',
+  28: 'PLACE_28',
+  29: 'PLACE_29',
+  30: 'PLACE_30',
 };
+
+/** Награды за места в недельном рейтинге и финале месяца. */
+export const RATING_REWARD_KEYS: XpSettingKey[] = [
+  'WEEKLY_TOP_1',
+  'WEEKLY_TOP_2',
+  'WEEKLY_TOP_3',
+  'MONTHLY_TOP_1',
+  'MONTHLY_TOP_2',
+  'MONTHLY_TOP_3',
+];
 
 export const PLACE_RATING_KEYS: XpSettingKey[] = Object.values(PLACE_RATING_KEY_BY_PLACE);
 
@@ -348,13 +418,13 @@ export interface PlaceRatingScaleDto {
   totalPoints: number;
 }
 
-/** Собирает шкалу рейтинга 1–20 из карты настроек XP. */
+/** Собирает шкалу рейтинга 1–30 из карты настроек XP. */
 export function buildPlaceRatingScale(
   settings: Partial<Record<XpSettingKey, number>>,
 ): PlaceRatingScaleDto {
   const rows: PlaceRatingRow[] = [];
 
-  for (let place = 1; place <= 20; place += 1) {
+  for (let place = 1; place <= MAX_SCORING_PLACE; place += 1) {
     const key = PLACE_RATING_KEY_BY_PLACE[place];
     const points = settings[key] ?? 0;
     const previous = place === 1 ? null : (rows[place - 2]?.points ?? 0);
@@ -416,18 +486,8 @@ export interface LegalDocumentDto {
   updatedAt: string;
 }
 
-/** Редактируемый текст достижения (отображение в Mini App). */
-export type AchievementTextId =
-  | 'first_visit'
-  | 'visit_5'
-  | 'four_kind'
-  | 'first_knockout'
-  | 'royal_flush'
-  | 'visit_10'
-  | 'first_win'
-  | 'straight_flush'
-  | 'final_table'
-  | 'win_streak';
+/** Редактируемый текст достижения (id из ACHIEVEMENTS_CATALOG). */
+export type AchievementTextId = string;
 
 export interface AchievementTextDto {
   id: AchievementTextId;
@@ -474,6 +534,22 @@ export interface ScannerEventResultDto {
   level: number;
   levelUp: boolean;
   achievementUnlocked: AchievementCode | null;
+  /** Достижения каталога, открытые этим событием. */
+  unlockedAchievements?: { id: string; title: string; xp: number }[];
+}
+
+/** Выплата наград за недельный рейтинг / финал месяца. */
+export interface RatingRewardPayoutDto {
+  periodType: 'WEEKLY' | 'MONTHLY';
+  periodKey: string;
+  awarded: {
+    userId: string;
+    place: number;
+    xp: number;
+    nickname?: string | null;
+    firstName?: string | null;
+  }[];
+  skipped: number;
 }
 
 export interface AdminTournamentRegistration {
@@ -496,6 +572,51 @@ export interface AdminTournamentRegistration {
     level: number;
   };
 }
+
+export type AchievementRarity = 'common' | 'rare' | 'epic' | 'legend';
+
+export type AchievementGroup =
+  | 'wins'
+  | 'final_tables'
+  | 'tournaments'
+  | 'active_weeks'
+  | 'weekly_rating'
+  | 'monthly_final'
+  | 'four_of_a_kind'
+  | 'straight_flush'
+  | 'royal_flush'
+  | 'special'
+  | 'knockouts'
+  | 'legend';
+
+/** Определение достижения из каталога клуба (отдаётся API). */
+export interface AchievementDefinitionDto {
+  id: string;
+  group: AchievementGroup;
+  icon: string;
+  title: string;
+  description: string;
+  howTo: string;
+  xp: number;
+  target: number;
+  rarity: AchievementRarity;
+  span2?: boolean;
+}
+
+export const ACHIEVEMENT_GROUP_LABELS: Record<AchievementGroup, string> = {
+  wins: 'Победы в турнирах',
+  final_tables: 'Финальные столы',
+  tournaments: 'Сыгранные турниры',
+  active_weeks: 'Активные недели',
+  weekly_rating: 'Недельный рейтинг',
+  monthly_final: 'Финал месяца',
+  four_of_a_kind: 'Каре',
+  straight_flush: 'Стрит-флеш',
+  royal_flush: 'Роял-флеш',
+  special: 'Особые достижения',
+  knockouts: 'Нокауты',
+  legend: 'Легенда Gutshot',
+};
 
 export interface ApiSuccessResponse<T> {
   success: true;

@@ -14,6 +14,11 @@ export const PLAYER_EVENT_LABELS: Record<PlayerEventType, string> = {
   LEVEL_UP: 'Новый уровень',
   TOURNAMENT_RESULT: 'Результат турнира',
   ACHIEVEMENT_UNLOCKED: 'Достижение получено',
+  WEEKLY_RATING_REWARD: 'Награда недельного рейтинга',
+  MONTHLY_FINAL_REWARD: 'Награда финала месяца',
+  TUTORIAL_COMPLETED: 'Пройдено обучение',
+  FRIEND_REFERRED: 'Приведён друг',
+  SHORT_STACK_WIN: 'Победа со стека менее 10 BB',
 };
 
 export function formatEventDate(iso: string): string {

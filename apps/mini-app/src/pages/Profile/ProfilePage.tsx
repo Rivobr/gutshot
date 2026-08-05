@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { Loader } from '@gutshot/ui';
 import {
   useAchievementTexts,
-  useAchievements,
+  useAchievementsCatalog,
   usePlayerEvents,
   useProfile,
   useTournamentHistory,
@@ -19,9 +19,8 @@ import { displayNameOf } from '../../shared/lib/display-name';
 import { formatDate } from '../../shared/lib/format';
 import { PLAYER_EVENT_LABELS, formatEventDate } from '../../shared/lib/event-labels';
 import {
-  mergeAchievementTexts,
+  buildAchievementViews,
   sortAchievementsByAvailability,
-  type AchievementContext,
 } from '../../shared/lib/achievements-catalog';
 import { AchievementMedallion } from '../../shared/ui/AchievementMedallion';
 
@@ -72,14 +71,28 @@ export function ProfilePage(): JSX.Element {
   const { data: profile, isLoading } = useProfile();
   const { data: history } = useTournamentHistory();
   const { data: events } = usePlayerEvents();
-  const { data: unlockedAchievements } = useAchievements();
+  const { data: achievementsCatalog } = useAchievementsCatalog();
   const { data: achievementTexts } = useAchievementTexts();
   const updateNickname = useUpdateNickname();
   const [isQrOpen, setQrOpen] = useState(false);
   const [isEditingName, setEditingName] = useState(false);
   const [isActivityOpen, setActivityOpen] = useState(false);
   const [nicknameDraft, setNicknameDraft] = useState('');
-  const catalog = useMemo(() => mergeAchievementTexts(achievementTexts), [achievementTexts]);
+  const achievementViews = useMemo(
+    () =>
+      buildAchievementViews(
+        achievementsCatalog,
+        achievementTexts,
+        profile?.achievementProgress,
+        profile?.unlockedAchievements,
+      ),
+    [
+      achievementsCatalog,
+      achievementTexts,
+      profile?.achievementProgress,
+      profile?.unlockedAchievements,
+    ],
+  );
 
   useEffect(() => {
     if (profile) {
@@ -90,8 +103,6 @@ export function ProfilePage(): JSX.Element {
   if (isLoading || !profile) {
     return <Loader />;
   }
-
-  const unlockedCodes = new Set((unlockedAchievements ?? []).map((item) => item.code));
 
   const xpPct = Math.round(profile.progress * 100);
   const s = profile.stats;
@@ -135,36 +146,23 @@ export function ProfilePage(): JSX.Element {
     { icon: '📅', value: `${s.daysInClub}`, label: 'Дней в клубе' },
   ];
 
-  const achievementCtx: AchievementContext = {
-    visits: s.visits ?? 0,
-    wins: s.wins,
-    finalTables: s.finalTables ?? 0,
-    winStreak: s.winStreak ?? 0,
-    bounties: s.bounties ?? 0,
-    fourOfAKind: s.fourOfAKind ?? 0,
-    unlockedCodes,
-  };
-
   const pinnedIds = profile.pinnedAchievements ?? [];
-  const sortedAchievements = sortAchievementsByAvailability(catalog, achievementCtx);
+  const sortedAchievements = sortAchievementsByAvailability(achievementViews);
   // Закреплённые игроком достижения — витрина, поэтому идут первыми.
   const previewAchievements = [
     ...sortedAchievements.filter((item) => pinnedIds.includes(item.id)),
     ...sortedAchievements.filter((item) => !pinnedIds.includes(item.id)),
   ]
     .slice(0, 6)
-    .map((item) => {
-      const progress = item.getProgress(achievementCtx);
-      const unlocked = progress >= item.target;
-      return {
-        id: item.id,
-        icon: item.icon,
-        title: item.title,
-        unlocked,
-        pinned: pinnedIds.includes(item.id),
-        progress: unlocked ? 'Получено' : `${progress}/${item.target}`,
-      };
-    });
+    .map((item) => ({
+      id: item.id,
+      group: item.group,
+      icon: item.icon,
+      title: item.title,
+      unlocked: item.unlocked,
+      pinned: pinnedIds.includes(item.id),
+      progress: item.unlocked ? 'Получено' : `${item.progress}/${item.target}`,
+    }));
 
   return (
     <div className="flex flex-col">
@@ -441,7 +439,7 @@ export function ProfilePage(): JSX.Element {
                     ★
                   </span>
                 )}
-                <AchievementMedallion id={a.id} locked={!a.unlocked} size={42} />
+                <AchievementMedallion group={a.group} locked={!a.unlocked} size={42} />
                 <span
                   className="sans text-center"
                   style={{ fontSize: 10, color: '#D8CEBC', lineHeight: 1.25 }}

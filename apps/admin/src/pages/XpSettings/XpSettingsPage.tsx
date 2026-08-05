@@ -9,15 +9,19 @@ import { Button, Card, Loader } from '@gutshot/ui';
 import { useUpdateLevels, useUpdateXpSettings, useXpConfig } from '../../entities/xp-config';
 import {
   XP_EVENT_SETTING_ORDER,
+  XP_REWARD_SETTING_ORDER,
   XP_SETTING_LABELS,
   XP_SETTING_ORDER,
   formatPoints,
 } from '../../shared/lib/event-labels';
+import { useRatingRewardPayout } from '../../entities/xp-config';
 
 export function XpSettingsPage(): JSX.Element {
   const { data, isLoading } = useXpConfig();
   const updateSettings = useUpdateXpSettings();
   const updateLevels = useUpdateLevels();
+  const payoutWeekly = useRatingRewardPayout('weekly');
+  const payoutMonthly = useRatingRewardPayout('monthly');
 
   const [values, setValues] = useState<Record<string, number>>({});
   const [levels, setLevels] = useState<LevelThresholdDto[]>([]);
@@ -97,20 +101,20 @@ export function XpSettingsPage(): JSX.Element {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-medium">Очки и XP</h1>
+        <h1 className="text-2xl font-medium">XP и уровни</h1>
         <p className="text-sm text-muted-foreground">
-          Очки — рейтинг (места в турнирах). XP — уровень игрока (явка, комбо и т.д.). Новые значения
-          не пересчитывают уже начисленное.
+          Система по ТЗ клуба: XP за места 1–30, уровни 1–100, награды за неделю и финал месяца.
+          Новые значения не пересчитывают уже начисленное.
         </p>
       </div>
 
       <Card className="gap-4">
         <div>
-          <h2 className="font-medium">Шкала рейтинга — очки (места 1–20)</h2>
+          <h2 className="font-medium">XP за места в турнире (1–30)</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Очки за место в турнире. 1 место — премия за победу; со 2 по 20 — плавное снижение.
-            Всего за турнир при полной таблице:{' '}
-            <span className="text-foreground">{formatPoints(scale.totalPoints)}</span> очков.
+            Игроки ниже 30 места получают 0 XP за место, но турнир засчитывается в достижения за
+            количество сыгранных турниров. Всего за турнир при полной таблице:{' '}
+            <span className="text-foreground">{formatPoints(scale.totalPoints)}</span> XP.
           </p>
         </div>
 
@@ -119,7 +123,7 @@ export function XpSettingsPage(): JSX.Element {
             <thead>
               <tr className="border-b border-border bg-secondary/40 text-left text-muted-foreground">
                 <th className="px-3 py-2.5 font-medium">Место</th>
-                <th className="px-3 py-2.5 font-medium">Очки</th>
+                <th className="px-3 py-2.5 font-medium">XP</th>
                 <th className="px-3 py-2.5 font-medium">Разница с предыдущим</th>
               </tr>
             </thead>
@@ -132,9 +136,7 @@ export function XpSettingsPage(): JSX.Element {
                       type="number"
                       min={0}
                       value={values[PLACE_RATING_KEY_BY_PLACE[row.place]] ?? 0}
-                      onChange={(event) =>
-                        setPlacePoints(row.place, Number(event.target.value))
-                      }
+                      onChange={(event) => setPlacePoints(row.place, Number(event.target.value))}
                       className="w-28 rounded-md border border-border bg-secondary px-2.5 py-1.5 outline-none focus:ring-2 focus:ring-primary"
                     />
                   </td>
@@ -145,6 +147,62 @@ export function XpSettingsPage(): JSX.Element {
               ))}
             </tbody>
           </table>
+        </div>
+      </Card>
+
+      <Card className="gap-4">
+        <div>
+          <h2 className="font-medium">Награды рейтинга</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            XP за призовые места в недельном рейтинге и финале месяца. Начисляется при выплате —
+            повторный запуск за тот же период ничего не задвоит.
+          </p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {XP_REWARD_SETTING_ORDER.map((key: XpSettingKey) => (
+            <label key={key} className="flex flex-col gap-1.5">
+              <span className="text-sm text-muted-foreground">{XP_SETTING_LABELS[key]}</span>
+              <input
+                type="number"
+                min={0}
+                value={values[key] ?? 0}
+                onChange={(event) =>
+                  setValues((current) => ({ ...current, [key]: Number(event.target.value) }))
+                }
+                className="rounded-md border border-border bg-secondary px-3 py-2.5 text-foreground outline-none focus:ring-2 focus:ring-primary"
+              />
+            </label>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant="ghost"
+            onClick={() => payoutWeekly.mutate()}
+            isLoading={payoutWeekly.isPending}
+          >
+            Выплатить за неделю
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => payoutMonthly.mutate()}
+            isLoading={payoutMonthly.isPending}
+          >
+            Выплатить за финал месяца
+          </Button>
+          {payoutWeekly.isSuccess && (
+            <span className="text-sm text-primary">
+              Неделя: начислено {payoutWeekly.data?.awarded.length ?? 0}, пропущено{' '}
+              {payoutWeekly.data?.skipped ?? 0}
+            </span>
+          )}
+          {payoutMonthly.isSuccess && (
+            <span className="text-sm text-primary">
+              Месяц: начислено {payoutMonthly.data?.awarded.length ?? 0}, пропущено{' '}
+              {payoutMonthly.data?.skipped ?? 0}
+            </span>
+          )}
         </div>
       </Card>
 
@@ -181,9 +239,10 @@ export function XpSettingsPage(): JSX.Element {
 
       <Card className="gap-4">
         <div>
-          <h2 className="font-medium">Уровни</h2>
+          <h2 className="font-medium">Уровни 1–100</h2>
           <p className="text-sm text-muted-foreground">
-            Пороги XP для каждого уровня. Уровни игроков пересчитываются автоматически.
+            Накопительный XP для каждого уровня. По ТЗ: 10 ур. — 4 410, 50 ур. — 104 410, 100 ур. —
+            481 910 XP. Уровни игроков пересчитываются автоматически.
           </p>
         </div>
 

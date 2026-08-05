@@ -13,6 +13,7 @@ import { BackButton } from '../../shared/ui/BackButton';
 import { PlayersFillBar } from '../../shared/ui/PlayersFillBar';
 import { PlayerAvatar } from '../../shared/ui/PlayerAvatar';
 import { AchievementMedallion } from '../../shared/ui/AchievementMedallion';
+import { groupFromAchievementId } from '../../shared/lib/achievements-catalog';
 import { showToast } from '../../shared/ui/toast';
 import { displayNameOf } from '../../shared/lib/display-name';
 import { formatDate, formatTime } from '../../shared/lib/format';
@@ -346,7 +347,11 @@ export function TournamentPage(): JSX.Element {
                   {p.pinnedAchievements && p.pinnedAchievements.length > 0 && (
                     <div className="flex shrink-0 items-center gap-1">
                       {p.pinnedAchievements.slice(0, 3).map((achievementId) => (
-                        <AchievementMedallion key={achievementId} id={achievementId} size={24} />
+                        <AchievementMedallion
+                          key={achievementId}
+                          group={groupFromAchievementId(achievementId)}
+                          size={24}
+                        />
                       ))}
                     </div>
                   )}

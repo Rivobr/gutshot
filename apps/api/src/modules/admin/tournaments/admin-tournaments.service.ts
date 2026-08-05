@@ -14,6 +14,7 @@ import { xpSettingKeyForPlace } from '../../../common/constants/xp-defaults.cons
 import { XpService } from '../../progression/xp.service';
 import { XpSettingsService } from '../../progression/xp-settings.service';
 import { LevelsService } from '../../progression/levels.service';
+import { AchievementEngineService } from '../../progression/achievement-engine.service';
 import { CreateTournamentDto } from './dto/create-tournament.dto';
 import { UpdateTournamentDto, UpdateTournamentLiveDto } from './dto/update-tournament.dto';
 import { TournamentResultEntryDto } from './dto/finish-tournament.dto';
@@ -30,6 +31,7 @@ export class AdminTournamentsService {
     private readonly xpService: XpService,
     private readonly xpSettingsService: XpSettingsService,
     private readonly levelsService: LevelsService,
+    private readonly achievementEngine: AchievementEngineService,
   ) {}
 
   async findAll() {
@@ -469,8 +471,8 @@ export class AdminTournamentsService {
           );
         }
 
-        // Места 1–10 берутся из настраиваемой таблицы XP,
-        // для остальных сохраняется историческое значение.
+        // Места 1–30 берутся из настраиваемой таблицы XP.
+        // Ниже 30 места XP за место не начисляется, но турнир идёт в зачёт достижений.
         const settingKey = xpSettingKeyForPlace(entry.place);
         const xpEarned = settingKey ? xpSettings[settingKey] : getXpForPlace(entry.place);
 
@@ -528,6 +530,22 @@ export class AdminTournamentsService {
           player.xp,
         ),
       });
+
+      // Победы, финальные столы, сыгранные турниры, серии — считаются после результата.
+      const unlocked = await this.achievementEngine.syncForUser(player.userId, {
+        tournamentId: id,
+        performedById: adminId,
+      });
+
+      for (const achievement of unlocked) {
+        await this.notificationsService.notify({
+          userId: player.userId,
+          telegramId: player.telegramId,
+          type: NotificationType.SYSTEM,
+          title: 'Новое достижение',
+          message: `🏅 ${achievement.title}\n+${achievement.xp} XP`,
+        });
+      }
     }
 
     return this.findById(id);

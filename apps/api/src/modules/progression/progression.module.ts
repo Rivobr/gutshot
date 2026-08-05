@@ -4,24 +4,31 @@ import { LevelsService } from './levels.service';
 import { XpService } from './xp.service';
 import { PlayerEventsService } from './player-events.service';
 import { AchievementsService } from './achievements.service';
+import { AchievementEngineService } from './achievement-engine.service';
 import { AchievementTextsService } from './achievement-texts.service';
 import {
   AchievementTextsController,
   AdminAchievementTextsController,
 } from './achievement-texts.controller';
+import { AchievementsCatalogController } from './achievements-catalog.controller';
 
 /**
  * Прогрессия игрока: настраиваемые значения XP, таблица уровней,
  * начисление опыта, достижения и история событий.
  */
 @Module({
-  controllers: [AchievementTextsController, AdminAchievementTextsController],
+  controllers: [
+    AchievementTextsController,
+    AdminAchievementTextsController,
+    AchievementsCatalogController,
+  ],
   providers: [
     XpSettingsService,
     LevelsService,
     XpService,
     PlayerEventsService,
     AchievementsService,
+    AchievementEngineService,
     AchievementTextsService,
   ],
   exports: [
@@ -30,6 +37,7 @@ import {
     XpService,
     PlayerEventsService,
     AchievementsService,
+    AchievementEngineService,
     AchievementTextsService,
   ],
 })

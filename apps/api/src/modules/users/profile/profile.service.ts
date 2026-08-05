@@ -3,6 +3,7 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { LevelsService } from '../../progression/levels.service';
 import { PlayerEventsService } from '../../progression/player-events.service';
 import { AchievementsService } from '../../progression/achievements.service';
+import { AchievementEngineService } from '../../progression/achievement-engine.service';
 import { UsersService } from '../users.service';
 
 /** Сколько достижений игрок может закрепить в профиле. */
@@ -16,6 +17,7 @@ export class ProfileService {
     private readonly levelsService: LevelsService,
     private readonly playerEventsService: PlayerEventsService,
     private readonly achievementsService: AchievementsService,
+    private readonly achievementEngine: AchievementEngineService,
   ) {}
 
   async getProfile(userId: string) {
@@ -48,27 +50,18 @@ export class ProfileService {
     const qrCode = user.qrCode ?? (await this.usersService.ensureQrCode(user.id)).qrCode;
 
     const [
-      tournamentsPlayed,
       resultsCount,
-      wins,
       itm,
-      finalTables,
       placeAvg,
       visits,
-      fourOfAKind,
       placeHistory,
       levelProgress,
+      metrics,
+      unlockedAchievements,
     ] = await Promise.all([
-      this.prisma.registration.count({
-        where: { userId, status: 'FINISHED' },
-      }),
       this.prisma.tournamentResult.count({ where: { userId } }),
-      this.prisma.tournamentResult.count({ where: { userId, place: 1 } }),
       this.prisma.tournamentResult.count({
         where: { userId, place: { lte: 10 } },
-      }),
-      this.prisma.tournamentResult.count({
-        where: { userId, place: { lte: 9 } },
       }),
       this.prisma.tournamentResult.aggregate({
         where: { userId },
@@ -77,16 +70,19 @@ export class ProfileService {
       this.prisma.playerEvent.count({
         where: { userId, type: 'ARRIVED' },
       }),
-      this.prisma.playerEvent.count({
-        where: { userId, type: 'FOUR_OF_A_KIND' },
-      }),
       this.prisma.tournamentResult.findMany({
         where: { userId },
         select: { place: true, tournament: { select: { date: true } } },
         orderBy: { tournament: { date: 'asc' } },
       }),
       this.levelsService.getProgress(user.playerProfile.xp),
+      this.achievementEngine.collectMetrics(this.prisma, userId),
+      this.achievementEngine.listUnlocked(userId),
     ]);
+
+    const tournamentsPlayed = metrics.tournamentsPlayed;
+    const wins = metrics.wins;
+    const finalTables = metrics.finalTables;
 
     let winStreak = 0;
     let currentStreak = 0;
@@ -135,8 +131,26 @@ export class ProfileService {
         visits,
         finalTables,
         winStreak,
-        fourOfAKind,
+        fourOfAKind: metrics.fourOfAKind,
+        straightFlush: metrics.straightFlush,
+        royalFlush: metrics.royalFlush,
+        activeWeeks: metrics.activeWeeks,
+        weeklyTop3: metrics.weeklyTop3,
+        weeklyWins: metrics.weeklyWins,
+        monthlyEntries: metrics.monthlyEntries,
+        monthlyPrizes: metrics.monthlyPrizes,
+        monthlyWins: metrics.monthlyWins,
+        winNoReentry: metrics.winNoReentry,
+        backToBackWins: metrics.backToBackWins,
+        finalTableStreak: metrics.finalTableStreak,
+        top10Streak: metrics.top10Streak,
+        shortStackWins: metrics.shortStackWins,
+        tutorialCompleted: metrics.tutorialCompleted,
+        friendsReferred: metrics.friendsReferred,
+        knockouts: metrics.knockouts,
       },
+      unlockedAchievements,
+      achievementProgress: this.achievementEngine.buildProgressMap(metrics),
     };
   }
 

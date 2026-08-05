@@ -26,3 +26,15 @@ export function useUpdateLevels() {
     },
   });
 }
+
+/** Выплата наград за недельный рейтинг / финал месяца. */
+export function useRatingRewardPayout(period: 'weekly' | 'monthly') {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => xpConfigApi.payoutRatingRewards(period),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'players'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'dashboard'] });
+    },
+  });
+}

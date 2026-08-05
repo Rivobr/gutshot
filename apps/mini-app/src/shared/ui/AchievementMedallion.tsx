@@ -1,30 +1,35 @@
 /** Золотые значки достижений — ассеты в стиле постера «Система достижений». */
 
-const ICON_SRC: Record<string, string> = {
-  first_visit: '/achievements/first_visit.png',
-  visit_5: '/achievements/visit_5.png',
-  four_kind: '/achievements/four_kind.png',
-  four_kind_5: '/achievements/four_kind.png',
-  first_knockout: '/achievements/first_knockout.png',
-  royal_flush: '/achievements/royal_flush.png',
-  visit_10: '/achievements/visit_10.png',
-  first_win: '/achievements/first_win.png',
+import type { AchievementGroup } from '@gutshot/types';
+
+/** Значок подбирается по группе достижения — так работает весь каталог клуба. */
+const ICON_BY_GROUP: Record<AchievementGroup, string> = {
+  wins: '/achievements/first_win.png',
+  final_tables: '/achievements/final_table.png',
+  tournaments: '/achievements/first_visit.png',
+  active_weeks: '/achievements/visit_10.png',
+  weekly_rating: '/achievements/win_streak.png',
+  monthly_final: '/achievements/visit_5.png',
+  four_of_a_kind: '/achievements/four_kind.png',
   straight_flush: '/achievements/straight_flush.png',
-  final_table: '/achievements/final_table.png',
-  win_streak: '/achievements/win_streak.png',
-  legend_gutshot: '/achievements/first_win.png',
+  royal_flush: '/achievements/royal_flush.png',
+  special: '/achievements/win_streak.png',
+  knockouts: '/achievements/first_knockout.png',
+  legend: '/achievements/royal_flush.png',
 };
 
+const FALLBACK_ICON = '/achievements/first_visit.png';
+
 export function AchievementMedallion({
-  id,
+  group,
   locked = false,
   size = 56,
 }: {
-  id: string;
+  group?: AchievementGroup;
   locked?: boolean;
   size?: number;
 }): JSX.Element {
-  const src = ICON_SRC[id] ?? ICON_SRC.win_streak;
+  const src = (group && ICON_BY_GROUP[group]) || FALLBACK_ICON;
 
   return (
     <span
