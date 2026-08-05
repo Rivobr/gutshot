@@ -13,7 +13,8 @@ const CLUB_INFO = [
 const LINKS = [
   { label: 'Mini App игрока', href: 'https://app.gutshotapp.ru' },
   { label: 'Табло турнира (TV)', href: 'https://tv.gutshotapp.ru' },
-  { label: 'API', href: 'https://api.gutshotapp.ru/api/v1' },
+  { label: 'Админка на ТВ (Xiaomi)', href: 'https://tv.gutshotapp.ru:8443' },
+  { label: 'API', href: '/api/v1' },
 ];
 
 export function SettingsPage(): JSX.Element {

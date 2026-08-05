@@ -69,7 +69,7 @@ services:
       dockerfile: apps/admin/Dockerfile
       network: host
       args:
-        VITE_ADMIN_API_URL: ${VITE_ADMIN_API_URL:-https://api.gutshotapp.ru/api/v1}
+        VITE_ADMIN_API_URL: ${VITE_ADMIN_API_URL:-/api/v1}
     container_name: gutshot-admin
     restart: unless-stopped
     ports:
@@ -102,6 +102,8 @@ services:
     ports:
       - '80:80'
       - '443:443'
+      # Админка без Cloudflare для Xiaomi TV: https://tv.gutshotapp.ru:8443
+      - '8443:8443'
     volumes:
       - ./docker/nginx/conf.d:/etc/nginx/conf.d
       - ./docker/nginx/certs:/etc/letsencrypt
