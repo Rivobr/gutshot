@@ -19,6 +19,8 @@ export const club = {
     vk: 'https://vk.com/gutshot',
     instagram: 'https://instagram.com/gutshot_spb',
     instagramHandle: '@gutshot_spb',
+    tiktok: 'https://www.tiktok.com/@gutshot_spb',
+    tiktokHandle: '@gutshot_spb',
   },
   docs: {
     terms: 'https://gutshotclub.ru/terms',
