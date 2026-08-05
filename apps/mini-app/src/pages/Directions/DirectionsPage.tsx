@@ -83,7 +83,7 @@ export function DirectionsPage(): JSX.Element {
           className="vip-card overflow-hidden rounded-[20px]"
         >
           <img
-            src="/how-to-find.jpg"
+            src="/how-to-find.jpg?v=3"
             alt="Как найти Gutshot — схема входа"
             className="w-full block"
             style={{
