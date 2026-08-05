@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import type { AdminTournamentRegistration } from '@gutshot/types';
 import { Avatar, Badge, Button, Card, Loader } from '@gutshot/ui';
 import {
   useAdminTournament,
+  useEliminatePlayer,
   useMarkAttendance,
+  useSetTournamentPlace,
   useTournamentRegistrations,
   type AdminTournament,
 } from '../../entities/tournament';
@@ -27,6 +29,21 @@ function displayName(
   return name || user.username || 'Игрок';
 }
 
+function sortRegistrations(items: AdminTournamentRegistration[]): AdminTournamentRegistration[] {
+  return items.slice().sort((a, b) => {
+    if (a.place != null && b.place != null) {
+      return a.place - b.place;
+    }
+    if (a.place != null) {
+      return -1;
+    }
+    if (b.place != null) {
+      return 1;
+    }
+    return new Date(a.registeredAt).getTime() - new Date(b.registeredAt).getTime();
+  });
+}
+
 export function TournamentDetailsPage(): JSX.Element {
   const { id = '' } = useParams();
   const navigate = useNavigate();
@@ -36,9 +53,12 @@ export function TournamentDetailsPage(): JSX.Element {
   const { data: registrations, isLoading: isRegistrationsLoading } = useTournamentRegistrations(id);
   const { data: history } = useAdminHistory({ tournamentId: id, take: 50 });
   const markAttendance = useMarkAttendance(id);
+  const setPlace = useSetTournamentPlace(id);
+  const eliminatePlayer = useEliminatePlayer(id);
 
   const [isEditOpen, setEditOpen] = useState(false);
   const [isFinishOpen, setFinishOpen] = useState(false);
+  const [placeDrafts, setPlaceDrafts] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (searchParams.get('finish') === '1') {
@@ -48,11 +68,56 @@ export function TournamentDetailsPage(): JSX.Element {
     }
   }, [searchParams, setSearchParams]);
 
+  useEffect(() => {
+    if (!registrations) {
+      return;
+    }
+    const next: Record<string, string> = {};
+    for (const registration of registrations) {
+      next[registration.id] = registration.place != null ? String(registration.place) : '';
+    }
+    setPlaceDrafts(next);
+  }, [registrations]);
+
+  const sortedRegistrations = useMemo(
+    () => sortRegistrations(registrations ?? []),
+    [registrations],
+  );
+
   if (isLoading || !tournament) {
     return <Loader />;
   }
 
+  const isLive = tournament.status === 'IN_PROGRESS';
   const arrivedCount = (registrations ?? []).filter((item) => item.arrivedAt).length;
+  const placedCount = (registrations ?? []).filter((item) => item.place != null).length;
+  const stillInCount = (registrations ?? []).filter(
+    (item) =>
+      item.place == null &&
+      ['REGISTERED', 'CHECKED_IN', 'PLAYING', 'FINISHED'].includes(item.status) &&
+      (item.arrivedAt != null || item.status === 'PLAYING'),
+  ).length;
+
+  const savePlace = (registrationId: string) => {
+    const current = registrations?.find((item) => item.id === registrationId);
+    const raw = placeDrafts[registrationId]?.trim() ?? '';
+    if (raw === '') {
+      if (current?.place != null) {
+        setPlace.mutate({ registrationId, place: null });
+      }
+      return;
+    }
+    const place = Number(raw);
+    if (!Number.isInteger(place) || place < 1) {
+      return;
+    }
+    if (current?.place === place) {
+      return;
+    }
+    setPlace.mutate({ registrationId, place });
+  };
+
+  const placeBusy = setPlace.isPending || eliminatePlayer.isPending;
 
   return (
     <div className="flex flex-col gap-6">
@@ -73,6 +138,7 @@ export function TournamentDetailsPage(): JSX.Element {
             <p className="mt-1 text-sm text-muted-foreground">
               {formatDateTime(tournament.date)} · мест {tournament.maxPlayers} · пришли{' '}
               {arrivedCount} из {registrations?.length ?? 0}
+              {isLive ? ` · в игре ${stillInCount} · места ${placedCount}` : ''}
             </p>
             {tournament.description && (
               <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
@@ -96,9 +162,17 @@ export function TournamentDetailsPage(): JSX.Element {
       <TournamentLivePanel tournamentId={tournament.id} live={tournament.live} />
 
       <Card className="gap-4">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="font-medium">Зарегистрированные игроки</h2>
-          {tournament.status === 'IN_PROGRESS' && (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="font-medium">Игроки и места</h2>
+            {isLive && (
+              <p className="mt-1 text-sm text-muted-foreground">
+                Когда игрок вылетел — нажмите «Выбыл»: место проставится с конца автоматически.
+                Можно править вручную до завершения турнира.
+              </p>
+            )}
+          </div>
+          {isLive && (
             <Button className="px-3 py-1.5 text-xs" onClick={() => setFinishOpen(true)}>
               Завершить с местами
             </Button>
@@ -115,18 +189,35 @@ export function TournamentDetailsPage(): JSX.Element {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border text-left text-muted-foreground">
+                    <th className="py-2 pr-3 font-medium">Место</th>
                     <th className="py-2 pr-3 font-medium">Игрок</th>
-                    <th className="py-2 pr-3 font-medium">Telegram ID</th>
                     <th className="py-2 pr-3 font-medium">Уровень</th>
-                    <th className="py-2 pr-3 font-medium">XP</th>
-                    <th className="py-2 pr-3 font-medium">Регистрация</th>
                     <th className="py-2 pr-3 font-medium">Явка</th>
                     <th className="py-2 font-medium">Действия</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {registrations.map((registration) => (
+                  {sortedRegistrations.map((registration) => (
                     <tr key={registration.id} className="border-b border-border/60">
+                      <td className="py-2.5 pr-3">
+                        {isLive ? (
+                          <PlaceInput
+                            value={placeDrafts[registration.id] ?? ''}
+                            disabled={placeBusy}
+                            onChange={(value) =>
+                              setPlaceDrafts((prev) => ({
+                                ...prev,
+                                [registration.id]: value,
+                              }))
+                            }
+                            onSave={() => savePlace(registration.id)}
+                          />
+                        ) : (
+                          <span className="font-medium">
+                            {registration.place != null ? registration.place : '—'}
+                          </span>
+                        )}
+                      </td>
                       <td className="py-2.5 pr-3">
                         <div className="flex items-center gap-2">
                           <Avatar
@@ -137,27 +228,50 @@ export function TournamentDetailsPage(): JSX.Element {
                           <span>{displayName(registration.user)}</span>
                         </div>
                       </td>
-                      <td className="py-2.5 pr-3 text-muted-foreground">
-                        {registration.user.telegramId}
-                      </td>
-                      <td className="py-2.5 pr-3">{registration.user.level}</td>
                       <td className="py-2.5 pr-3">
-                        {registration.user.xp.toLocaleString('ru-RU')}
-                      </td>
-                      <td className="py-2.5 pr-3 text-muted-foreground">
-                        {formatDateTime(registration.registeredAt)}
+                        {registration.user.level} · {registration.user.xp.toLocaleString('ru-RU')}{' '}
+                        XP
                       </td>
                       <td className="py-2.5 pr-3">
                         <AttendanceBadge registration={registration} />
                       </td>
                       <td className="py-2.5">
-                        <AttendanceActions
-                          registration={registration}
-                          isPending={markAttendance.isPending}
-                          onMark={(arrived) =>
-                            markAttendance.mutate({ registrationId: registration.id, arrived })
-                          }
-                        />
+                        <div className="flex flex-wrap gap-2">
+                          {isLive && registration.place == null && (
+                            <Button
+                              className="px-3 py-1.5 text-xs"
+                              disabled={placeBusy}
+                              onClick={() => eliminatePlayer.mutate(registration.id)}
+                            >
+                              Выбыл
+                            </Button>
+                          )}
+                          {isLive && registration.place != null && (
+                            <Button
+                              variant="ghost"
+                              className="px-3 py-1.5 text-xs"
+                              disabled={placeBusy}
+                              onClick={() =>
+                                setPlace.mutate({
+                                  registrationId: registration.id,
+                                  place: null,
+                                })
+                              }
+                            >
+                              Сбросить
+                            </Button>
+                          )}
+                          <AttendanceActions
+                            registration={registration}
+                            isPending={markAttendance.isPending}
+                            onMark={(arrived) =>
+                              markAttendance.mutate({
+                                registrationId: registration.id,
+                                arrived,
+                              })
+                            }
+                          />
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -166,7 +280,7 @@ export function TournamentDetailsPage(): JSX.Element {
             </div>
 
             <div className="flex flex-col gap-3 md:hidden">
-              {registrations.map((registration) => (
+              {sortedRegistrations.map((registration) => (
                 <div
                   key={registration.id}
                   className="flex flex-col gap-3 rounded-md border border-border p-3"
@@ -177,33 +291,81 @@ export function TournamentDetailsPage(): JSX.Element {
                       fallback={displayName(registration.user)}
                       size={40}
                     />
-                    <div className="flex min-w-0 flex-col">
+                    <div className="flex min-w-0 flex-1 flex-col">
                       <span className="font-medium">{displayName(registration.user)}</span>
                       <span className="text-xs text-muted-foreground">
-                        ID {registration.user.telegramId} · Ур. {registration.user.level} ·{' '}
+                        Ур. {registration.user.level} ·{' '}
                         {registration.user.xp.toLocaleString('ru-RU')} XP
                       </span>
                     </div>
+                    {registration.place != null && (
+                      <Badge
+                        style={{ background: 'rgba(184,134,59,0.2)', color: 'var(--primary)' }}
+                      >
+                        {registration.place} место
+                      </Badge>
+                    )}
                   </div>
 
-                  <div className="flex items-center justify-between gap-2">
-                    <AttendanceBadge registration={registration} />
-                    <AttendanceActions
-                      registration={registration}
-                      isPending={markAttendance.isPending}
-                      onMark={(arrived) =>
-                        markAttendance.mutate({ registrationId: registration.id, arrived })
-                      }
-                    />
-                  </div>
+                  <AttendanceBadge registration={registration} />
+
+                  {isLive && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <PlaceInput
+                        value={placeDrafts[registration.id] ?? ''}
+                        disabled={placeBusy}
+                        onChange={(value) =>
+                          setPlaceDrafts((prev) => ({
+                            ...prev,
+                            [registration.id]: value,
+                          }))
+                        }
+                        onSave={() => savePlace(registration.id)}
+                      />
+                      {registration.place == null ? (
+                        <Button
+                          className="px-3 py-1.5 text-xs"
+                          disabled={placeBusy}
+                          onClick={() => eliminatePlayer.mutate(registration.id)}
+                        >
+                          Выбыл
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          className="px-3 py-1.5 text-xs"
+                          disabled={placeBusy}
+                          onClick={() =>
+                            setPlace.mutate({
+                              registrationId: registration.id,
+                              place: null,
+                            })
+                          }
+                        >
+                          Сбросить
+                        </Button>
+                      )}
+                    </div>
+                  )}
+
+                  <AttendanceActions
+                    registration={registration}
+                    isPending={markAttendance.isPending}
+                    onMark={(arrived) =>
+                      markAttendance.mutate({ registrationId: registration.id, arrived })
+                    }
+                  />
                 </div>
               ))}
             </div>
           </>
         )}
 
-        {markAttendance.isError && (
-          <p className="text-sm text-destructive">Не удалось изменить отметку явки</p>
+        {(markAttendance.isError || setPlace.isError || eliminatePlayer.isError) && (
+          <p className="text-sm text-destructive">
+            Не удалось обновить игрока. Проверьте место (оно не должно повторяться) и статус
+            турнира.
+          </p>
         )}
       </Card>
 
@@ -255,11 +417,52 @@ export function TournamentDetailsPage(): JSX.Element {
   );
 }
 
+function PlaceInput({
+  value,
+  disabled,
+  onChange,
+  onSave,
+}: {
+  value: string;
+  disabled: boolean;
+  onChange: (value: string) => void;
+  onSave: () => void;
+}): JSX.Element {
+  return (
+    <div className="flex items-center gap-1.5">
+      <input
+        type="number"
+        min={1}
+        placeholder="—"
+        disabled={disabled}
+        className="w-16 rounded-md border border-border bg-secondary px-2 py-1.5 text-sm"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        onBlur={onSave}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            event.currentTarget.blur();
+          }
+        }}
+      />
+    </div>
+  );
+}
+
 function AttendanceBadge({
   registration,
 }: {
   registration: AdminTournamentRegistration;
 }): JSX.Element {
+  if (registration.place != null) {
+    return (
+      <Badge style={{ background: 'rgba(184,134,59,0.2)', color: 'var(--primary)' }}>
+        {registration.place} место
+        {registration.eliminatedAt ? ` · ${formatDateTime(registration.eliminatedAt)}` : ''}
+      </Badge>
+    );
+  }
+
   if (registration.arrivedAt) {
     return (
       <Badge style={{ background: 'rgba(184,134,59,0.2)', color: 'var(--primary)' }}>

@@ -120,4 +120,21 @@ export const adminTournamentsApi = {
     );
     return data.data;
   },
+  async setPlace(
+    id: string,
+    registrationId: string,
+    place: number | null,
+  ): Promise<AdminTournamentRegistration[]> {
+    const { data } = await apiClient.patch(
+      `/admin/tournaments/${id}/registrations/${registrationId}/place`,
+      { place },
+    );
+    return data.data;
+  },
+  async eliminate(id: string, registrationId: string): Promise<AdminTournamentRegistration[]> {
+    const { data } = await apiClient.post(
+      `/admin/tournaments/${id}/registrations/${registrationId}/eliminate`,
+    );
+    return data.data;
+  },
 };

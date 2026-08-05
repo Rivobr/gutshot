@@ -10,6 +10,7 @@ import {
 import { PrismaService } from '../../../prisma/prisma.service';
 import { normalizePlayerQrCode } from '../../../common/utils/player-qr.util';
 import { AttendanceService } from '../attendance/attendance.service';
+import { AdminTournamentsService } from '../tournaments/admin-tournaments.service';
 import { LevelsService } from '../../progression/levels.service';
 import { XpService } from '../../progression/xp.service';
 import { XpSettingsService } from '../../progression/xp-settings.service';
@@ -131,6 +132,7 @@ export class ScannerService {
     private readonly playerEventsService: PlayerEventsService,
     private readonly attendanceService: AttendanceService,
     private readonly notificationsService: NotificationsService,
+    private readonly adminTournamentsService: AdminTournamentsService,
   ) {}
 
   /** Карточка игрока по отсканированному постоянному QR-коду. */
@@ -220,14 +222,11 @@ export class ScannerService {
       if (event === ScannerEvent.ARRIVED) {
         xpAmount = await this.attendanceService.applyArrival(tx, registration!);
       } else if (event === ScannerEvent.ELIMINATED) {
-        await tx.registration.update({
-          where: { id: registration!.id },
-          data: { eliminatedAt: new Date() },
-        });
+        await this.adminTournamentsService.applyEliminationPlaceInTx(tx, registration!.id);
       } else if (event === ScannerEvent.RE_ENTRY) {
         await tx.registration.update({
           where: { id: registration!.id },
-          data: { reEntries: { increment: 1 }, eliminatedAt: null },
+          data: { reEntries: { increment: 1 }, eliminatedAt: null, place: null },
         });
         await tx.playerProfile.upsert({
           where: { userId: user.id },

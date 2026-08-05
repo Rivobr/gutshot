@@ -297,6 +297,8 @@ model Registration {
   arrivedAt          DateTime?
   attendanceXpGiven  Boolean   @default(false)
   eliminatedAt       DateTime?
+  /// Место в турнире (можно проставить до finish — XP начислится при завершении).
+  place              Int?
   reEntries          Int       @default(0)
   bounties           Int       @default(0)
 

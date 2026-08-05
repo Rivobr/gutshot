@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import {
   NotificationType,
   PlayerEventType,
+  Prisma,
   RegistrationStatus,
   TournamentStatus,
   XPReason,
@@ -21,6 +22,14 @@ import { TournamentResultEntryDto } from './dto/finish-tournament.dto';
 import { ClockActionDto, UpdateBlindStructureDto } from './dto/blind-structure.dto';
 import { serializeClock, serializeTournament } from '../../tournaments/tournament.serializer';
 import { defaultBlindStructure } from '../../tournaments/tournament-clock';
+
+/** Статусы регистраций, которые учитываются в итоговых местах турнира. */
+const RESULT_ELIGIBLE_STATUSES: RegistrationStatus[] = [
+  RegistrationStatus.REGISTERED,
+  RegistrationStatus.CHECKED_IN,
+  RegistrationStatus.PLAYING,
+  RegistrationStatus.FINISHED,
+];
 
 @Injectable()
 export class AdminTournamentsService {
@@ -409,7 +418,7 @@ export class AdminTournamentsService {
       this.prisma.registration.findMany({
         where: { tournamentId },
         include: { user: { include: { playerProfile: true } } },
-        orderBy: { registeredAt: 'asc' },
+        orderBy: [{ place: { sort: 'asc', nulls: 'last' } }, { registeredAt: 'asc' }],
       }),
       this.levelsService.getThresholds(),
     ]);
@@ -423,6 +432,8 @@ export class AdminTournamentsService {
         registeredAt: registration.registeredAt,
         arrivedAt: registration.arrivedAt,
         attendanceXpGiven: registration.attendanceXpGiven,
+        eliminatedAt: registration.eliminatedAt,
+        place: registration.place,
         reEntries: registration.reEntries,
         bounties: registration.bounties,
         user: {
@@ -440,11 +451,192 @@ export class AdminTournamentsService {
     });
   }
 
+  /**
+   * Проставить или сбросить место игрока во время турнира.
+   * XP не начисляется — только при finish.
+   */
+  async setPlace(tournamentId: string, registrationId: string, place: number | null) {
+    const tournament = await this.findById(tournamentId);
+
+    if (
+      tournament.status !== TournamentStatus.IN_PROGRESS &&
+      tournament.status !== TournamentStatus.REGISTRATION_CLOSED
+    ) {
+      throw new BadRequestException('Места можно менять только в активном турнире');
+    }
+
+    const registration = await this.prisma.registration.findUnique({
+      where: { id: registrationId },
+    });
+
+    if (!registration || registration.tournamentId !== tournamentId) {
+      throw new NotFoundException('Регистрация не найдена в этом турнире');
+    }
+
+    if (!RESULT_ELIGIBLE_STATUSES.includes(registration.status)) {
+      throw new BadRequestException('Этому игроку нельзя назначить место');
+    }
+
+    if (place !== null) {
+      const conflict = await this.prisma.registration.findFirst({
+        where: {
+          tournamentId,
+          place,
+          id: { not: registrationId },
+        },
+      });
+
+      if (conflict) {
+        throw new BadRequestException(`Место ${place} уже занято другим игроком`);
+      }
+    }
+
+    await this.prisma.registration.update({
+      where: { id: registrationId },
+      data: {
+        place,
+        eliminatedAt: place === null ? null : (registration.eliminatedAt ?? new Date()),
+      },
+    });
+
+    return this.getRegistrations(tournamentId);
+  }
+
+  /**
+   * Игрок выбыл: автоматически ставит следующее свободное место с конца
+   * (первый вылет при 30 игроках → 30 место).
+   */
+  async eliminate(tournamentId: string, registrationId: string) {
+    const tournament = await this.findById(tournamentId);
+
+    if (tournament.status !== TournamentStatus.IN_PROGRESS) {
+      throw new BadRequestException('Отметить выбытие можно только во время турнира');
+    }
+
+    const registration = await this.prisma.registration.findUnique({
+      where: { id: registrationId },
+    });
+
+    if (!registration || registration.tournamentId !== tournamentId) {
+      throw new NotFoundException('Регистрация не найдена в этом турнире');
+    }
+
+    if (!RESULT_ELIGIBLE_STATUSES.includes(registration.status)) {
+      throw new BadRequestException('Этому игроку нельзя назначить место');
+    }
+
+    if (registration.place != null) {
+      return this.getRegistrations(tournamentId);
+    }
+
+    const place = await this.computeNextEliminationPlace(tournamentId, registrationId);
+
+    await this.prisma.registration.update({
+      where: { id: registrationId },
+      data: {
+        place,
+        eliminatedAt: new Date(),
+      },
+    });
+
+    return this.getRegistrations(tournamentId);
+  }
+
+  /**
+   * Следующее место при выбытии: число участников поля без места
+   * (включая текущего). Учитываем пришедших / играющих.
+   */
+  async computeNextEliminationPlace(
+    tournamentId: string,
+    registrationId: string,
+    client: Prisma.TransactionClient | PrismaService = this.prisma,
+  ): Promise<number> {
+    const registrations = await client.registration.findMany({
+      where: {
+        tournamentId,
+        status: { in: RESULT_ELIGIBLE_STATUSES },
+      },
+      select: { id: true, place: true, arrivedAt: true, status: true },
+    });
+
+    const fieldPlayers = registrations.filter(
+      (row) =>
+        row.id === registrationId ||
+        row.place != null ||
+        row.arrivedAt != null ||
+        row.status === RegistrationStatus.PLAYING ||
+        row.status === RegistrationStatus.FINISHED,
+    );
+
+    const stillInCount = fieldPlayers.filter((row) => row.place == null).length;
+
+    if (stillInCount < 1) {
+      throw new BadRequestException('Некого отмечать выбывшим');
+    }
+
+    const place = stillInCount;
+    const taken = fieldPlayers.some((row) => row.place === place && row.id !== registrationId);
+
+    if (taken) {
+      throw new BadRequestException(
+        `Место ${place} уже занято. Проставьте места вручную или освободите конфликт.`,
+      );
+    }
+
+    return place;
+  }
+
+  /** Применить авто-место внутри чужой транзакции (сканер ELIMINATED). */
+  async applyEliminationPlaceInTx(
+    tx: Prisma.TransactionClient,
+    registrationId: string,
+  ): Promise<number | null> {
+    const registration = await tx.registration.findUnique({ where: { id: registrationId } });
+
+    if (!registration) {
+      return null;
+    }
+
+    if (registration.place != null) {
+      await tx.registration.update({
+        where: { id: registrationId },
+        data: { eliminatedAt: registration.eliminatedAt ?? new Date() },
+      });
+      return registration.place;
+    }
+
+    const place = await this.computeNextEliminationPlace(
+      registration.tournamentId,
+      registrationId,
+      tx,
+    );
+
+    await tx.registration.update({
+      where: { id: registrationId },
+      data: { place, eliminatedAt: new Date() },
+    });
+
+    return place;
+  }
+
   async finish(id: string, results: TournamentResultEntryDto[], adminId: string) {
     const tournament = await this.findById(id);
 
     if (tournament.status !== TournamentStatus.IN_PROGRESS) {
       throw new BadRequestException('Турнир не находится в процессе игры');
+    }
+
+    if (results.length === 0) {
+      throw new BadRequestException('Укажите места игроков');
+    }
+
+    const places = results.map((item) => item.place);
+    if (new Set(places).size !== places.length) {
+      throw new BadRequestException('Места игроков должны быть уникальными');
+    }
+
+    if (places.some((place) => !Number.isInteger(place) || place < 1)) {
+      throw new BadRequestException('Место должно быть целым числом от 1');
     }
 
     const xpSettings = await this.xpSettingsService.getAll();
@@ -489,7 +681,11 @@ export class AdminTournamentsService {
 
         await tx.registration.update({
           where: { id: registration.id },
-          data: { status: RegistrationStatus.FINISHED },
+          data: {
+            status: RegistrationStatus.FINISHED,
+            place: entry.place,
+            eliminatedAt: registration.eliminatedAt ?? new Date(),
+          },
         });
 
         const award = await this.xpService.award(tx, {

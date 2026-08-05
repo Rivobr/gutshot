@@ -558,6 +558,9 @@ export interface AdminTournamentRegistration {
   registeredAt: string;
   arrivedAt?: string | null;
   attendanceXpGiven: boolean;
+  eliminatedAt?: string | null;
+  /** Место, проставленное до или при завершении турнира. */
+  place?: number | null;
   reEntries: number;
   bounties: number;
   user: {

@@ -24,6 +24,7 @@ import { MarkAttendanceDto } from '../scanner/dto/scanner.dto';
 import { CreateTournamentDto } from './dto/create-tournament.dto';
 import { UpdateTournamentDto, UpdateTournamentLiveDto } from './dto/update-tournament.dto';
 import { TournamentResultEntryDto } from './dto/finish-tournament.dto';
+import { SetPlaceDto } from './dto/set-place.dto';
 import { ClockActionDto, UpdateBlindStructureDto } from './dto/blind-structure.dto';
 
 @ApiTags('Admin / Tournaments')
@@ -166,5 +167,26 @@ export class AdminTournamentsController {
     @Body() dto: MarkAttendanceDto,
   ) {
     return this.attendanceService.markAttendance(registrationId, dto.arrived, admin.sub);
+  }
+
+  /**
+   * Проставить / сбросить место во время турнира (до finish).
+   * XP не начисляется — только запись места.
+   */
+  @Roles(AdminRole.OWNER, AdminRole.ADMIN)
+  @Patch(':id/registrations/:registrationId/place')
+  setPlace(
+    @Param('id') id: string,
+    @Param('registrationId') registrationId: string,
+    @Body() dto: SetPlaceDto,
+  ) {
+    return this.adminTournamentsService.setPlace(id, registrationId, dto.place ?? null);
+  }
+
+  /** Игрок выбыл — автоматически следующее место с конца. */
+  @Roles(AdminRole.OWNER, AdminRole.ADMIN)
+  @Post(':id/registrations/:registrationId/eliminate')
+  eliminate(@Param('id') id: string, @Param('registrationId') registrationId: string) {
+    return this.adminTournamentsService.eliminate(id, registrationId);
   }
 }
