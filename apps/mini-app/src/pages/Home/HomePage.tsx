@@ -6,7 +6,7 @@ import { RatingBanner } from '../../widgets/RatingBanner/RatingBanner';
 import { useNearestTournament } from '../../entities/tournament';
 import { useCurrentRegistration } from '../../entities/registration';
 import { SuitWatermark, goldButtonStyle } from '../../shared/ui/figma';
-import { club } from '../../shared/config/club';
+import { club, clubLegalLine } from '../../shared/config/club';
 import { formatDateShort, formatTime, seatsWord } from '../../shared/lib/format';
 
 function Chip({ icon, children }: { icon: string; children: string }): JSX.Element {
@@ -174,9 +174,9 @@ export function HomePage(): JSX.Element {
         <div className="flex flex-col items-center gap-2 pt-3">
           <p
             className="sans text-center"
-            style={{ fontSize: 10, color: '#3E3428', letterSpacing: '0.06em' }}
+            style={{ fontSize: 10, color: '#3E3428', letterSpacing: '0.06em', lineHeight: 1.5 }}
           >
-            {club.address} · {club.city}
+            {clubLegalLine()}
           </p>
         </div>
       </div>

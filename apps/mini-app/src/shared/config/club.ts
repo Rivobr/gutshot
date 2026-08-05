@@ -4,6 +4,10 @@ export const club = {
   city: 'Санкт-Петербург',
   address: 'Миллионная улица, 19',
   addressFull: 'Санкт Петербург, улица Миллионная дом 19',
+  phone: '+7 999 009-11-99',
+  phoneTel: '+79990091199',
+  inn: '781140907760',
+  legalName: 'ИП Миронов Михаил Александрович',
   supportUrl: 'https://t.me/gutshot_suport',
   supportUsername: '@gutshot_suport',
   channelUrl: 'https://t.me/gutshot_spb',
@@ -16,3 +20,7 @@ export const club = {
     media: 'https://gutshotclub.ru/media-consent',
   },
 } as const;
+
+export function clubLegalLine(): string {
+  return `${club.address} · ИНН ${club.inn} · ${club.legalName}`;
+}

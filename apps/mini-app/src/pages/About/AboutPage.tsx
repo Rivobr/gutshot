@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '../../widgets/PageHeader/PageHeader';
 import { InfoCard, Logo } from '../../shared/ui/figma';
-import { club } from '../../shared/config/club';
+import { club, clubLegalLine } from '../../shared/config/club';
 
 const PARAGRAPHS = [
   'GUTSHOT — клуб спортивного покера в Санкт-Петербурге. Мы проводим регулярные турниры по правилам спортивного покера: без ставок на деньги, с зачётом очков в клубный рейтинг.',
@@ -29,6 +29,20 @@ export function AboutPage(): JSX.Element {
         <div className="grid grid-cols-2 gap-3 mt-1">
           <InfoCard icon="📍" label="Адрес" value={club.address} />
           <InfoCard icon="🏙" label="Город" value={club.city} />
+          <InfoCard icon="📞" label="Телефон" value={club.phone} />
+          <InfoCard icon="🧾" label="ИНН" value={club.inn} />
+        </div>
+
+        <div className="vip-card rounded-[18px] px-5 py-4">
+          <p
+            className="sans uppercase"
+            style={{ fontSize: 8.5, color: '#6B614E', letterSpacing: '0.18em' }}
+          >
+            Реквизиты
+          </p>
+          <p className="serif font-semibold mt-1" style={{ fontSize: 15, color: '#F5EDD6' }}>
+            {club.legalName}
+          </p>
         </div>
 
         <Link
@@ -70,6 +84,25 @@ export function AboutPage(): JSX.Element {
         </Link>
 
         <a
+          href={`tel:${club.phoneTel}`}
+          className="vip-card rounded-[18px] px-5 py-4 flex items-center justify-between"
+          style={{ textDecoration: 'none' }}
+        >
+          <span className="flex flex-col">
+            <span
+              className="sans uppercase"
+              style={{ fontSize: 8.5, color: '#6B614E', letterSpacing: '0.18em' }}
+            >
+              Позвонить
+            </span>
+            <span className="serif font-semibold" style={{ fontSize: 15, color: '#F5EDD6' }}>
+              {club.phone}
+            </span>
+          </span>
+          <span style={{ color: 'rgba(199,154,61,0.6)', fontSize: 20 }}>›</span>
+        </a>
+
+        <a
           href={club.channelUrl}
           target="_blank"
           rel="noreferrer"
@@ -93,6 +126,13 @@ export function AboutPage(): JSX.Element {
         <div className="flex justify-center pt-4">
           <Logo size="md" />
         </div>
+
+        <p
+          className="sans text-center pt-1"
+          style={{ fontSize: 10, color: '#6B614E', lineHeight: 1.5 }}
+        >
+          {clubLegalLine()}
+        </p>
       </div>
     </PageHeader>
   );
