@@ -153,14 +153,14 @@
 
 ### Admin CRM
 
-- [ ] `http://admin.gutshotapp.ru` (оранжевый DNS) или с телефона/ноута `https://admin.gutshotapp.ru`
-- [ ] `tvadmin` / `tvadmin`
-- [ ] Ссылка «Открыть TV» должна вести на `http://tv.gutshotapp.ru/?tournament=…`
+Админка на ТВ **не нужна**. Управление турниром — с телефона/ноута  
+(`https://admin.gutshotapp.ru`). На ТВ только экран табло.
 
 ---
 
 ## 6. Чего НЕ делать
 
+- Не открывать на ТВ админку — только табло
 - Не открывать на ТВ `http://159.194.208.116/…` — до Beget IP клубный Wi‑Fi не ходит
 - Не оставлять `tv` серым облаком «для скорости» — с этой сети серое = timeout
 - Не рассчитывать на React/SPA на Xiaomi YaBrowser Lite
