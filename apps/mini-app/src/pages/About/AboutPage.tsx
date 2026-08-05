@@ -12,6 +12,9 @@ const PARAGRAPHS = [
 const INSTAGRAM_GRADIENT =
   'linear-gradient(135deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)';
 
+const TIKTOK_GRADIENT =
+  'linear-gradient(135deg, #00f2ea 0%, #111111 42%, #111111 58%, #ff0050 100%)';
+
 export function AboutPage(): JSX.Element {
   return (
     <PageHeader title="О клубе" subtitle={club.fullName}>
