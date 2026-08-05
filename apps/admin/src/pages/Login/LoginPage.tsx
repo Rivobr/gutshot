@@ -6,8 +6,8 @@ import { Button, Card } from '@gutshot/ui';
 import { useAdminLogin } from '../../features/auth/model/use-auth';
 
 const schema = z.object({
-  email: z.string().email('Введите корректный email'),
-  password: z.string().min(8, 'Минимум 8 символов'),
+  email: z.string().trim().min(2, 'Введите логин или email'),
+  password: z.string().min(1, 'Введите пароль'),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -53,11 +53,13 @@ export function LoginPage(): JSX.Element {
           )}
         >
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm text-muted-foreground">Email</label>
+            <label className="text-sm text-muted-foreground">Логин или email</label>
             <input
-              type="email"
+              type="text"
+              autoCapitalize="none"
+              autoCorrect="off"
               className="rounded-md border border-border bg-secondary px-3 py-2.5 text-foreground outline-none focus:ring-2 focus:ring-primary"
-              placeholder="admin@gutshot.club"
+              placeholder="tvadmin"
               {...register('email')}
             />
             {errors.email && (
