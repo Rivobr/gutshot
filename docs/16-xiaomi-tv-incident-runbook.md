@@ -53,8 +53,8 @@
 
 ## 3. Что уже починено в коде/проде
 
-1. **Табло без JS**: `GET /api/v1/public/tournaments/board.html`  
-   HTML + `meta refresh` каждые 5 сек (блайнды/таймеры с сервера).
+1. **Табло в реальном времени**: `GET /api/v1/public/tournaments/board.html`  
+   Таймер тикает **каждую 1 сек**, данные с сервера — **каждые 2 сек** (inline JS в HTML; внешние `.js` Xiaomi не грузит).
 2. **TV nginx** (`:8082` и `/` на `tv.*`) отдаёт это HTML как главную страницу.
 3. **Admin** умеет same-origin API (`/api/v1`) — логин не обязан ходить на `api.*` напрямую.
 4. HTTP для `tv`/`admin` на origin **без редиректа на HTTPS** (для кривого TLS на ТВ).
