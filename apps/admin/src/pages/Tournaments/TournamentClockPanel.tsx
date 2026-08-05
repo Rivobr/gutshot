@@ -8,6 +8,7 @@ import {
   useSetClockLevel,
   useTournamentClock,
 } from '../../entities/tournament';
+import { env } from '../../shared/config/env';
 
 function formatClock(totalSec: number | null | undefined): string {
   if (totalSec == null || totalSec < 0) return '—';
@@ -62,13 +63,11 @@ export function TournamentClockPanel({ tournamentId }: { tournamentId: string })
   const secondsLeft = useCountdown(clock?.levelEndsAt, running);
   const secondsToBreak = useCountdown(clock?.breakAt, running);
 
-  const tvUrl = useMemo(() => {
-    // Всегда прямой IP: tv.* сейчас за Cloudflare и без VPN на Xiaomi не открывается.
-    const base =
-      (import.meta.env.VITE_TV_BOARD_URL as string | undefined)?.replace(/\/$/, '') ||
-      'http://159.194.208.116';
-    return `${base}/?tournament=${tournamentId}`;
-  }, [tournamentId]);
+  const tvUrl = useMemo(
+    // Прямой IP: tv.* за Cloudflare — без VPN на Xiaomi часто не открывается.
+    () => `${env.tvBoardUrl}/?tournament=${tournamentId}`,
+    [tournamentId],
+  );
 
   if (isLoading) {
     return (
