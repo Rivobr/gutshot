@@ -82,9 +82,7 @@
    (именно `http`, не `https`, не IP)
 6. Добавить в закладки YaBrowser / на главный экран
 
-**Admin на ТВ (если нужен):**  
-`admin` тоже оранжевый + IPv6 off, открывать `http://admin.gutshotapp.ru`  
-логин: `tvadmin` / `tvadmin`
+Админка на ТВ **не нужна** — только табло. CRM открываете с телефона/ноута.
 
 ---
 
@@ -95,9 +93,8 @@
 1. Cloudflare Zero Trust → Networks → Tunnels → ваш туннель
 2. Public Hostname:
    - `tv.gutshotapp.ru` → `http://localhost:8082`
-   - (опционально) `admin.gutshotapp.ru` → `http://localhost:8081`
-3. DNS для этих имён пусть ведёт в Tunnel (Cloudflare сам проставит)
-4. На ТВ: `http://tv.gutshotapp.ru/` или `https://tv.gutshotapp.ru/` — что откроется стабильнее
+3. DNS для `tv` пусть ведёт в Tunnel (Cloudflare сам проставит)
+4. На ТВ: `http://tv.gutshotapp.ru/`
 
 Плюс: трафик VPS → Cloudflare **исходящий**, клубскому Wi‑Fi не нужно достучаться до Beget IP.
 
