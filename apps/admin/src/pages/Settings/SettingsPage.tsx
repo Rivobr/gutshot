@@ -3,6 +3,10 @@ import { Card } from '@gutshot/ui';
 const CLUB_INFO = [
   { label: 'Название клуба', value: 'GUTSHOT Poker Club' },
   { label: 'Адрес', value: 'Санкт-Петербург, Миллионная улица, 19' },
+  { label: 'Телефон', value: '+7 999 009-11-99' },
+  { label: 'ИНН', value: '781140907760' },
+  { label: 'Юр. лицо', value: 'ИП Миронов Михаил Александрович' },
+  { label: 'Поддержка', value: '@gutshot_suport' },
   { label: 'Часовой пояс', value: 'Europe/Moscow (UTC+3)' },
 ];
 

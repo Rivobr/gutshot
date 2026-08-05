@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Loader } from '@gutshot/ui';
 import { useTournament, useTournamentParticipants } from '../../entities/tournament';
 import {
@@ -225,10 +225,8 @@ export function TournamentPage(): JSX.Element {
             >
               Поддержка
             </a>
-            <a
-              href={club.mapsUrl}
-              target="_blank"
-              rel="noreferrer"
+            <Link
+              to="/directions"
               className="vip-card rounded-[16px] px-4 py-3.5 sans text-center"
               style={{
                 fontSize: 13,
@@ -238,8 +236,8 @@ export function TournamentPage(): JSX.Element {
                 fontWeight: 600,
               }}
             >
-              Как пройти
-            </a>
+              Как найти
+            </Link>
           </div>
 
           {tournament.description && (

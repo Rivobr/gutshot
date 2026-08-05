@@ -181,8 +181,8 @@ export function HomePage(): JSX.Element {
 
         <div className="grid grid-cols-2 gap-3">
           <HomeTile title="Чат клуба" suit="spade" href={club.chatUrl} delay={0.18} />
-          <HomeTile title="Как дойти" suit="diamond" href={club.mapsUrl} delay={0.2} />
-          <HomeTile title="Правила" suit="club" href={club.docs.clubRules} delay={0.22} />
+          <HomeTile title="Как найти" suit="diamond" to="/directions" delay={0.2} />
+          <HomeTile title="Правила" suit="club" to="/rules" delay={0.22} />
           <HomeTile title="О клубе" suit="heart" to="/about" delay={0.24} />
           <HomeTile title="Поддержка" suit="heart" to="/support" delay={0.26} />
           <HomeTile title="Q&A" suit="club" to="/faq" delay={0.28} />
@@ -196,7 +196,7 @@ export function HomePage(): JSX.Element {
             {clubLegalLine()}
           </p>
           <a
-            href={`tel:${club.phone.replace(/[^\d+]/g, '')}`}
+            href={`tel:${club.phoneTel}`}
             className="sans"
             style={{ fontSize: 11, color: '#C89A3D', textDecoration: 'none' }}
           >
