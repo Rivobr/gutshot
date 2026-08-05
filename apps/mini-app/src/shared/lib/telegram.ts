@@ -34,7 +34,12 @@ declare global {
 
 const APP_BG = '#090909';
 /** Запас под кнопку «Закрыть» / Menu Telegram, когда нет content safe area. */
-const TELEGRAM_HEADER_FALLBACK_PX = 52;
+const TELEGRAM_HEADER_FALLBACK_PX = 56;
+/**
+ * В fullscreen Telegram оставляет компактную кнопку «Закрыть» у статус-бара.
+ * Нужен заметный отступ, иначе контент и «Назад» оказываются под ней.
+ */
+const FULLSCREEN_CLOSE_BUTTON_PX = 56;
 
 export function getTelegramWebApp(): TelegramWebApp | undefined {
   return window.Telegram?.WebApp;
@@ -45,15 +50,16 @@ export function getTelegramInitData(): string {
 }
 
 function applyTopInset(webApp: TelegramWebApp): void {
-  // В fullscreen верхняя плашка Telegram скрыта — оставляем только safe-area.
+  const safeTop = webApp.safeAreaInset?.top ?? 0;
+  const contentTop = webApp.contentSafeAreaInset?.top ?? 0;
+
   if (webApp.isFullscreen) {
-    const safeTop = webApp.safeAreaInset?.top ?? 0;
-    document.documentElement.style.setProperty('--app-top-pad', `${Math.max(safeTop, 8)}px`);
+    // safe-area (вырез) + место под «X Закрыть», чтобы кнопки были доступны.
+    const pad = Math.max(safeTop + FULLSCREEN_CLOSE_BUTTON_PX, contentTop + 12, 72);
+    document.documentElement.style.setProperty('--app-top-pad', `${pad}px`);
     return;
   }
 
-  const safeTop = webApp.safeAreaInset?.top ?? 0;
-  const contentTop = webApp.contentSafeAreaInset?.top ?? 0;
   const telegramChrome = contentTop > 0 ? contentTop : TELEGRAM_HEADER_FALLBACK_PX;
   const pad = Math.max(safeTop + telegramChrome, TELEGRAM_HEADER_FALLBACK_PX);
   document.documentElement.style.setProperty('--app-top-pad', `${pad}px`);

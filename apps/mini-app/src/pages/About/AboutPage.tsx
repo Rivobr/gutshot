@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '../../widgets/PageHeader/PageHeader';
-import { InfoCard, Logo } from '../../shared/ui/figma';
-import { club, clubLegalLine } from '../../shared/config/club';
+import { InfoCard } from '../../shared/ui/figma';
+import { club } from '../../shared/config/club';
 
 const PARAGRAPHS = [
   'GUTSHOT — клуб спортивного покера в Санкт-Петербурге. Мы проводим регулярные турниры по правилам спортивного покера: без ставок на деньги, с зачётом очков в клубный рейтинг.',
@@ -12,20 +12,32 @@ const PARAGRAPHS = [
 const SOCIALS: { label: string; href: string }[] = [
   { label: 'Telegram-канал', href: club.socials.telegram },
   { label: 'Чат клуба', href: club.chatUrl },
-  { label: 'VK', href: club.socials.vk },
-  { label: 'Instagram', href: club.socials.instagram },
 ];
 
 export function AboutPage(): JSX.Element {
   return (
     <PageHeader title="О клубе" subtitle={club.fullName}>
       <div className="flex flex-col gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45 }}
+          className="vip-card overflow-hidden rounded-[20px]"
+        >
+          <img
+            src="/about-club.jpg"
+            alt="GUTSHOT — как нас найти"
+            className="w-full block"
+            style={{ objectFit: 'contain', background: '#0B0A08' }}
+          />
+        </motion.div>
+
         {PARAGRAPHS.map((text, i) => (
           <motion.p
             key={i}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: i * 0.08 }}
+            transition={{ duration: 0.5, delay: 0.05 + i * 0.08 }}
             className="sans"
             style={{ fontSize: 13, lineHeight: 1.7, color: '#B6A98F' }}
           >
@@ -127,16 +139,15 @@ export function AboutPage(): JSX.Element {
           ))}
         </div>
 
-        <div className="flex justify-center pt-2">
-          <Logo size="md" />
+        <div className="flex justify-center pt-3 pb-1">
+          <img
+            src="/gutshot-logo.png"
+            alt="GUTSHOT"
+            width={72}
+            height={72}
+            style={{ width: 72, height: 72, objectFit: 'contain' }}
+          />
         </div>
-
-        <p
-          className="sans text-center pt-2"
-          style={{ fontSize: 10, color: '#6B614E', lineHeight: 1.5 }}
-        >
-          {clubLegalLine()}
-        </p>
       </div>
     </PageHeader>
   );

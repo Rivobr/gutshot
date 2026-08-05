@@ -44,7 +44,7 @@ export function HomePage(): JSX.Element {
 
       <div
         className="flex flex-col px-4 pb-6 gap-4"
-        style={{ paddingTop: 8, position: 'relative', zIndex: 1 }}
+        style={{ paddingTop: 12, position: 'relative', zIndex: 1 }}
       >
         {isLoading ? (
           <Loader />
