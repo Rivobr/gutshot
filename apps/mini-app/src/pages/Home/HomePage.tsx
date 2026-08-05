@@ -6,7 +6,7 @@ import { RatingBanner } from '../../widgets/RatingBanner/RatingBanner';
 import { useNearestTournament } from '../../entities/tournament';
 import { useCurrentRegistration } from '../../entities/registration';
 import { SuitWatermark, goldButtonStyle } from '../../shared/ui/figma';
-import { club, clubLegalLine } from '../../shared/config/club';
+import { clubLegalLine } from '../../shared/config/club';
 import { formatDateShort, formatTime, seatsWord } from '../../shared/lib/format';
 
 function Chip({ icon, children }: { icon: string; children: string }): JSX.Element {
