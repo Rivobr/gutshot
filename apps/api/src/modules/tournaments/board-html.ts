@@ -1,7 +1,11 @@
-/** HTML-табло без JavaScript — для Xiaomi YaBrowser Lite. */
+/**
+ * HTML-табло для Xiaomi TV.
+ * Таймер тикает каждую секунду (inline JS); данные с сервера подтягиваются каждые 2с.
+ * Внешние .js файлы YaBrowser Lite не загружает — только inline в этой странице.
+ */
 
 type BoardLike = {
-  tournament?: { title?: string | null } | null;
+  tournament?: { id?: string | null; title?: string | null } | null;
   clock?: {
     status?: string | null;
     secondsLeft?: number | null;
@@ -67,13 +71,145 @@ function liveSecondsLeft(
   return fallback ?? null;
 }
 
-export function renderBoardHtml(board: BoardLike): string {
-  const refresh = 5;
+/** Inline ES5: тик 1с + опрос API 2с. Без modules/fetch. */
+function liveScript(apiUrl: string, initialJson: string): string {
+  return `<script>
+(function(){
+  var API=${JSON.stringify(apiUrl)};
+  var state=null;
+  var skew=0;
+  try{state=${initialJson};}catch(e){state=null;}
+  if(state&&state.clock&&state.clock.serverTime){
+    var st=new Date(state.clock.serverTime).getTime();
+    if(!isNaN(st)) skew=st-Date.now();
+  }
+  function $(id){return document.getElementById(id);}
+  function pad(n){return n<10?'0'+n:''+n;}
+  function fmtClock(sec){
+    if(sec==null||isNaN(sec)||sec<0) return '\\u2014';
+    sec=Math.floor(sec);
+    var h=Math.floor(sec/3600), m=Math.floor((sec%3600)/60), s=sec%60;
+    return h>0?(h+':'+pad(m)+':'+pad(s)):(m+':'+pad(s));
+  }
+  function fmtAmt(v){
+    if(v==null||v==='') return '\\u2014';
+    var n=Number(v);
+    if(isNaN(n)) return String(v);
+    try{return n.toLocaleString('ru-RU');}catch(e){return String(n);}
+  }
+  function left(endsAt){
+    if(!endsAt) return null;
+    var t=new Date(endsAt).getTime();
+    if(isNaN(t)) return null;
+    var v=Math.round((t-(Date.now()+skew))/1000);
+    return v<0?0:v;
+  }
+  function paint(){
+    if(!state||!state.clock){
+      var empty=$('empty');
+      var board=$('board');
+      if(empty) empty.style.display='flex';
+      if(board) board.style.display='none';
+      return;
+    }
+    var c=state.clock;
+    var cur=c.current||{};
+    var isBreak=!!cur.isBreak;
+    var running=c.status==='RUNNING';
+    var levelLeft=left(c.levelEndsAt);
+    if(levelLeft==null&&c.secondsLeft!=null) levelLeft=c.secondsLeft;
+    var breakLeft=left(c.breakAt);
+    if(breakLeft==null&&c.secondsToBreak!=null) breakLeft=c.secondsToBreak;
+    var empty=$('empty');
+    var board=$('board');
+    if(empty) empty.style.display='none';
+    if(board) board.style.display='flex';
+    var title=state.tournament&&state.tournament.title?state.tournament.title:'\\u0422\\u0443\\u0440\\u043d\\u0438\\u0440';
+    var ev=$('event'); if(ev) ev.innerHTML=title;
+    document.title='GUTSHOT \\u2014 '+title;
+    var center=$('center');
+    if(center){
+      if(isBreak){
+        center.innerHTML='<div class="break"><div class="lbl">\\u041f\\u0435\\u0440\\u0435\\u0440\\u044b\\u0432</div><div class="big" id="breakClock">'+fmtClock(levelLeft)+'</div></div>';
+      } else {
+        center.innerHTML='<div class="blinds"><div class="blind"><div class="lbl">\\u041c\\u0430\\u043b\\u044b\\u0439</div><div class="big" id="sb">'+fmtAmt(cur.smallBlind)+'</div></div><div class="sep"></div><div class="blind"><div class="lbl">\\u0411\\u043e\\u043b\\u044c\\u0448\\u043e\\u0439</div><div class="big" id="bb">'+fmtAmt(cur.bigBlind)+'</div></div></div>';
+      }
+    }
+    var nextTxt='';
+    if(c.next&&!c.next.isBreak) nextTxt=fmtAmt(c.next.smallBlind)+' / '+fmtAmt(c.next.bigBlind);
+    else if(c.next&&c.next.isBreak) nextTxt='\\u041f\\u0435\\u0440\\u0435\\u0440\\u044b\\u0432';
+    var nextEl=$('next');
+    if(nextEl){
+      if(nextTxt&&c.status!=='FINISHED'){ nextEl.style.display='block'; nextEl.innerHTML='\\u0414\\u0430\\u043b\\u0435\\u0435<b>'+nextTxt+'</b>'; }
+      else { nextEl.style.display='none'; }
+    }
+    var lvl=$('levelVal'); if(lvl) lvl.innerHTML=isBreak?'\\u2014':(cur.number!=null?String(cur.number):'\\u2014');
+    var lvlLbl=$('levelLeftLbl'); if(lvlLbl) lvlLbl.innerHTML=isBreak?'\\u0414\\u043e \\u043f\\u0440\\u043e\\u0434\\u043e\\u043b\\u0436\\u0435\\u043d\\u0438\\u044f':'\\u0414\\u043e \\u0441\\u043c\\u0435\\u043d\\u044b';
+    var lvlLeft=$('levelLeftVal'); if(lvlLeft) lvlLeft.innerHTML=fmtClock(levelLeft);
+    var brk=$('breakLeftVal'); if(brk) brk.innerHTML=isBreak?'\\u0418\\u0434\\u0451\\u0442':fmtClock(breakLeft);
+    var pl=$('players'); if(pl) pl.innerHTML=c.playersIn!=null?String(c.playersIn):'\\u2014';
+    var ante=$('ante'); if(ante) ante.innerHTML=isBreak?'\\u2014':fmtAmt(cur.ante);
+    var st='\\u041f\\u0430\\u0443\\u0437\\u0430';
+    if(running) st='LIVE';
+    else if(c.status==='IDLE') st='\\u0421\\u043a\\u043e\\u0440\\u043e \\u0441\\u0442\\u0430\\u0440\\u0442';
+    else if(c.status==='FINISHED') st='\\u0424\\u0438\\u043d\\u0438\\u0448';
+    var pill=$('status'); if(pill) pill.innerHTML=st;
+  }
+  function tick(){
+    if(!state||!state.clock) return;
+    var c=state.clock;
+    var cur=c.current||{};
+    var isBreak=!!cur.isBreak;
+    var levelLeft=left(c.levelEndsAt);
+    if(levelLeft==null&&c.secondsLeft!=null) levelLeft=c.secondsLeft;
+    var breakLeft=left(c.breakAt);
+    if(breakLeft==null&&c.secondsToBreak!=null) breakLeft=c.secondsToBreak;
+    var bc=$('breakClock'); if(bc&&isBreak) bc.innerHTML=fmtClock(levelLeft);
+    var ll=$('levelLeftVal'); if(ll) ll.innerHTML=fmtClock(levelLeft);
+    var bl=$('breakLeftVal'); if(bl) bl.innerHTML=isBreak?'\\u0418\\u0434\\u0451\\u0442':fmtClock(breakLeft);
+  }
+  function pull(){
+    var x=new XMLHttpRequest();
+    x.open('GET',API,true);
+    try{x.setRequestHeader('Cache-Control','no-store');}catch(e){}
+    x.onreadystatechange=function(){
+      if(x.readyState!==4) return;
+      if(x.status<200||x.status>=300) return;
+      try{
+        var payload=JSON.parse(x.responseText);
+        var data=payload&&payload.data!==undefined?payload.data:payload;
+        state=data;
+        if(data&&data.clock&&data.clock.serverTime){
+          var st=new Date(data.clock.serverTime).getTime();
+          if(!isNaN(st)) skew=st-Date.now();
+        }
+        paint();
+      }catch(err){}
+    };
+    x.send(null);
+  }
+  paint();
+  setInterval(tick,1000);
+  setInterval(pull,2000);
+  pull();
+})();
+</script>`;
+}
+
+export function renderBoardHtml(board: BoardLike, opts?: { tournamentId?: string }): string {
+  const apiPath = opts?.tournamentId
+    ? `/api/v1/public/tournaments/${encodeURIComponent(opts.tournamentId)}/board`
+    : '/api/v1/public/tournaments/board';
+
+  const initialJson = JSON.stringify(board ?? null)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026');
+
   if (!board?.clock) {
     return `<!doctype html>
 <html lang="ru"><head>
 <meta charset="utf-8"/>
-<meta http-equiv="refresh" content="${refresh}"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>GUTSHOT — табло</title>
 <style>
@@ -81,8 +217,13 @@ html,body{margin:0;height:100%;background:#090907;color:#f7d98a;font-family:Aria
 .wrap{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
 h1{letter-spacing:.22em;font-size:48px;margin:0}
 p{color:#7a6e5a;letter-spacing:.12em;text-transform:uppercase;font-size:22px}
+.board{display:none}
 </style></head>
-<body><div class="wrap"><h1>GUTSHOT</h1><p>Ближайших турниров нет</p></div></body></html>`;
+<body>
+<div class="wrap" id="empty"><h1>GUTSHOT</h1><p>Ближайших турниров нет</p></div>
+<div class="board" id="board" style="display:none"></div>
+${liveScript(apiPath, initialJson)}
+</body></html>`;
   }
 
   const clock = board.clock;
@@ -106,21 +247,23 @@ p{color:#7a6e5a;letter-spacing:.12em;text-transform:uppercase;font-size:22px}
   else if (clock.status === 'FINISHED') statusText = 'Финиш';
 
   const center = isBreak
-    ? `<div class="break"><div class="lbl">Перерыв</div><div class="big">${formatClock(levelLeft)}</div></div>`
+    ? `<div class="break"><div class="lbl">Перерыв</div><div class="big" id="breakClock">${formatClock(levelLeft)}</div></div>`
     : `<div class="blinds">
-        <div class="blind"><div class="lbl">Малый</div><div class="big">${formatAmount(current.smallBlind)}</div></div>
+        <div class="blind"><div class="lbl">Малый</div><div class="big" id="sb">${formatAmount(current.smallBlind)}</div></div>
         <div class="sep"></div>
-        <div class="blind"><div class="lbl">Большой</div><div class="big">${formatAmount(current.bigBlind)}</div></div>
+        <div class="blind"><div class="lbl">Большой</div><div class="big" id="bb">${formatAmount(current.bigBlind)}</div></div>
       </div>`;
 
   return `<!doctype html>
 <html lang="ru"><head>
 <meta charset="utf-8"/>
-<meta http-equiv="refresh" content="${refresh}"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>GUTSHOT — ${title}</title>
 <style>
 html,body{margin:0;height:100%;background:#090907;color:#f5edd6;font-family:Arial,Helvetica,sans-serif;overflow:hidden}
+#empty{display:none;height:100%;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#f7d98a}
+#empty h1{letter-spacing:.22em;font-size:48px;margin:0}
+#empty p{color:#7a6e5a;letter-spacing:.12em;text-transform:uppercase;font-size:22px}
 .board{height:100%;padding:3vh 4vw;box-sizing:border-box;display:flex;flex-direction:column;background:linear-gradient(180deg,#120e09 0%,#090907 45%,#0c0a08 100%)}
 .head{text-align:center}
 .wordmark{font-size:42px;font-weight:700;letter-spacing:.22em;color:#f7d98a;margin:0}
@@ -144,24 +287,28 @@ html,body{margin:0;height:100%;background:#090907;color:#f5edd6;font-family:Aria
 .pill{border:1px solid rgba(199,154,61,.5);background:rgba(199,154,61,.12);color:#f7d98a;border-radius:999px;padding:.4em 1em}
 </style></head>
 <body>
-<div class="board">
+<div id="empty"><h1>GUTSHOT</h1><p>Ближайших турниров нет</p></div>
+<div class="board" id="board">
   <header class="head">
     <h1 class="wordmark">GUTSHOT</h1>
     <div class="rule"></div>
-    <div class="event">${title}</div>
+    <div class="event" id="event">${title}</div>
   </header>
-  <main class="center">${center}</main>
-  ${nextBlinds && clock.status !== 'FINISHED' ? `<p class="next">Далее<b>${esc(nextBlinds)}</b></p>` : ''}
+  <main class="center" id="center">${center}</main>
+  <p class="next" id="next" style="${nextBlinds && clock.status !== 'FINISHED' ? '' : 'display:none'}">${
+    nextBlinds && clock.status !== 'FINISHED' ? `Далее<b>${esc(nextBlinds)}</b>` : ''
+  }</p>
   <section class="stats">
-    <div class="stat"><div class="lbl">Уровень</div><div class="val">${isBreak ? '—' : current.number != null ? esc(String(current.number)) : '—'}</div></div>
-    <div class="stat"><div class="lbl">${isBreak ? 'До продолжения' : 'До смены'}</div><div class="val">${formatClock(levelLeft)}</div></div>
-    <div class="stat"><div class="lbl">До перерыва</div><div class="val">${isBreak ? 'Идёт' : formatClock(breakLeft)}</div></div>
+    <div class="stat"><div class="lbl">Уровень</div><div class="val" id="levelVal">${isBreak ? '—' : current.number != null ? esc(String(current.number)) : '—'}</div></div>
+    <div class="stat"><div class="lbl" id="levelLeftLbl">${isBreak ? 'До продолжения' : 'До смены'}</div><div class="val" id="levelLeftVal">${formatClock(levelLeft)}</div></div>
+    <div class="stat"><div class="lbl">До перерыва</div><div class="val" id="breakLeftVal">${isBreak ? 'Идёт' : formatClock(breakLeft)}</div></div>
   </section>
   <footer class="foot">
-    <span>Играют<b>${clock.playersIn != null ? esc(String(clock.playersIn)) : '—'}</b></span>
-    <span class="pill">${esc(statusText)}</span>
-    <span>Ante<b>${isBreak ? '—' : formatAmount(current.ante)}</b></span>
+    <span>Играют<b id="players">${clock.playersIn != null ? esc(String(clock.playersIn)) : '—'}</b></span>
+    <span class="pill" id="status">${esc(statusText)}</span>
+    <span>Ante<b id="ante">${isBreak ? '—' : formatAmount(current.ante)}</b></span>
   </footer>
 </div>
+${liveScript(apiPath, initialJson)}
 </body></html>`;
 }

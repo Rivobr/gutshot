@@ -36,7 +36,10 @@ export class PublicTournamentsController {
     const data = tournamentId
       ? await this.tournamentsService.findBoardById(tournamentId)
       : await this.tournamentsService.findBoard();
-    res.status(200).type('html').send(renderBoardHtml(data));
+    res
+      .status(200)
+      .type('html')
+      .send(renderBoardHtml(data, { tournamentId: tournamentId || undefined }));
   }
 
   @Get(':id/board')
