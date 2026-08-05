@@ -27,8 +27,9 @@ export class PublicTournamentsController {
   }
 
   /**
-   * HTML-табло без JavaScript (meta refresh).
-   * Нужно для Xiaomi YaBrowser Lite — там скрипты не выполняются.
+   * HTML-табло в реальном времени.
+   * Inline JS: тик таймера + опрос API каждую 1с.
+   * Fallback без JS: meta refresh 1с (Xiaomi YaBrowser Lite).
    */
   @Get('board.html')
   @Header('Cache-Control', 'no-cache, no-store, must-revalidate')

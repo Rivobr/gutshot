@@ -1,6 +1,8 @@
 /**
- * HTML-табло для Xiaomi TV.
- * Таймер тикает каждую секунду (inline JS); данные с сервера подтягиваются каждые 2с.
+ * HTML-табло для Xiaomi TV — в реальном времени.
+ * - При RUNNING таймер считает от levelEndsAt каждую секунду (inline JS).
+ * - Данные с сервера (пауза/блейнды/игроки) подтягиваются каждую 1с.
+ * - Без JS: meta refresh 1с (YaBrowser Lite иногда не выполняет скрипты).
  * Внешние .js файлы YaBrowser Lite не загружает — только inline в этой странице.
  */
 
@@ -71,17 +73,20 @@ function liveSecondsLeft(
   return fallback ?? null;
 }
 
-/** Inline ES5: тик 1с + опрос API 2с. Без modules/fetch. */
+/** Inline ES5: живой тик + опрос API 1с. Без modules/fetch. */
 function liveScript(apiUrl: string, initialJson: string): string {
   return `<script>
 (function(){
+  var meta=document.getElementById('fallbackRefresh');
+  if(meta&&meta.parentNode) meta.parentNode.removeChild(meta);
   var API=${JSON.stringify(apiUrl)};
   var state=null;
   var skew=0;
+  var lastPaintKey='';
   try{state=${initialJson};}catch(e){state=null;}
   if(state&&state.clock&&state.clock.serverTime){
-    var st=new Date(state.clock.serverTime).getTime();
-    if(!isNaN(st)) skew=st-Date.now();
+    var st0=new Date(state.clock.serverTime).getTime();
+    if(!isNaN(st0)) skew=st0-Date.now();
   }
   function $(id){return document.getElementById(id);}
   function pad(n){return n<10?'0'+n:''+n;}
@@ -104,22 +109,34 @@ function liveScript(apiUrl: string, initialJson: string): string {
     var v=Math.round((t-(Date.now()+skew))/1000);
     return v<0?0:v;
   }
+  function remainders(c){
+    var running=c.status==='RUNNING';
+    var levelLeft=null;
+    var breakLeft=null;
+    if(running){
+      levelLeft=left(c.levelEndsAt);
+      breakLeft=left(c.breakAt);
+    }
+    if(levelLeft==null&&c.secondsLeft!=null) levelLeft=c.secondsLeft;
+    if(breakLeft==null&&c.secondsToBreak!=null) breakLeft=c.secondsToBreak;
+    return {levelLeft:levelLeft,breakLeft:breakLeft,running:running};
+  }
   function paint(){
     if(!state||!state.clock){
       var empty=$('empty');
       var board=$('board');
       if(empty) empty.style.display='flex';
       if(board) board.style.display='none';
+      lastPaintKey='empty';
       return;
     }
     var c=state.clock;
     var cur=c.current||{};
     var isBreak=!!cur.isBreak;
-    var running=c.status==='RUNNING';
-    var levelLeft=left(c.levelEndsAt);
-    if(levelLeft==null&&c.secondsLeft!=null) levelLeft=c.secondsLeft;
-    var breakLeft=left(c.breakAt);
-    if(breakLeft==null&&c.secondsToBreak!=null) breakLeft=c.secondsToBreak;
+    var rem=remainders(c);
+    var levelLeft=rem.levelLeft;
+    var breakLeft=rem.breakLeft;
+    var running=rem.running;
     var empty=$('empty');
     var board=$('board');
     if(empty) empty.style.display='none';
@@ -154,19 +171,21 @@ function liveScript(apiUrl: string, initialJson: string): string {
     else if(c.status==='IDLE') st='\\u0421\\u043a\\u043e\\u0440\\u043e \\u0441\\u0442\\u0430\\u0440\\u0442';
     else if(c.status==='FINISHED') st='\\u0424\\u0438\\u043d\\u0438\\u0448';
     var pill=$('status'); if(pill) pill.innerHTML=st;
+    lastPaintKey=String(levelLeft)+'|'+String(breakLeft)+'|'+String(isBreak);
   }
   function tick(){
     if(!state||!state.clock) return;
     var c=state.clock;
+    if(c.status!=='RUNNING') return;
     var cur=c.current||{};
     var isBreak=!!cur.isBreak;
-    var levelLeft=left(c.levelEndsAt);
-    if(levelLeft==null&&c.secondsLeft!=null) levelLeft=c.secondsLeft;
-    var breakLeft=left(c.breakAt);
-    if(breakLeft==null&&c.secondsToBreak!=null) breakLeft=c.secondsToBreak;
-    var bc=$('breakClock'); if(bc&&isBreak) bc.innerHTML=fmtClock(levelLeft);
-    var ll=$('levelLeftVal'); if(ll) ll.innerHTML=fmtClock(levelLeft);
-    var bl=$('breakLeftVal'); if(bl) bl.innerHTML=isBreak?'\\u0418\\u0434\\u0451\\u0442':fmtClock(breakLeft);
+    var rem=remainders(c);
+    var key=String(rem.levelLeft)+'|'+String(rem.breakLeft)+'|'+String(isBreak);
+    if(key===lastPaintKey) return;
+    var bc=$('breakClock'); if(bc&&isBreak) bc.innerHTML=fmtClock(rem.levelLeft);
+    var ll=$('levelLeftVal'); if(ll) ll.innerHTML=fmtClock(rem.levelLeft);
+    var bl=$('breakLeftVal'); if(bl) bl.innerHTML=isBreak?'\\u0418\\u0434\\u0451\\u0442':fmtClock(rem.breakLeft);
+    lastPaintKey=key;
   }
   function pull(){
     var x=new XMLHttpRequest();
@@ -189,8 +208,8 @@ function liveScript(apiUrl: string, initialJson: string): string {
     x.send(null);
   }
   paint();
-  setInterval(tick,1000);
-  setInterval(pull,2000);
+  setInterval(tick,250);
+  setInterval(pull,1000);
   pull();
 })();
 </script>`;
@@ -211,6 +230,7 @@ export function renderBoardHtml(board: BoardLike, opts?: { tournamentId?: string
 <html lang="ru"><head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta http-equiv="refresh" content="1" id="fallbackRefresh"/>
 <title>GUTSHOT — табло</title>
 <style>
 html,body{margin:0;height:100%;background:#090907;color:#f7d98a;font-family:Arial,Helvetica,sans-serif}
@@ -258,6 +278,7 @@ ${liveScript(apiPath, initialJson)}
 <html lang="ru"><head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta http-equiv="refresh" content="1" id="fallbackRefresh"/>
 <title>GUTSHOT — ${title}</title>
 <style>
 html,body{margin:0;height:100%;background:#090907;color:#f5edd6;font-family:Arial,Helvetica,sans-serif;overflow:hidden}
