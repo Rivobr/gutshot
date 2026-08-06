@@ -242,9 +242,19 @@ export function TournamentPage(): JSX.Element {
                 >
                   Подробнее
                 </p>
-                <p className="serif" style={{ fontSize: 19, color: '#D8CEBC', lineHeight: 1.65 }}>
-                  {tournament.description}
-                </p>
+                <div
+                  className="serif flex flex-col gap-3"
+                  style={{ fontSize: 17, color: '#D8CEBC', lineHeight: 1.7 }}
+                >
+                  {tournament.description
+                    .trim()
+                    .split(/\n{2,}/)
+                    .map((block, index) => (
+                      <p key={index} className="m-0 whitespace-pre-wrap">
+                        {block}
+                      </p>
+                    ))}
+                </div>
               </div>
             </div>
           )}

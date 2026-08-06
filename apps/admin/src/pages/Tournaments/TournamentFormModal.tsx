@@ -119,8 +119,8 @@ export function TournamentFormModal({
               />
               <textarea
                 className="rounded-md border border-border bg-secondary px-3 py-2.5"
-                placeholder="Описание"
-                rows={3}
+                placeholder="Описание (абзацы через Enter)"
+                rows={12}
                 {...register('description')}
               />
               <input
