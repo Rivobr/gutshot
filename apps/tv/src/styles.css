@@ -78,7 +78,7 @@ body,
 
 .brand-logo {
   display: block;
-  height: clamp(72px, 11vh, 120px);
+  height: clamp(96px, 14vh, 160px);
   width: auto;
   margin: 0 auto;
   object-fit: contain;
@@ -105,10 +105,10 @@ body,
 }
 
 .event {
-  font-size: clamp(11px, 1.15vw, 20px);
-  letter-spacing: 0.28em;
+  font-size: clamp(20px, 2.2vw, 36px);
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: rgba(247, 217, 138, 0.72);
+  color: rgba(247, 217, 138, 0.9);
   font-weight: 600;
 }
 
@@ -127,18 +127,18 @@ body,
 }
 
 .blind-label {
-  font-size: clamp(11px, 1.05vw, 19px);
-  letter-spacing: 0.26em;
+  font-size: clamp(18px, 1.8vw, 30px);
+  letter-spacing: 0.24em;
   text-transform: uppercase;
   color: var(--gold);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .blind-value {
   font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
   font-weight: 700;
   line-height: 0.92;
-  font-size: clamp(72px, 15.5vw, 300px);
+  font-size: clamp(110px, 18vw, 280px);
   color: #fff8e6;
   text-shadow: 0 0 60px rgba(199, 154, 61, 0.35);
   font-variant-numeric: tabular-nums;
@@ -156,7 +156,7 @@ body,
 
 .break-title {
   font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
-  font-size: clamp(56px, 11vw, 200px);
+  font-size: clamp(100px, 16vw, 240px);
   font-weight: 700;
   letter-spacing: 0.06em;
   color: #f7d98a;
@@ -177,17 +177,17 @@ body,
 }
 
 .stat-label {
-  font-size: clamp(10px, 0.95vw, 17px);
-  letter-spacing: 0.22em;
+  font-size: clamp(16px, 1.5vw, 26px);
+  letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--gold);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .stat-value {
   font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
   font-weight: 700;
-  font-size: clamp(30px, 5vw, 96px);
+  font-size: clamp(48px, 6.5vw, 110px);
   line-height: 1.05;
   margin-top: 0.4vh;
   color: var(--ivory);
@@ -216,17 +216,19 @@ body,
 }
 
 .foot-item {
-  font-size: clamp(11px, 1.1vw, 20px);
-  letter-spacing: 0.18em;
+  font-size: clamp(18px, 1.8vw, 30px);
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--muted);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .foot-item b {
   color: var(--ivory);
   font-weight: 700;
   margin-left: 0.5em;
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 1.2em;
   font-variant-numeric: tabular-nums;
 }
 
@@ -234,13 +236,13 @@ body,
   display: inline-flex;
   align-items: center;
   gap: 0.5em;
-  padding: 0.45em 1.1em;
+  padding: 0.55em 1.2em;
   border-radius: 999px;
   border: 1px solid rgba(199, 154, 61, 0.5);
   background: rgba(199, 154, 61, 0.12);
   color: var(--gold-bright);
-  font-size: clamp(11px, 1.05vw, 19px);
-  letter-spacing: 0.2em;
+  font-size: clamp(16px, 1.5vw, 26px);
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   font-weight: 700;
 }

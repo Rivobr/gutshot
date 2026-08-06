@@ -80,7 +80,7 @@ const FONTS_LINK = `<link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet"/>`;
 
-const LOGO_CSS = `.brand-logo{display:block;height:clamp(72px,11vh,120px);width:auto;margin:0 auto;object-fit:contain;filter:drop-shadow(0 8px 28px rgba(199,154,61,.22))}
+const LOGO_CSS = `.brand-logo{display:block;height:clamp(96px,14vh,160px);width:auto;margin:0 auto;object-fit:contain;filter:drop-shadow(0 8px 28px rgba(199,154,61,.22))}
 .serif{font-family:'Fraunces',Georgia,'Times New Roman',serif}
 .sans{font-family:'Sora',system-ui,Arial,sans-serif}`;
 
@@ -349,29 +349,30 @@ ${FONTS_LINK}
 <style>
 html,body{margin:0;height:100%;background:#090907;color:#f5edd6;font-family:'Sora',system-ui,Arial,Helvetica,sans-serif;overflow:hidden}
 #empty{display:none;height:100%;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#f7d98a;gap:18px}
-#empty p{color:#7a6e5a;letter-spacing:.12em;text-transform:uppercase;font-size:22px;margin:0;font-family:'Sora',system-ui,sans-serif}
+#empty p{color:#7a6e5a;letter-spacing:.12em;text-transform:uppercase;font-size:clamp(22px,2vw,34px);margin:0;font-family:'Sora',system-ui,sans-serif}
 .offline{display:none;position:fixed;top:0;left:0;right:0;z-index:50;background:rgba(120,20,40,.92);color:#fff;text-align:center;padding:10px 16px;font-size:14px;letter-spacing:.08em;text-transform:uppercase;font-family:'Sora',system-ui,sans-serif}
-.board{height:100%;padding:3vh 4vw;box-sizing:border-box;display:flex;flex-direction:column;background:linear-gradient(180deg,#120e09 0%,#090907 45%,#0c0a08 100%)}
+.board{height:100%;padding:2.2vh 3.2vw;box-sizing:border-box;display:flex;flex-direction:column;background:linear-gradient(180deg,#120e09 0%,#090907 45%,#0c0a08 100%)}
 .head{text-align:center}
 ${LOGO_CSS}
-.rule{width:40%;max-width:520px;height:1px;margin:1.2vh auto;background:#c89a3d}
-.event{font-family:'Sora',system-ui,sans-serif;font-size:16px;letter-spacing:.24em;text-transform:uppercase;color:#f7d98a;opacity:.85;font-weight:600}
+.rule{width:46%;max-width:640px;height:2px;margin:1.4vh auto;background:#c89a3d}
+.event{font-family:'Sora',system-ui,sans-serif;font-size:clamp(20px,2.2vw,36px);letter-spacing:.22em;text-transform:uppercase;color:#f7d98a;opacity:.9;font-weight:600}
 .center{flex:1;display:flex;align-items:center;justify-content:center;min-height:0}
 .blinds{display:flex;align-items:center;justify-content:center}
-.blind{text-align:center;margin:0 36px}
-.lbl{font-family:'Sora',system-ui,sans-serif;font-size:16px;letter-spacing:.26em;text-transform:uppercase;color:#c89a3d;font-weight:700}
-.big{font-family:'Fraunces',Georgia,'Times New Roman',serif;font-weight:700;font-size:120px;line-height:.95;color:#fff8e6;margin-top:8px}
-.sep{width:2px;height:120px;background:#c89a3d}
+.blind{text-align:center;margin:0 clamp(28px,4vw,64px)}
+.lbl{font-family:'Sora',system-ui,sans-serif;font-size:clamp(18px,1.8vw,30px);letter-spacing:.24em;text-transform:uppercase;color:#c89a3d;font-weight:700}
+.big{font-family:'Fraunces',Georgia,'Times New Roman',serif;font-weight:700;font-size:clamp(110px,18vw,280px);line-height:.92;color:#fff8e6;margin-top:10px}
+.sep{width:3px;height:clamp(120px,22vh,240px);background:#c89a3d}
 .break{text-align:center}
-.next{text-align:center;color:#7a6e5a;letter-spacing:.18em;text-transform:uppercase;font-size:16px;margin:0 0 1vh;font-family:'Sora',system-ui,sans-serif}
-.next b{color:#f7d98a;margin-left:.5em;font-family:'Fraunces',Georgia,serif}
-.stats{display:flex;border-top:1px solid rgba(199,154,61,.22);padding:2vh 0 1.5vh}
+.break .big{font-size:clamp(100px,16vw,240px);color:#f7d98a}
+.next{text-align:center;color:#7a6e5a;letter-spacing:.16em;text-transform:uppercase;font-size:clamp(18px,1.7vw,28px);margin:0 0 1.2vh;font-family:'Sora',system-ui,sans-serif}
+.next b{color:#f7d98a;margin-left:.5em;font-family:'Fraunces',Georgia,serif;font-size:1.15em}
+.stats{display:flex;border-top:1px solid rgba(199,154,61,.22);padding:2.4vh 0 1.8vh}
 .stat{flex:1;text-align:center}
-.stat .lbl{font-size:14px}
-.stat .val{font-family:'Fraunces',Georgia,serif;font-size:48px;font-weight:700;margin-top:6px;color:#f5edd6}
-.foot{display:flex;justify-content:space-between;align-items:center;padding-top:1vh;color:#7a6e5a;letter-spacing:.16em;text-transform:uppercase;font-size:16px;font-weight:700;font-family:'Sora',system-ui,sans-serif}
-.foot b{color:#f5edd6;margin-left:.45em;font-family:'Fraunces',Georgia,serif}
-.pill{border:1px solid rgba(199,154,61,.5);background:rgba(199,154,61,.12);color:#f7d98a;border-radius:999px;padding:.4em 1em;font-family:'Sora',system-ui,sans-serif}
+.stat .lbl{font-size:clamp(16px,1.5vw,26px)}
+.stat .val{font-family:'Fraunces',Georgia,serif;font-size:clamp(48px,6.5vw,110px);font-weight:700;margin-top:8px;color:#f5edd6}
+.foot{display:flex;justify-content:space-between;align-items:center;padding-top:1.2vh;color:#7a6e5a;letter-spacing:.14em;text-transform:uppercase;font-size:clamp(18px,1.8vw,30px);font-weight:700;font-family:'Sora',system-ui,sans-serif}
+.foot b{color:#f5edd6;margin-left:.45em;font-family:'Fraunces',Georgia,serif;font-size:1.2em}
+.pill{border:1px solid rgba(199,154,61,.5);background:rgba(199,154,61,.12);color:#f7d98a;border-radius:999px;padding:.55em 1.2em;font-family:'Sora',system-ui,sans-serif;font-size:clamp(16px,1.5vw,26px)}
 </style></head>
 <body>
 <div class="offline" id="offline">нет связи — табло держит последние данные, переподключение…</div>
