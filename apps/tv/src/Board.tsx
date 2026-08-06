@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { useBoard, useCountdown } from './useBoard';
 
 function formatClock(totalSec: number | null | undefined): string {
@@ -22,64 +21,13 @@ function BrandLogo(): JSX.Element {
   );
 }
 
-function isFullscreen(): boolean {
-  const doc = document as Document & { webkitFullscreenElement?: Element | null };
-  return !!(doc.fullscreenElement || doc.webkitFullscreenElement);
-}
-
-async function enterFullscreen(): Promise<void> {
-  const el = document.documentElement as HTMLElement & {
-    webkitRequestFullscreen?: () => void;
-  };
-  if (el.requestFullscreen) await el.requestFullscreen();
-  else el.webkitRequestFullscreen?.();
-}
-
-async function exitFullscreen(): Promise<void> {
-  const doc = document as Document & { webkitExitFullscreen?: () => void };
-  if (doc.exitFullscreen) await doc.exitFullscreen();
-  else doc.webkitExitFullscreen?.();
-}
-
 export function Board(): JSX.Element {
   const { board, clockSkewMs, isOffline, isLoading } = useBoard();
-  const [fullscreen, setFullscreen] = useState(false);
   const clock = board?.clock;
   const running = clock?.status === 'RUNNING';
 
   const secondsLeft = useCountdown(clock?.levelEndsAt, clockSkewMs, running);
   const secondsToBreak = useCountdown(clock?.breakAt, clockSkewMs, running);
-
-  useEffect(() => {
-    const sync = () => setFullscreen(isFullscreen());
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'f' || event.key === 'F' || event.key === 'ф' || event.key === 'Ф') {
-        event.preventDefault();
-        void (isFullscreen() ? exitFullscreen() : enterFullscreen());
-      }
-    };
-    const onDblClick = (event: MouseEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (target?.closest('button, a, input')) return;
-      void (isFullscreen() ? exitFullscreen() : enterFullscreen());
-    };
-
-    sync();
-    document.addEventListener('fullscreenchange', sync);
-    document.addEventListener('webkitfullscreenchange', sync as EventListener);
-    document.addEventListener('keydown', onKey);
-    document.addEventListener('dblclick', onDblClick);
-    return () => {
-      document.removeEventListener('fullscreenchange', sync);
-      document.removeEventListener('webkitfullscreenchange', sync as EventListener);
-      document.removeEventListener('keydown', onKey);
-      document.removeEventListener('dblclick', onDblClick);
-    };
-  }, []);
-
-  const toggleFullscreen = () => {
-    void (isFullscreen() ? exitFullscreen() : enterFullscreen());
-  };
 
   if (isLoading) {
     return (
@@ -120,7 +68,7 @@ export function Board(): JSX.Element {
         : null;
 
   return (
-    <div className={`board${fullscreen ? ' is-fs' : ''}`}>
+    <div className="board">
       {isOffline && (
         <div className="offline">нет связи — табло держит последние данные, переподключение…</div>
       )}
@@ -189,15 +137,6 @@ export function Board(): JSX.Element {
           Ante<b>{isBreak ? '—' : formatAmount(current?.ante)}</b>
         </span>
       </footer>
-
-      {!fullscreen && (
-        <>
-          <button type="button" className="fs-btn" onClick={toggleFullscreen}>
-            На весь экран
-          </button>
-          <div className="fs-hint">F11 или F · двойной клик</div>
-        </>
-      )}
     </div>
   );
 }
