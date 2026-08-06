@@ -214,10 +214,17 @@ export function TournamentClockPanel({ tournamentId }: { tournamentId: string })
       <div>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-sm font-medium">Структура блайндов</h3>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               variant="secondary"
-              onClick={() => applyDefault.mutate(undefined as never)}
+              onClick={() => applyDefault.mutate('club')}
+              isLoading={applyDefault.isPending}
+            >
+              Шаблон клуба
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => applyDefault.mutate('classic20')}
               isLoading={applyDefault.isPending}
             >
               Шаблон 20 мин

@@ -25,7 +25,11 @@ import { CreateTournamentDto } from './dto/create-tournament.dto';
 import { UpdateTournamentDto, UpdateTournamentLiveDto } from './dto/update-tournament.dto';
 import { TournamentResultEntryDto } from './dto/finish-tournament.dto';
 import { SetPlaceDto } from './dto/set-place.dto';
-import { ClockActionDto, UpdateBlindStructureDto } from './dto/blind-structure.dto';
+import {
+  ApplyBlindStructureTemplateDto,
+  ClockActionDto,
+  UpdateBlindStructureDto,
+} from './dto/blind-structure.dto';
 
 @ApiTags('Admin / Tournaments')
 @ApiBearerAuth()
@@ -72,8 +76,8 @@ export class AdminTournamentsController {
 
   @Roles(AdminRole.OWNER, AdminRole.ADMIN)
   @Post(':id/blind-structure/default')
-  applyDefaultStructure(@Param('id') id: string) {
-    return this.adminTournamentsService.applyDefaultStructure(id);
+  applyDefaultStructure(@Param('id') id: string, @Body() dto: ApplyBlindStructureTemplateDto = {}) {
+    return this.adminTournamentsService.applyDefaultStructure(id, dto.template ?? 'classic20');
   }
 
   @Roles(AdminRole.OWNER, AdminRole.ADMIN)

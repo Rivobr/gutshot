@@ -5,6 +5,7 @@ import {
   ArrayMinSize,
   IsArray,
   IsBoolean,
+  IsIn,
   IsInt,
   IsOptional,
   Max,
@@ -71,4 +72,15 @@ export class ClockActionDto {
   @IsInt()
   @Min(0)
   playersIn?: number;
+}
+
+export class ApplyBlindStructureTemplateDto {
+  @ApiPropertyOptional({
+    description: 'Имя шаблона: classic20 (по умолчанию) или club',
+    enum: ['classic20', 'club'],
+    default: 'classic20',
+  })
+  @IsOptional()
+  @IsIn(['classic20', 'club'])
+  template?: 'classic20' | 'club';
 }

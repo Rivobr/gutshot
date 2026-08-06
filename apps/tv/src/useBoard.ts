@@ -3,7 +3,9 @@ import type { TournamentBoard } from '@gutshot/types';
 
 const API_URL =
   (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') || '/api/v1';
-const POLL_MS = 10_000;
+/** Частый опрос для ноутбука по HDMI: пауза/смена уровня почти сразу. */
+const POLL_OK_MS = 2_000;
+const POLL_FAIL_MS = 3_000;
 
 export interface BoardState {
   board: TournamentBoard | null;
@@ -27,13 +29,48 @@ export function useBoard(): BoardState {
   const [isOffline, setOffline] = useState(false);
   const [isLoading, setLoading] = useState(true);
   const failures = useRef(0);
+  const boardRef = useRef<TournamentBoard | null>(null);
+  const timerRef = useRef<number | null>(null);
+  const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
+    const schedule = (ms: number) => {
+      if (timerRef.current != null) {
+        window.clearTimeout(timerRef.current);
+      }
+      timerRef.current = window.setTimeout(() => {
+        void load();
+      }, ms);
+    };
+
+    const requestWakeLock = async () => {
+      try {
+        if (document.visibilityState !== 'visible') return;
+        const wakeLock = (
+          navigator as Navigator & {
+            wakeLock?: { request: (type: 'screen') => Promise<{ release: () => Promise<void> }> };
+          }
+        ).wakeLock;
+        if (!wakeLock?.request) return;
+        const lock = await wakeLock.request('screen');
+        wakeLockRef.current = lock;
+      } catch {
+        // Браузер/ОС может отказать — табло всё равно работает.
+      }
+    };
+
     const load = async () => {
       try {
-        const response = await fetch(boardUrl(), { cache: 'no-store' });
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), 8_000);
+        const response = await fetch(boardUrl(), {
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+        window.clearTimeout(timeout);
+
         if (!response.ok) {
           throw new Error(`http ${response.status}`);
         }
@@ -42,12 +79,18 @@ export function useBoard(): BoardState {
         if (cancelled) return;
 
         const next = payload.data ?? null;
-        setBoard(next);
-        if (next?.clock.serverTime) {
-          setSkew(new Date(next.clock.serverTime).getTime() - Date.now());
+        // Не затираем удачное состояние пустым ответом при кратком сбое API.
+        if (next?.clock || !boardRef.current) {
+          boardRef.current = next;
+          setBoard(next);
+          if (next?.clock?.serverTime) {
+            setSkew(new Date(next.clock.serverTime).getTime() - Date.now());
+          }
         }
+
         failures.current = 0;
         setOffline(false);
+        schedule(POLL_OK_MS);
       } catch {
         if (cancelled) return;
         failures.current += 1;
@@ -55,6 +98,7 @@ export function useBoard(): BoardState {
         if (failures.current >= 3) {
           setOffline(true);
         }
+        schedule(POLL_FAIL_MS);
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -62,12 +106,33 @@ export function useBoard(): BoardState {
       }
     };
 
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        void requestWakeLock();
+        void load();
+      }
+    };
+
+    const onOnline = () => {
+      failures.current = 0;
+      void load();
+    };
+
+    void requestWakeLock();
     void load();
-    const timer = window.setInterval(load, POLL_MS);
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('online', onOnline);
+    window.addEventListener('focus', onOnline);
 
     return () => {
       cancelled = true;
-      window.clearInterval(timer);
+      if (timerRef.current != null) {
+        window.clearTimeout(timerRef.current);
+      }
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('focus', onOnline);
+      void wakeLockRef.current?.release().catch(() => undefined);
     };
   }, []);
 

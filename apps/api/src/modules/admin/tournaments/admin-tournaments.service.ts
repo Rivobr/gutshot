@@ -21,7 +21,7 @@ import { UpdateTournamentDto, UpdateTournamentLiveDto } from './dto/update-tourn
 import { TournamentResultEntryDto } from './dto/finish-tournament.dto';
 import { ClockActionDto, UpdateBlindStructureDto } from './dto/blind-structure.dto';
 import { serializeClock, serializeTournament } from '../../tournaments/tournament.serializer';
-import { defaultBlindStructure } from '../../tournaments/tournament-clock';
+import { resolveBlindStructureTemplate } from '../../tournaments/tournament-clock';
 
 /** Статусы регистраций, которые учитываются в итоговых местах турнира. */
 const RESULT_ELIGIBLE_STATUSES: RegistrationStatus[] = [
@@ -112,14 +112,15 @@ export class AdminTournamentsService {
     return this.getClock(id);
   }
 
-  /** Заполняет структуру шаблоном 20-минутных уровней с перерывами. */
-  async applyDefaultStructure(id: string) {
+  /** Заполняет структуру именованным шаблоном (`classic20` | `club`). */
+  async applyDefaultStructure(id: string, template: string = 'classic20') {
     await this.findById(id);
+    const levels = resolveBlindStructureTemplate(template);
 
     await this.prisma.$transaction(async (tx) => {
       await tx.blindLevel.deleteMany({ where: { tournamentId: id } });
       await tx.blindLevel.createMany({
-        data: defaultBlindStructure().map((level) => ({ ...level, tournamentId: id })),
+        data: levels.map((level) => ({ ...level, tournamentId: id })),
       });
     });
 

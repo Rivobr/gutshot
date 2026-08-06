@@ -71,8 +71,13 @@ export const adminTournamentsApi = {
     });
     return data.data;
   },
-  async applyDefaultStructure(id: string): Promise<TournamentClockResponse> {
-    const { data } = await apiClient.post(`/admin/tournaments/${id}/blind-structure/default`);
+  async applyDefaultStructure(
+    id: string,
+    template: 'classic20' | 'club' = 'classic20',
+  ): Promise<TournamentClockResponse> {
+    const { data } = await apiClient.post(`/admin/tournaments/${id}/blind-structure/default`, {
+      template,
+    });
     return data.data;
   },
   async clockAction(

@@ -2,11 +2,14 @@
 /* eslint-env browser */
 /* eslint-disable no-empty */
 (function () {
-  var POLL_MS = 10000;
+  var POLL_OK_MS = 2000;
+  var POLL_FAIL_MS = 3000;
   var root = document.getElementById('root');
   var board = null;
   var skewMs = 0;
   var failures = 0;
+  var pullTimer = null;
+  var wakeLock = null;
 
   function qs(name) {
     var m = window.location.search.match(new RegExp('[?&]' + name + '=([^&]*)'));
@@ -56,26 +59,40 @@
 
   function xhrGet(url, cb) {
     var x = new XMLHttpRequest();
+    var done = false;
     x.open('GET', url, true);
     try {
       x.setRequestHeader('Cache-Control', 'no-store');
     } catch (e) {}
+    x.timeout = 8000;
+    function finish(err, data) {
+      if (done) return;
+      done = true;
+      cb(err, data);
+    }
     x.onreadystatechange = function () {
       if (x.readyState !== 4) return;
       if (x.status >= 200 && x.status < 300) {
         try {
-          cb(null, JSON.parse(x.responseText));
+          finish(null, JSON.parse(x.responseText));
         } catch (err) {
-          cb(err);
+          finish(err);
         }
       } else {
-        cb(new Error('http ' + x.status));
+        finish(new Error('http ' + x.status));
       }
     };
     x.onerror = function () {
-      cb(new Error('network'));
+      finish(new Error('network'));
     };
-    x.send(null);
+    x.ontimeout = function () {
+      finish(new Error('timeout'));
+    };
+    try {
+      x.send(null);
+    } catch (err) {
+      finish(err);
+    }
   }
 
   function el(tag, className, text) {
@@ -95,6 +112,18 @@
 
   function clear(node) {
     while (node.firstChild) node.removeChild(node.firstChild);
+  }
+
+  function ensureOfflineBanner(on) {
+    var banner = document.getElementById('offline-banner');
+    if (!on) {
+      if (banner && banner.parentNode) banner.parentNode.removeChild(banner);
+      return;
+    }
+    if (banner) return;
+    banner = el('div', 'offline', 'нет связи — табло держит последние данные, переподключение…');
+    banner.id = 'offline-banner';
+    document.body.insertBefore(banner, document.body.firstChild);
   }
 
   function renderNotice(text) {
@@ -125,75 +154,62 @@
     var breakLeft = secondsLeft(clock.breakAt, running);
     if (breakLeft == null && clock.secondsToBreak != null) breakLeft = clock.secondsToBreak;
 
-    var nextBlinds = null;
-    if (clock.next && !clock.next.isBreak) {
-      nextBlinds = formatAmount(clock.next.smallBlind) + ' / ' + formatAmount(clock.next.bigBlind);
-    } else if (clock.next && clock.next.isBreak) {
-      nextBlinds = 'Перерыв';
-    }
-
     clear(root);
     var wrap = el('div', 'board');
-
-    if (failures >= 3) {
-      wrap.appendChild(el('div', 'offline', 'нет связи с сервером'));
-    }
 
     var head = el('header', 'head');
     head.appendChild(logoMark());
     head.appendChild(el('div', 'rule'));
-    head.appendChild(el('div', 'event', board.tournament ? board.tournament.title : ''));
+    var title = board.tournament && board.tournament.title ? board.tournament.title : 'Турнир';
+    head.appendChild(el('div', 'event', title));
     wrap.appendChild(head);
 
-    var main = el('main', 'center');
+    var center = el('main', 'center');
     if (isBreak) {
-      var br = el('div', 'break-banner');
-      br.appendChild(el('div', 'blind-label', 'Перерыв'));
-      br.appendChild(el('div', 'break-title', formatClock(levelLeft)));
-      main.appendChild(br);
+      var br = el('div', 'break');
+      br.appendChild(el('div', 'lbl', 'Перерыв'));
+      br.appendChild(el('div', 'big', formatClock(levelLeft)));
+      center.appendChild(br);
     } else {
-      var b1 = el('div', 'blind');
-      b1.appendChild(el('div', 'blind-label', 'Малый'));
-      b1.appendChild(el('div', 'blind-value', formatAmount(current.smallBlind)));
-      var div = el('div', 'divider');
-      var b2 = el('div', 'blind');
-      b2.appendChild(el('div', 'blind-label', 'Большой'));
-      b2.appendChild(el('div', 'blind-value', formatAmount(current.bigBlind)));
-      main.appendChild(b1);
-      main.appendChild(div);
-      main.appendChild(b2);
+      var blinds = el('div', 'blinds');
+      var sb = el('div', 'blind');
+      sb.appendChild(el('div', 'lbl', 'Малый'));
+      sb.appendChild(el('div', 'big', formatAmount(current.smallBlind)));
+      var sep = el('div', 'sep');
+      var bb = el('div', 'blind');
+      bb.appendChild(el('div', 'lbl', 'Большой'));
+      bb.appendChild(el('div', 'big', formatAmount(current.bigBlind)));
+      blinds.appendChild(sb);
+      blinds.appendChild(sep);
+      blinds.appendChild(bb);
+      center.appendChild(blinds);
     }
-    wrap.appendChild(main);
+    wrap.appendChild(center);
 
-    if (nextBlinds && !finished) {
-      var next = el('p', 'next-level', 'Далее');
+    var nextTxt = '';
+    if (clock.next && !clock.next.isBreak) {
+      nextTxt = formatAmount(clock.next.smallBlind) + ' / ' + formatAmount(clock.next.bigBlind);
+    } else if (clock.next && clock.next.isBreak) {
+      nextTxt = 'Перерыв';
+    }
+    if (nextTxt && clock.status !== 'FINISHED') {
+      var next = el('p', 'next', 'Далее');
       var nb = document.createElement('b');
-      nb.appendChild(document.createTextNode(nextBlinds));
+      nb.appendChild(document.createTextNode(nextTxt));
       next.appendChild(nb);
       wrap.appendChild(next);
     }
 
     var stats = el('section', 'stats');
-    var s1 = el('div', 'stat');
-    s1.appendChild(el('div', 'stat-label', 'Уровень'));
-    s1.appendChild(
-      el(
-        'div',
-        'stat-value',
-        isBreak ? '—' : current.number != null ? String(current.number) : '—',
-      ),
-    );
-    var s2 = el('div', 'stat');
-    s2.appendChild(el('div', 'stat-label', isBreak ? 'До продолжения' : 'До смены'));
-    var levelClass = 'stat-value';
-    if (running && levelLeft != null && levelLeft <= 60) levelClass += ' warn';
-    s2.appendChild(el('div', levelClass, formatClock(levelLeft)));
-    var s3 = el('div', 'stat');
-    s3.appendChild(el('div', 'stat-label', 'До перерыва'));
-    s3.appendChild(el('div', 'stat-value', isBreak ? 'Идёт' : formatClock(breakLeft)));
-    stats.appendChild(s1);
-    stats.appendChild(s2);
-    stats.appendChild(s3);
+    function addStat(label, value) {
+      var s = el('div', 'stat');
+      s.appendChild(el('div', 'lbl', label));
+      s.appendChild(el('div', 'val', value));
+      stats.appendChild(s);
+    }
+    addStat('Уровень', isBreak ? '—' : current.number != null ? String(current.number) : '—');
+    addStat(isBreak ? 'До продолжения' : 'До смены', formatClock(levelLeft));
+    addStat('До перерыва', isBreak ? 'Идёт' : formatClock(breakLeft));
     wrap.appendChild(stats);
 
     var foot = el('footer', 'foot');
@@ -226,29 +242,69 @@
     root.appendChild(wrap);
   }
 
+  function schedule(ms) {
+    if (pullTimer) clearTimeout(pullTimer);
+    pullTimer = setTimeout(load, ms);
+  }
+
   function load() {
     xhrGet(boardUrl(), function (err, payload) {
       if (err) {
         failures += 1;
+        ensureOfflineBanner(failures >= 3);
         if (!board) renderNotice('Нет связи… повтор ' + failures);
         else renderBoard();
+        schedule(POLL_FAIL_MS);
         return;
       }
       failures = 0;
+      ensureOfflineBanner(false);
       var data = payload && payload.data ? payload.data : null;
-      board = data;
-      if (data && data.clock && data.clock.serverTime) {
-        var server = new Date(data.clock.serverTime).getTime();
-        if (!isNaN(server)) skewMs = server - Date.now();
+      if (data && data.clock) {
+        board = data;
+        if (data.clock.serverTime) {
+          var server = new Date(data.clock.serverTime).getTime();
+          if (!isNaN(server)) skewMs = server - Date.now();
+        }
+      } else if (!board) {
+        board = data;
       }
       renderBoard();
+      schedule(POLL_OK_MS);
     });
   }
 
+  function requestWake() {
+    try {
+      if (document.visibilityState !== 'visible') return;
+      if (!navigator.wakeLock || !navigator.wakeLock.request) return;
+      navigator.wakeLock
+        .request('screen')
+        .then(function (lock) {
+          wakeLock = lock;
+        })
+        .catch(function () {});
+    } catch (e) {}
+  }
+
+  function onVisible() {
+    if (document.visibilityState === 'visible') {
+      requestWake();
+      load();
+    }
+  }
+
   renderNotice('Загрузка табло…');
+  requestWake();
   load();
-  setInterval(load, POLL_MS);
   setInterval(function () {
     if (board) renderBoard();
   }, 1000);
+  document.addEventListener('visibilitychange', onVisible);
+  window.addEventListener('online', function () {
+    failures = 0;
+    load();
+  });
+  window.addEventListener('focus', load);
+  document.addEventListener('click', requestWake);
 })();

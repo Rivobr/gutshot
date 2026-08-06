@@ -80,7 +80,7 @@ const LOGO_CSS = `.logo{display:inline-flex;align-items:flex-end;justify-content
 .logo .bar{display:block;width:12px;height:56px;border-radius:4px;background:linear-gradient(150deg,#7d5417 0%,#c89a3d 42%,#f7d98a 58%,#8a5c1c 100%);box-shadow:0 1px 4px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.3)}
 .logo .bar.ruby{background:linear-gradient(150deg,#7a0b2c 0%,#e0115f 45%,#ff4d7d 60%,#a10d3d 100%);box-shadow:0 0 12px rgba(224,17,95,.45),inset 0 1px 0 rgba(255,255,255,.35)}`;
 
-/** Inline ES5: живой тик + опрос API 1с. Без modules/fetch. */
+/** Inline ES5: живой тик + опрос API. Устойчиво к обрывам (ноут→HDMI). */
 function liveScript(apiUrl: string, initialJson: string): string {
   return `<script>
 (function(){
@@ -90,6 +90,11 @@ function liveScript(apiUrl: string, initialJson: string): string {
   var state=null;
   var skew=0;
   var lastPaintKey='';
+  var fails=0;
+  var pullTimer=null;
+  var wakeLock=null;
+  var PULL_OK_MS=1000;
+  var PULL_FAIL_MS=3000;
   try{state=${initialJson};}catch(e){state=null;}
   if(state&&state.clock&&state.clock.serverTime){
     var st0=new Date(state.clock.serverTime).getTime();
@@ -127,6 +132,11 @@ function liveScript(apiUrl: string, initialJson: string): string {
     if(levelLeft==null&&c.secondsLeft!=null) levelLeft=c.secondsLeft;
     if(breakLeft==null&&c.secondsToBreak!=null) breakLeft=c.secondsToBreak;
     return {levelLeft:levelLeft,breakLeft:breakLeft,running:running};
+  }
+  function setOffline(on){
+    var banner=$('offline');
+    if(!banner) return;
+    banner.style.display=on?'block':'none';
   }
   function paint(){
     if(!state||!state.clock){
@@ -194,30 +204,71 @@ function liveScript(apiUrl: string, initialJson: string): string {
     var bl=$('breakLeftVal'); if(bl) bl.innerHTML=isBreak?'\\u0418\\u0434\\u0451\\u0442':fmtClock(rem.breakLeft);
     lastPaintKey=key;
   }
+  function schedulePull(ms){
+    if(pullTimer) clearTimeout(pullTimer);
+    pullTimer=setTimeout(pull, ms);
+  }
+  function onPullFail(){
+    fails+=1;
+    if(fails>=3) setOffline(true);
+    schedulePull(PULL_FAIL_MS);
+  }
   function pull(){
     var x=new XMLHttpRequest();
+    var done=false;
     x.open('GET',API,true);
     try{x.setRequestHeader('Cache-Control','no-store');}catch(e){}
+    x.timeout=8000;
+    function finishOk(data){
+      if(done) return;
+      done=true;
+      state=data;
+      fails=0;
+      setOffline(false);
+      if(data&&data.clock&&data.clock.serverTime){
+        var st=new Date(data.clock.serverTime).getTime();
+        if(!isNaN(st)) skew=st-Date.now();
+      }
+      paint();
+      schedulePull(PULL_OK_MS);
+    }
     x.onreadystatechange=function(){
       if(x.readyState!==4) return;
-      if(x.status<200||x.status>=300) return;
+      if(x.status<200||x.status>=300){ onPullFail(); return; }
       try{
         var payload=JSON.parse(x.responseText);
         var data=payload&&payload.data!==undefined?payload.data:payload;
-        state=data;
-        if(data&&data.clock&&data.clock.serverTime){
-          var st=new Date(data.clock.serverTime).getTime();
-          if(!isNaN(st)) skew=st-Date.now();
-        }
-        paint();
-      }catch(err){}
+        finishOk(data);
+      }catch(err){ onPullFail(); }
     };
-    x.send(null);
+    x.onerror=function(){ onPullFail(); };
+    x.ontimeout=function(){ onPullFail(); };
+    try{x.send(null);}catch(err){ onPullFail(); }
+  }
+  function requestWake(){
+    try{
+      if(document.visibilityState!=='visible') return;
+      if(!navigator.wakeLock||!navigator.wakeLock.request) return;
+      navigator.wakeLock.request('screen').then(function(lock){
+        wakeLock=lock;
+        lock.addEventListener('release',function(){ wakeLock=null; });
+      }).catch(function(){});
+    }catch(e){}
+  }
+  function onVisible(){
+    if(document.visibilityState==='visible'){
+      requestWake();
+      pull();
+    }
   }
   paint();
   setInterval(tick,250);
-  setInterval(pull,1000);
   pull();
+  requestWake();
+  document.addEventListener('visibilitychange', onVisible);
+  window.addEventListener('online', function(){ fails=0; pull(); });
+  window.addEventListener('focus', function(){ pull(); });
+  document.addEventListener('click', requestWake);
 })();
 </script>`;
 }
@@ -244,9 +295,11 @@ html,body{margin:0;height:100%;background:#090907;color:#f7d98a;font-family:Aria
 .wrap{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:18px}
 p{color:#7a6e5a;letter-spacing:.12em;text-transform:uppercase;font-size:22px;margin:0}
 .board{display:none}
+.offline{display:none;position:fixed;top:0;left:0;right:0;z-index:50;background:rgba(120,20,40,.92);color:#fff;text-align:center;padding:10px 16px;font-size:14px;letter-spacing:.08em;text-transform:uppercase}
 ${LOGO_CSS}
 </style></head>
 <body>
+<div class="offline" id="offline">нет связи — табло держит последние данные, переподключение…</div>
 <div class="wrap" id="empty">${LOGO_MARK}<p>Ближайших турниров нет</p></div>
 <div class="board" id="board" style="display:none"></div>
 ${liveScript(apiPath, initialJson)}
@@ -291,6 +344,7 @@ ${liveScript(apiPath, initialJson)}
 html,body{margin:0;height:100%;background:#090907;color:#f5edd6;font-family:Arial,Helvetica,sans-serif;overflow:hidden}
 #empty{display:none;height:100%;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#f7d98a;gap:18px}
 #empty p{color:#7a6e5a;letter-spacing:.12em;text-transform:uppercase;font-size:22px;margin:0}
+.offline{display:none;position:fixed;top:0;left:0;right:0;z-index:50;background:rgba(120,20,40,.92);color:#fff;text-align:center;padding:10px 16px;font-size:14px;letter-spacing:.08em;text-transform:uppercase}
 .board{height:100%;padding:3vh 4vw;box-sizing:border-box;display:flex;flex-direction:column;background:linear-gradient(180deg,#120e09 0%,#090907 45%,#0c0a08 100%)}
 .head{text-align:center}
 ${LOGO_CSS}
@@ -314,6 +368,7 @@ ${LOGO_CSS}
 .pill{border:1px solid rgba(199,154,61,.5);background:rgba(199,154,61,.12);color:#f7d98a;border-radius:999px;padding:.4em 1em}
 </style></head>
 <body>
+<div class="offline" id="offline">нет связи — табло держит последние данные, переподключение…</div>
 <div id="empty">${LOGO_MARK}<p>Ближайших турниров нет</p></div>
 <div class="board" id="board">
   <header class="head">

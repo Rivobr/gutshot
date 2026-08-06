@@ -76,7 +76,7 @@ export function Board(): JSX.Element {
   return (
     <div className="board">
       {isOffline && (
-        <div className="offline">нет связи с сервером — открой http://tv.gutshotapp.ru</div>
+        <div className="offline">нет связи — табло держит последние данные, переподключение…</div>
       )}
 
       <header className="head">

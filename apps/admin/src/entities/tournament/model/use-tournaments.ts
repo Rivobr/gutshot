@@ -147,7 +147,11 @@ export function useSaveBlindStructure(id: string) {
 }
 
 export function useApplyDefaultStructure(id: string) {
-  return useClockMutation(() => adminTournamentsApi.applyDefaultStructure(id), id);
+  return useClockMutation(
+    (template: 'classic20' | 'club' = 'classic20') =>
+      adminTournamentsApi.applyDefaultStructure(id, template),
+    id,
+  );
 }
 
 export function useClockAction(id: string) {
