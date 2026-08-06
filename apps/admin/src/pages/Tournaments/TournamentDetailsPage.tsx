@@ -141,7 +141,7 @@ export function TournamentDetailsPage(): JSX.Element {
               {isLive ? ` · в игре ${stillInCount} · места ${placedCount}` : ''}
             </p>
             {tournament.description && (
-              <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+              <p className="mt-2 max-w-2xl whitespace-pre-wrap text-sm text-muted-foreground">
                 {tournament.description}
               </p>
             )}
