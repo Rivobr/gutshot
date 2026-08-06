@@ -73,12 +73,16 @@ function liveSecondsLeft(
   return fallback ?? null;
 }
 
-/** Фирменный знак: 5 полосок без текста GUTSHOT. */
-const LOGO_MARK = `<div class="logo" aria-hidden="true"><span class="bar"></span><span class="bar"></span><span class="bar ruby"></span><span class="bar"></span><span class="bar"></span></div>`;
+/** Фирменный логотип из бота / Mini App. */
+const LOGO_MARK = `<img class="brand-logo" src="/gutshot-logo.png" alt="GUTSHOT" width="160" height="160"/>`;
 
-const LOGO_CSS = `.logo{display:inline-flex;align-items:flex-end;justify-content:center;gap:10px;height:56px;margin:0 auto}
-.logo .bar{display:block;width:12px;height:56px;border-radius:4px;background:linear-gradient(150deg,#7d5417 0%,#c89a3d 42%,#f7d98a 58%,#8a5c1c 100%);box-shadow:0 1px 4px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.3)}
-.logo .bar.ruby{background:linear-gradient(150deg,#7a0b2c 0%,#e0115f 45%,#ff4d7d 60%,#a10d3d 100%);box-shadow:0 0 12px rgba(224,17,95,.45),inset 0 1px 0 rgba(255,255,255,.35)}`;
+const FONTS_LINK = `<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet"/>`;
+
+const LOGO_CSS = `.brand-logo{display:block;height:clamp(72px,11vh,120px);width:auto;margin:0 auto;object-fit:contain;filter:drop-shadow(0 8px 28px rgba(199,154,61,.22))}
+.serif{font-family:'Fraunces',Georgia,'Times New Roman',serif}
+.sans{font-family:'Sora',system-ui,Arial,sans-serif}`;
 
 /** Inline ES5: живой тик + опрос API. Устойчиво к обрывам (ноут→HDMI). */
 function liveScript(apiUrl: string, initialJson: string): string {
@@ -290,12 +294,13 @@ export function renderBoardHtml(board: BoardLike, opts?: { tournamentId?: string
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <meta http-equiv="refresh" content="1" id="fallbackRefresh"/>
 <title>Табло</title>
+${FONTS_LINK}
 <style>
-html,body{margin:0;height:100%;background:#090907;color:#f7d98a;font-family:Arial,Helvetica,sans-serif}
+html,body{margin:0;height:100%;background:#090907;color:#f7d98a;font-family:'Sora',system-ui,Arial,Helvetica,sans-serif}
 .wrap{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:18px}
-p{color:#7a6e5a;letter-spacing:.12em;text-transform:uppercase;font-size:22px;margin:0}
+p{color:#7a6e5a;letter-spacing:.12em;text-transform:uppercase;font-size:22px;margin:0;font-family:'Sora',system-ui,sans-serif}
 .board{display:none}
-.offline{display:none;position:fixed;top:0;left:0;right:0;z-index:50;background:rgba(120,20,40,.92);color:#fff;text-align:center;padding:10px 16px;font-size:14px;letter-spacing:.08em;text-transform:uppercase}
+.offline{display:none;position:fixed;top:0;left:0;right:0;z-index:50;background:rgba(120,20,40,.92);color:#fff;text-align:center;padding:10px 16px;font-size:14px;letter-spacing:.08em;text-transform:uppercase;font-family:'Sora',system-ui,sans-serif}
 ${LOGO_CSS}
 </style></head>
 <body>
@@ -340,32 +345,33 @@ ${liveScript(apiPath, initialJson)}
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <meta http-equiv="refresh" content="1" id="fallbackRefresh"/>
 <title>${title}</title>
+${FONTS_LINK}
 <style>
-html,body{margin:0;height:100%;background:#090907;color:#f5edd6;font-family:Arial,Helvetica,sans-serif;overflow:hidden}
+html,body{margin:0;height:100%;background:#090907;color:#f5edd6;font-family:'Sora',system-ui,Arial,Helvetica,sans-serif;overflow:hidden}
 #empty{display:none;height:100%;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#f7d98a;gap:18px}
-#empty p{color:#7a6e5a;letter-spacing:.12em;text-transform:uppercase;font-size:22px;margin:0}
-.offline{display:none;position:fixed;top:0;left:0;right:0;z-index:50;background:rgba(120,20,40,.92);color:#fff;text-align:center;padding:10px 16px;font-size:14px;letter-spacing:.08em;text-transform:uppercase}
+#empty p{color:#7a6e5a;letter-spacing:.12em;text-transform:uppercase;font-size:22px;margin:0;font-family:'Sora',system-ui,sans-serif}
+.offline{display:none;position:fixed;top:0;left:0;right:0;z-index:50;background:rgba(120,20,40,.92);color:#fff;text-align:center;padding:10px 16px;font-size:14px;letter-spacing:.08em;text-transform:uppercase;font-family:'Sora',system-ui,sans-serif}
 .board{height:100%;padding:3vh 4vw;box-sizing:border-box;display:flex;flex-direction:column;background:linear-gradient(180deg,#120e09 0%,#090907 45%,#0c0a08 100%)}
 .head{text-align:center}
 ${LOGO_CSS}
 .rule{width:40%;max-width:520px;height:1px;margin:1.2vh auto;background:#c89a3d}
-.event{font-size:16px;letter-spacing:.24em;text-transform:uppercase;color:#f7d98a;opacity:.85}
+.event{font-family:'Sora',system-ui,sans-serif;font-size:16px;letter-spacing:.24em;text-transform:uppercase;color:#f7d98a;opacity:.85;font-weight:600}
 .center{flex:1;display:flex;align-items:center;justify-content:center;min-height:0}
 .blinds{display:flex;align-items:center;justify-content:center}
 .blind{text-align:center;margin:0 36px}
-.lbl{font-size:16px;letter-spacing:.26em;text-transform:uppercase;color:#c89a3d;font-weight:700}
-.big{font-family:Georgia,'Times New Roman',serif;font-weight:700;font-size:120px;line-height:.95;color:#fff8e6;margin-top:8px}
+.lbl{font-family:'Sora',system-ui,sans-serif;font-size:16px;letter-spacing:.26em;text-transform:uppercase;color:#c89a3d;font-weight:700}
+.big{font-family:'Fraunces',Georgia,'Times New Roman',serif;font-weight:700;font-size:120px;line-height:.95;color:#fff8e6;margin-top:8px}
 .sep{width:2px;height:120px;background:#c89a3d}
 .break{text-align:center}
-.next{text-align:center;color:#7a6e5a;letter-spacing:.18em;text-transform:uppercase;font-size:16px;margin:0 0 1vh}
-.next b{color:#f7d98a;margin-left:.5em}
+.next{text-align:center;color:#7a6e5a;letter-spacing:.18em;text-transform:uppercase;font-size:16px;margin:0 0 1vh;font-family:'Sora',system-ui,sans-serif}
+.next b{color:#f7d98a;margin-left:.5em;font-family:'Fraunces',Georgia,serif}
 .stats{display:flex;border-top:1px solid rgba(199,154,61,.22);padding:2vh 0 1.5vh}
 .stat{flex:1;text-align:center}
 .stat .lbl{font-size:14px}
-.stat .val{font-family:Georgia,serif;font-size:48px;font-weight:700;margin-top:6px;color:#f5edd6}
-.foot{display:flex;justify-content:space-between;align-items:center;padding-top:1vh;color:#7a6e5a;letter-spacing:.16em;text-transform:uppercase;font-size:16px;font-weight:700}
-.foot b{color:#f5edd6;margin-left:.45em}
-.pill{border:1px solid rgba(199,154,61,.5);background:rgba(199,154,61,.12);color:#f7d98a;border-radius:999px;padding:.4em 1em}
+.stat .val{font-family:'Fraunces',Georgia,serif;font-size:48px;font-weight:700;margin-top:6px;color:#f5edd6}
+.foot{display:flex;justify-content:space-between;align-items:center;padding-top:1vh;color:#7a6e5a;letter-spacing:.16em;text-transform:uppercase;font-size:16px;font-weight:700;font-family:'Sora',system-ui,sans-serif}
+.foot b{color:#f5edd6;margin-left:.45em;font-family:'Fraunces',Georgia,serif}
+.pill{border:1px solid rgba(199,154,61,.5);background:rgba(199,154,61,.12);color:#f7d98a;border-radius:999px;padding:.4em 1em;font-family:'Sora',system-ui,sans-serif}
 </style></head>
 <body>
 <div class="offline" id="offline">нет связи — табло держит последние данные, переподключение…</div>

@@ -19,7 +19,7 @@ body,
   height: 100%;
   background: #090907;
   color: #f5edd6;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Sora', system-ui, Arial, Helvetica, sans-serif;
   overflow: hidden;
 }
 
@@ -48,35 +48,20 @@ body,
   font-weight: 700;
   letter-spacing: 0.22em;
   color: #f7d98a;
+  font-family: 'Fraunces', Georgia, serif;
+}
+
+.brand-logo {
+  display: block;
+  height: 96px;
+  width: auto;
+  margin: 0 auto;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 28px rgba(199, 154, 61, 0.22));
 }
 
 .logo {
-  display: -webkit-inline-box;
-  display: -webkit-inline-flex;
-  display: inline-flex;
-  -webkit-box-align: end;
-  -webkit-align-items: flex-end;
-  align-items: flex-end;
-  -webkit-box-pack: center;
-  -webkit-justify-content: center;
-  justify-content: center;
-  gap: 10px;
-  height: 56px;
-  margin: 0 auto;
-}
-
-.logo .bar {
-  display: block;
-  width: 12px;
-  height: 56px;
-  border-radius: 4px;
-  background: linear-gradient(150deg, #7d5417 0%, #c89a3d 42%, #f7d98a 58%, #8a5c1c 100%);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3);
-}
-
-.logo .bar.ruby {
-  background: linear-gradient(150deg, #7a0b2c 0%, #e0115f 45%, #ff4d7d 60%, #a10d3d 100%);
-  box-shadow: 0 0 12px rgba(224, 17, 95, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  display: none;
 }
 
 .rule {
@@ -127,7 +112,7 @@ body,
 }
 
 .blind-value {
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
   font-weight: 700;
   line-height: 0.92;
   font-size: 140px;
@@ -145,7 +130,7 @@ body,
 }
 
 .break-title {
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
   font-size: 120px;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -179,7 +164,7 @@ body,
 }
 
 .stat-value {
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
   font-weight: 700;
   font-size: 56px;
   line-height: 1.05;

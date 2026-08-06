@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Sora:wght@400;500;600;700&display=swap');
+
 :root {
   --gold-bright: #f7d98a;
   --gold: #c89a3d;
@@ -19,13 +21,17 @@ body,
   height: 100%;
   background: var(--bg);
   color: var(--ivory);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
-    Arial, sans-serif;
+  font-family: 'Sora', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
   overflow: hidden;
 }
 
 .serif {
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
+}
+
+.sans {
+  font-family: 'Sora', system-ui, sans-serif;
 }
 
 .board {
@@ -70,31 +76,25 @@ body,
   text-shadow: 0 2px 18px rgba(199, 154, 61, 0.35);
 }
 
-.logo {
-  display: inline-flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: clamp(8px, 0.9vw, 14px);
-  height: clamp(40px, 5.2vh, 64px);
+.brand-logo {
+  display: block;
+  height: clamp(72px, 11vh, 120px);
+  width: auto;
   margin: 0 auto;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 28px rgba(199, 154, 61, 0.22));
+}
+
+.logo {
+  display: none;
 }
 
 .logo .bar {
-  display: block;
-  width: clamp(9px, 1.05vw, 14px);
-  height: 100%;
-  border-radius: 4px;
-  background: linear-gradient(150deg, #7d5417 0%, #c89a3d 42%, #f7d98a 58%, #8a5c1c 100%);
-  box-shadow:
-    0 1px 4px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  display: none;
 }
 
 .logo .bar.ruby {
-  background: linear-gradient(150deg, #7a0b2c 0%, #e0115f 45%, #ff4d7d 60%, #a10d3d 100%);
-  box-shadow:
-    0 0 12px rgba(224, 17, 95, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  display: none;
 }
 
 .rule {
@@ -135,7 +135,7 @@ body,
 }
 
 .blind-value {
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
   font-weight: 700;
   line-height: 0.92;
   font-size: clamp(72px, 15.5vw, 300px);
@@ -155,7 +155,7 @@ body,
 }
 
 .break-title {
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
   font-size: clamp(56px, 11vw, 200px);
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -185,7 +185,7 @@ body,
 }
 
 .stat-value {
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
   font-weight: 700;
   font-size: clamp(30px, 5vw, 96px);
   line-height: 1.05;

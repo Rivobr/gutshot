@@ -103,11 +103,13 @@
   }
 
   function logoMark() {
-    var logo = el('div', 'logo');
-    for (var i = 0; i < 5; i++) {
-      logo.appendChild(el('span', i === 2 ? 'bar ruby' : 'bar'));
-    }
-    return logo;
+    var img = document.createElement('img');
+    img.className = 'brand-logo';
+    img.src = '/gutshot-logo.png';
+    img.alt = 'GUTSHOT';
+    img.width = 160;
+    img.height = 160;
+    return img;
   }
 
   function clear(node) {

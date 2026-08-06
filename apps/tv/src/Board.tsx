@@ -14,16 +14,10 @@ function formatAmount(value: number | null | undefined): string {
   return value == null ? '—' : value.toLocaleString('ru-RU');
 }
 
-/** Фирменный знак: 5 полосок без текста названия. */
+/** Фирменный логотип из бота / Mini App. */
 function BrandLogo(): JSX.Element {
   return (
-    <div className="logo" aria-hidden="true">
-      <span className="bar" />
-      <span className="bar" />
-      <span className="bar ruby" />
-      <span className="bar" />
-      <span className="bar" />
-    </div>
+    <img className="brand-logo" src="/gutshot-logo.png" alt="GUTSHOT" width={160} height={160} />
   );
 }
 
