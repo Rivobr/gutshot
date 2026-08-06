@@ -6,10 +6,18 @@ import { tokenStorage } from '../../shared/lib/token-storage';
 
 export type StartupStatus = 'loading' | 'ready' | 'error';
 
-const INIT_WAIT_MS = 4_000;
-/** Must exceed worst-case login retries (attempts × axios timeout). */
-const HARD_TIMEOUT_MS = 90_000;
-const LOGIN_ATTEMPTS = 4;
+const INIT_WAIT_MS = 3_000;
+/** Жёсткий потолок splash — не крутим экран минутами. */
+const HARD_TIMEOUT_MS = 18_000;
+const LOGIN_ATTEMPTS = 3;
+
+function readTicketFromUrl(): string {
+  try {
+    return new URLSearchParams(window.location.search).get('ticket') || '';
+  } catch {
+    return '';
+  }
+}
 
 /** Telegram иногда отдаёт initData не в первый тик после открытия WebApp. */
 export async function waitForInitData(timeoutMs = INIT_WAIT_MS): Promise<string> {
@@ -73,10 +81,16 @@ export async function loginWithTelegramInitData(initData: string): Promise<strin
       if (!isRetryableNetworkError(error) || attempt === LOGIN_ATTEMPTS) {
         throw error;
       }
-      await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+      await new Promise((resolve) => setTimeout(resolve, 400 * attempt));
     }
   }
   throw lastError;
+}
+
+export async function loginWithTicket(ticket: string): Promise<string> {
+  const response = await authApi.loginWithTicket(ticket);
+  tokenStorage.set(response.accessToken);
+  return response.accessToken;
 }
 
 export function useStartup(): { status: StartupStatus; errorMessage?: string } {
@@ -86,7 +100,6 @@ export function useStartup(): { status: StartupStatus; errorMessage?: string } {
   useEffect(() => {
     let cancelled = false;
     let finished = false;
-    let loginInFlight = false;
 
     const finish = (next: StartupStatus, message?: string) => {
       if (cancelled || finished) {
@@ -100,10 +113,6 @@ export function useStartup(): { status: StartupStatus; errorMessage?: string } {
     };
 
     const watchdog = window.setTimeout(() => {
-      // Не рвём UI, пока ещё идут попытки логина — иначе гонка с axios retry.
-      if (loginInFlight) {
-        return;
-      }
       if (tokenStorage.get()) {
         finish('ready');
         return;
@@ -121,69 +130,74 @@ export function useStartup(): { status: StartupStatus; errorMessage?: string } {
         // chrome API не должен ломать вход
       }
 
-      const runLogin = async (initData: string): Promise<void> => {
-        loginInFlight = true;
-        try {
-          await loginWithTelegramInitData(initData);
-          if (!cancelled) {
-            finish('ready');
-          }
-        } catch (error) {
-          if (tokenStorage.get()) {
-            if (!cancelled) {
-              finish('ready');
-            }
-            return;
-          }
-          if (!cancelled) {
-            finish('error', extractAuthError(error));
-          }
-        } finally {
-          loginInFlight = false;
+      const ticket = readTicketFromUrl();
+      const runReady = () => {
+        if (!cancelled) {
+          finish('ready');
         }
       };
 
-      // boot.html already stored a fresh token — enter immediately, refresh in background.
-      if (tokenStorage.get()) {
-        finish('ready');
-        void (async () => {
-          try {
-            const initData = getTelegramInitData() || (await waitForInitData(2_000));
-            if (initData) {
-              loginInFlight = true;
-              try {
-                await loginWithTelegramInitData(initData);
-              } finally {
-                loginInFlight = false;
-              }
-            }
-          } catch {
-            // оставляем текущий токен
-          }
-        })();
-        return;
-      }
-
+      // 1) Свежий initData
       const immediateInit = getTelegramInitData();
       if (immediateInit) {
-        await runLogin(immediateInit);
+        try {
+          await loginWithTelegramInitData(immediateInit);
+          runReady();
+          return;
+        } catch (error) {
+          if (tokenStorage.get()) {
+            runReady();
+            return;
+          }
+          if (!ticket) {
+            finish('error', extractAuthError(error));
+            return;
+          }
+        }
+      }
+
+      // 2) Ticket из enter.html / кнопки бота
+      if (ticket) {
+        try {
+          await loginWithTicket(ticket);
+          runReady();
+          return;
+        } catch (error) {
+          if (tokenStorage.get()) {
+            runReady();
+            return;
+          }
+          if (immediateInit) {
+            finish('error', extractAuthError(error));
+            return;
+          }
+        }
+      }
+
+      // 3) Уже есть токен с enter.html
+      if (tokenStorage.get()) {
+        runReady();
         return;
       }
 
+      // 4) Подождём initData ещё немного
       const initData = await waitForInitData();
       if (cancelled) {
         return;
       }
 
       if (initData) {
-        await runLogin(initData);
-        return;
+        try {
+          await loginWithTelegramInitData(initData);
+          runReady();
+          return;
+        } catch (error) {
+          finish('error', extractAuthError(error));
+          return;
+        }
       }
 
-      finish(
-        'error',
-        'Приложение должно быть открыто через кнопку меню в Telegram-боте',
-      );
+      finish('error', 'Приложение должно быть открыто через кнопку меню в Telegram-боте');
     };
 
     void start().finally(() => {

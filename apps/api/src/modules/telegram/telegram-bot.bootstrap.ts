@@ -45,7 +45,8 @@ export class TelegramBotBootstrap implements OnModuleInit {
     }
 
     // enter.html — новый entry без кэша старого /t.html (NotFound в Telegram WebView).
-    const entryUrl = `${miniAppUrl}/enter.html`;
+    // ?v= ломает кэш WebView Telegram после фиксов входа.
+    const entryUrl = `${miniAppUrl}/enter.html?v=20260806b`;
     const menuOk = await this.withRetries(
       () => this.telegramService.setChatMenuButton(entryUrl),
       `setChatMenuButton ${entryUrl}`,

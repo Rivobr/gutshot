@@ -15,7 +15,7 @@
         height: 100%;
         background: #090909;
         color: #c9a227;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       }
       #s {
         min-height: 100%;
@@ -26,8 +26,6 @@
         gap: 12px;
         padding: 24px;
         text-align: center;
-      }
-      #s {
         background: radial-gradient(ellipse at 50% 35%, rgba(199, 154, 61, 0.12) 0%, transparent 58%);
       }
       .logo {
@@ -81,35 +79,45 @@
     </div>
     <script>
       (function () {
-        var TOKEN_KEY = "gutshot_access_token";
+        var TOKEN_KEY = 'gutshot_access_token';
+        var FETCH_MS = 10000;
         var params = new URLSearchParams(location.search);
-        var ticket = params.get("ticket") || "";
-        var m = document.getElementById("m");
-        var b = document.getElementById("b");
-        var sp = document.getElementById("sp");
+        var ticket = params.get('ticket') || '';
+        var m = document.getElementById('m');
+        var b = document.getElementById('b');
+        var sp = document.getElementById('sp');
         var done = false;
+        var hardTimer = setTimeout(function () {
+          if (!done) {
+            fail('Загрузка зависла. Нажмите «Повторить» или /start в боте.');
+          }
+        }, 20000);
 
         function appUrl() {
-          // Сразу на «/»: /t.html ломал React Router (NotFound) и кэшировался в Telegram.
-          return "/?from=boot&t=" + Date.now() + (location.hash || "");
+          var q = '/?from=boot&t=' + Date.now();
+          if (ticket) q += '&ticket=' + encodeURIComponent(ticket);
+          return q + (location.hash || '');
         }
 
         function goApp() {
           if (done) return;
           done = true;
+          clearTimeout(hardTimer);
           location.replace(appUrl());
         }
 
         function fail(text) {
-          sp.style.display = "none";
+          done = false;
+          clearTimeout(hardTimer);
+          sp.style.display = 'none';
           m.textContent = text;
-          b.classList.add("show");
+          b.classList.add('show');
         }
 
         function requestFs(tg) {
           try {
             if (!tg || !tg.requestFullscreen) return;
-            if (tg.isVersionAtLeast && !tg.isVersionAtLeast("8.0")) return;
+            if (tg.isVersionAtLeast && !tg.isVersionAtLeast('8.0')) return;
             if (tg.isFullscreen) return;
             tg.requestFullscreen();
           } catch (e) {}
@@ -121,9 +129,9 @@
             if (!tg) return null;
             tg.ready();
             tg.expand();
-            if (tg.setHeaderColor) tg.setHeaderColor("#090909");
-            if (tg.setBackgroundColor) tg.setBackgroundColor("#090909");
-            if (tg.setBottomBarColor) tg.setBottomBarColor("#090909");
+            if (tg.setHeaderColor) tg.setHeaderColor('#090909');
+            if (tg.setBackgroundColor) tg.setBackgroundColor('#090909');
+            if (tg.setBottomBarColor) tg.setBottomBarColor('#090909');
             if (tg.disableVerticalSwipes) tg.disableVerticalSwipes();
             requestFs(tg);
             setTimeout(function () {
@@ -140,47 +148,59 @@
 
         function getInitData() {
           try {
-            return (window.Telegram && Telegram.WebApp && Telegram.WebApp.initData) || "";
+            return (window.Telegram && Telegram.WebApp && Telegram.WebApp.initData) || '';
           } catch (e) {
-            return "";
+            return '';
           }
         }
 
-        function postLogin(path, body, attempt) {
+        function fetchJson(path, body, attempt) {
           attempt = attempt || 1;
-          m.textContent = attempt > 1 ? "Повтор входа… " + attempt : "Входим…";
+          m.textContent = attempt > 1 ? 'Повтор входа… ' + attempt : 'Входим…';
+          var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+          var timer = ctrl
+            ? setTimeout(function () {
+                try {
+                  ctrl.abort();
+                } catch (e) {}
+              }, FETCH_MS)
+            : null;
+
           return fetch(path, {
-            method: "POST",
-            cache: "no-store",
-            credentials: "omit",
-            headers: { "Content-Type": "application/json" },
+            method: 'POST',
+            cache: 'no-store',
+            credentials: 'omit',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
+            signal: ctrl ? ctrl.signal : undefined,
           })
             .then(function (r) {
+              if (timer) clearTimeout(timer);
               if (r.status === 401) {
-                var fatal = new Error("http 401");
+                var fatal = new Error('http 401');
                 fatal.fatal = true;
                 throw fatal;
               }
-              if (!r.ok) throw new Error("http " + r.status);
+              if (!r.ok) throw new Error('http ' + r.status);
               return r.json();
             })
             .then(function (json) {
               var token = json && json.data && json.data.accessToken;
-              if (!token) throw new Error("no token");
+              if (!token) throw new Error('no token');
               try {
                 localStorage.setItem(TOKEN_KEY, token);
               } catch (e) {}
-              m.textContent = "Открываем клуб…";
+              m.textContent = 'Открываем клуб…';
               goApp();
             })
             .catch(function (err) {
+              if (timer) clearTimeout(timer);
               if (err && err.fatal) throw err;
-              if (attempt < 3) {
+              if (attempt < 2) {
                 return new Promise(function (resolve) {
-                  setTimeout(resolve, 350 * attempt);
+                  setTimeout(resolve, 400);
                 }).then(function () {
-                  return postLogin(path, body, attempt + 1);
+                  return fetchJson(path, body, attempt + 1);
                 });
               }
               throw err;
@@ -188,40 +208,74 @@
         }
 
         function loginWithInitData(initData) {
-          return postLogin("/api/v1/auth/telegram", { initData: initData });
+          return fetchJson('/api/v1/auth/telegram', { initData: initData });
         }
 
         function loginWithTicket(value) {
-          return postLogin("/api/v1/auth/telegram/ticket", { ticket: value });
+          return fetchJson('/api/v1/auth/telegram/ticket', { ticket: value });
+        }
+
+        function validateCachedToken() {
+          var token = null;
+          try {
+            token = localStorage.getItem(TOKEN_KEY);
+          } catch (e) {}
+          if (!token) return Promise.reject(new Error('no token'));
+
+          m.textContent = 'Проверяем сессию…';
+          var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+          var timer = ctrl
+            ? setTimeout(function () {
+                try {
+                  ctrl.abort();
+                } catch (e) {}
+              }, FETCH_MS)
+            : null;
+
+          return fetch('/api/v1/profile', {
+            method: 'GET',
+            cache: 'no-store',
+            credentials: 'omit',
+            headers: { Authorization: 'Bearer ' + token },
+            signal: ctrl ? ctrl.signal : undefined,
+          }).then(function (r) {
+            if (timer) clearTimeout(timer);
+            if (!r.ok) {
+              try {
+                localStorage.removeItem(TOKEN_KEY);
+              } catch (e) {}
+              throw new Error('stale token');
+            }
+            m.textContent = 'Открываем клуб…';
+            goApp();
+          });
         }
 
         b.onclick = function () {
           done = false;
-          sp.style.display = "block";
-          b.classList.remove("show");
+          sp.style.display = 'block';
+          b.classList.remove('show');
+          hardTimer = setTimeout(function () {
+            if (!done) {
+              fail('Загрузка зависла. Нажмите «Повторить» или /start в боте.');
+            }
+          }, 20000);
           start();
         };
 
         function start() {
           readyTg();
 
-          try {
-            if (localStorage.getItem(TOKEN_KEY)) {
-              m.textContent = "Открываем клуб…";
-              goApp();
-              return;
-            }
-          } catch (e) {}
-
           var initData = getInitData();
+          // Живые данные важнее кэша — иначе старый JWT держит вечный splash.
           if (initData) {
             loginWithInitData(initData).catch(function () {
               if (ticket) {
                 return loginWithTicket(ticket).catch(function () {
-                  fail("Не удалось войти. Нажмите /start в боте и откройте новой кнопкой.");
+                  fail('Не удалось войти. Нажмите /start в боте и откройте новой кнопкой.');
                 });
               }
-              fail("Не удалось войти. Закройте и откройте кнопкой из бота.");
+              fail('Не удалось войти. Закройте и откройте кнопкой из бота.');
             });
             return;
           }
@@ -233,7 +287,9 @@
             return;
           }
 
-          waitInitDataOrFail();
+          validateCachedToken().catch(function () {
+            waitInitDataOrFail();
+          });
         }
 
         function waitInitDataOrFail() {
@@ -245,19 +301,19 @@
             if (initData) {
               clearInterval(timer);
               loginWithInitData(initData).catch(function () {
-                fail("Не удалось войти. Нажмите /start в боте и откройте новой кнопкой.");
+                fail('Не удалось войти. Нажмите /start в боте и откройте новой кнопкой.');
               });
               return;
             }
-            if (tries >= 80) {
+            if (tries >= 60) {
               clearInterval(timer);
               if (ticket) {
                 loginWithTicket(ticket).catch(function () {
-                  fail("Ссылка устарела. Нажмите /start в боте и откройте новой кнопкой.");
+                  fail('Ссылка устарела. Нажмите /start в боте и откройте новой кнопкой.');
                 });
                 return;
               }
-              fail("Откройте приложение кнопкой из бота (не из меню браузера).");
+              fail('Откройте приложение кнопкой из бота.');
             }
           }, 50);
         }

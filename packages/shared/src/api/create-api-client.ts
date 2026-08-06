@@ -22,7 +22,7 @@ export function createApiClient(options: CreateApiClientOptions): AxiosInstance 
     baseURL: options.baseURL,
     headers: { 'Content-Type': 'application/json' },
     // Slow iOS Telegram WebViews need headroom; callers also retry.
-    timeout: options.timeoutMs ?? 20_000,
+    timeout: options.timeoutMs ?? 12_000,
   });
 
   client.interceptors.request.use((config) => {
