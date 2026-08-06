@@ -39,6 +39,28 @@ export class UsersService {
     return this.prisma.user.findUnique({ where: { telegramId: String(telegramId) } });
   }
 
+  /**
+   * Создаёт игрока только по telegramId (кнопка бота / ticket без initData).
+   * Профиль (имя, username, фото) допишется при следующем входе через initData.
+   */
+  async findOrCreateByTelegramId(telegramId: string): Promise<User> {
+    const id = String(telegramId);
+    const existing = await this.findByTelegramId(id);
+    if (existing) {
+      return existing.qrCode ? existing : this.ensureQrCode(existing.id);
+    }
+
+    const nickname = await this.allocateUniqueNickname(`player_${id.slice(-6)}`);
+    return this.prisma.user.create({
+      data: {
+        telegramId: id,
+        nickname,
+        qrCode: generatePlayerQrCode(),
+        playerProfile: { create: { xp: 0 } },
+      },
+    });
+  }
+
   async findById(id: string): Promise<User | null> {
     return this.prisma.user.findUnique({ where: { id } });
   }

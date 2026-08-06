@@ -36,9 +36,10 @@ export class AuthService {
   /**
    * Ticket for WebViews where Telegram initData is missing (e.g. alternate HTTPS
    * front like Cloudflare quick tunnel). Issued by the bot when sending the open button.
+   * Долгий TTL: старая кнопка в чате должна открывать приложение и через часы/дни.
    */
   createMiniAppTicket(telegramId: string): string {
-    return this.jwtService.sign({ typ: 'miniapp_ticket', telegramId }, { expiresIn: '15m' });
+    return this.jwtService.sign({ typ: 'miniapp_ticket', telegramId }, { expiresIn: '7d' });
   }
 
   async loginWithTicket(ticket: string) {
@@ -47,7 +48,7 @@ export class AuthService {
       payload = this.jwtService.verify(ticket) as { typ?: string; telegramId?: string };
     } catch {
       throw new UnauthorizedException(
-        'Ссылка входа устарела. Откройте приложение кнопкой из бота снова.',
+        'Ссылка входа устарела. Нажмите /start в боте и откройте новой кнопкой.',
       );
     }
 
@@ -55,14 +56,9 @@ export class AuthService {
       throw new UnauthorizedException('Недействительный билет входа');
     }
 
-    const user = await this.prisma.user.findUnique({
-      where: { telegramId: String(payload.telegramId) },
-    });
-
-    if (!user) {
-      throw new UnauthorizedException('Сначала напишите /start боту, затем откройте приложение');
-    }
-
+    // Раньше ticket требовал уже существующего User — повторный/первый вход
+    // с кнопки бота падал, пока initData не создавал профиль. Теперь создаём.
+    const user = await this.usersService.findOrCreateByTelegramId(String(payload.telegramId));
     return this.issuePlayerToken(user);
   }
 

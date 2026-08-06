@@ -79,7 +79,7 @@ export class TelegramService {
     // ticket lets boot.html auth without Telegram.WebApp.initData.
     const ticket = this.jwtService.sign(
       { typ: 'miniapp_ticket', telegramId: String(chatId) },
-      { expiresIn: '15m' },
+      { expiresIn: '7d' },
     );
     const entryUrl = `${miniAppUrl}/enter.html?t=${Date.now()}&ticket=${encodeURIComponent(ticket)}`;
     const openAppKeyboard = {

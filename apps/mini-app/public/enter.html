@@ -158,6 +158,12 @@
             body: JSON.stringify(body),
           })
             .then(function (r) {
+              // 401 = билет/подпись мёртвые — не долбим «Повтор входа» 4 раза.
+              if (r.status === 401) {
+                var fatal = new Error("http 401");
+                fatal.fatal = true;
+                throw fatal;
+              }
               if (!r.ok) throw new Error("http " + r.status);
               return r.json();
             })
@@ -171,9 +177,10 @@
               goApp();
             })
             .catch(function (err) {
-              if (attempt < 4) {
+              if (err && err.fatal) throw err;
+              if (attempt < 3) {
                 return new Promise(function (resolve) {
-                  setTimeout(resolve, 400 * attempt);
+                  setTimeout(resolve, 350 * attempt);
                 }).then(function () {
                   return postLogin(path, body, attempt + 1);
                 });
@@ -200,10 +207,31 @@
         function start() {
           readyTg();
 
-          // Fast path: ticket from bot button (works even without initData).
+          // Повторный вход: токен уже есть в WebView — сразу в приложение.
+          try {
+            if (localStorage.getItem(TOKEN_KEY)) {
+              m.textContent = "Открываем клуб…";
+              goApp();
+              return;
+            }
+          } catch (e) {}
+
+          var initData = getInitData();
+          // Свежий initData надёжнее старого ticket из чата.
+          if (initData) {
+            loginWithInitData(initData).catch(function () {
+              if (ticket) {
+                return loginWithTicket(ticket).catch(function () {
+                  fail("Не удалось войти. Нажмите /start в боте и откройте новой кнопкой.");
+                });
+              }
+              fail("Не удалось войти. Закройте и откройте кнопкой из бота.");
+            });
+            return;
+          }
+
           if (ticket) {
             loginWithTicket(ticket).catch(function () {
-              // Fall through to initData wait.
               waitInitDataOrFail();
             });
             return;
@@ -221,7 +249,7 @@
             if (initData) {
               clearInterval(timer);
               loginWithInitData(initData).catch(function () {
-                fail("Не удалось войти. Закройте и откройте кнопкой из бота.");
+                fail("Не удалось войти. Нажмите /start в боте и откройте новой кнопкой.");
               });
               return;
             }
@@ -229,7 +257,7 @@
               clearInterval(timer);
               if (ticket) {
                 loginWithTicket(ticket).catch(function () {
-                  fail("Нет данных Telegram. Откройте приложение кнопкой из бота.");
+                  fail("Ссылка устарела. Нажмите /start в боте и откройте новой кнопкой.");
                 });
                 return;
               }
