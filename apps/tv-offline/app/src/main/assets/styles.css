@@ -1,0 +1,247 @@
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #090907;
+  color: #f5edd6;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  overflow: hidden;
+}
+
+.board {
+  height: 100%;
+  padding: 2.2vh 3.2vw;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #120e09 0%, #090907 45%, #0c0a08 100%);
+}
+
+.head {
+  text-align: center;
+  padding-top: 0.4vh;
+}
+
+.brand-logo {
+  display: block;
+  height: clamp(96px, 14vh, 160px);
+  width: auto;
+  margin: 0 auto;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 28px rgba(199, 154, 61, 0.22));
+}
+
+.rule {
+  width: 46%;
+  max-width: 640px;
+  height: 2px;
+  margin: 1.6vh auto 0;
+  background: #c89a3d;
+}
+
+.center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  gap: 2.2vh;
+}
+
+.blinds {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.blind {
+  text-align: center;
+  margin: 0 clamp(28px, 4vw, 64px);
+}
+
+.lbl {
+  font-size: clamp(18px, 1.8vw, 30px);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: #c89a3d;
+  font-weight: 700;
+}
+
+.big {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 700;
+  font-size: clamp(110px, 18vw, 280px);
+  line-height: 0.92;
+  color: #fff8e6;
+  margin-top: 10px;
+}
+
+.sep {
+  width: 3px;
+  height: clamp(120px, 22vh, 240px);
+  background: #c89a3d;
+}
+
+.next {
+  text-align: center;
+  color: #7a6e5a;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-size: clamp(18px, 1.7vw, 28px);
+  margin: 0 0 1.2vh;
+}
+
+.next b {
+  color: #f7d98a;
+  margin-left: 0.5em;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.15em;
+}
+
+.stats {
+  display: flex;
+  border-top: 1px solid rgba(199, 154, 61, 0.22);
+  padding: 2.4vh 0 1.8vh;
+}
+
+.stats2 {
+  max-width: 1100px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.stat {
+  flex: 1;
+  text-align: center;
+}
+
+.stat .lbl {
+  font-size: clamp(16px, 1.5vw, 26px);
+}
+
+.stat .val {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(48px, 6.5vw, 110px);
+  font-weight: 700;
+  margin-top: 8px;
+  color: #f5edd6;
+}
+
+.break-box {
+  text-align: center;
+}
+
+.break-box .big {
+  font-size: clamp(120px, 18vw, 280px);
+  color: #f7d98a;
+}
+
+.ante-bar {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 1.2em;
+  border: 1px solid rgba(199, 154, 61, 0.45);
+  border-radius: 999px;
+  padding: 0.55em 2em;
+  min-width: min(70vw, 820px);
+}
+
+.ante-bar .albl {
+  font-size: clamp(22px, 2.2vw, 36px);
+  letter-spacing: 0.28em;
+  color: #c89a3d;
+  font-weight: 700;
+}
+
+.ante-bar .aval {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(64px, 8vw, 130px);
+  font-weight: 700;
+  color: #fff8e6;
+  line-height: 1;
+}
+
+.menu-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2vh;
+}
+
+.time-big {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 700;
+  font-size: clamp(100px, 14vw, 220px);
+  color: #fff8e6;
+  line-height: 1;
+}
+
+.meta {
+  color: #7a6e5a;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: clamp(16px, 1.6vw, 26px);
+  text-align: center;
+}
+
+.btn {
+  border: none;
+  background: linear-gradient(180deg, #e0c070, #c89a3d);
+  color: #1a140a;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-size: clamp(18px, 1.8vw, 28px);
+  padding: 1em 2.4em;
+  border-radius: 999px;
+  margin-top: 1vh;
+  cursor: pointer;
+}
+
+.btn:focus {
+  outline: 3px solid #fff8e6;
+  outline-offset: 4px;
+}
+
+.hint {
+  color: #5c5345;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: clamp(14px, 1.3vw, 20px);
+}
+
+.chevs {
+  color: #c89a3d;
+  font-size: clamp(22px, 2vw, 32px);
+}
+
+.screen {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.play-screen {
+  width: 100%;
+}
+
+.menu-center.screen {
+  /* already flex column via .menu-center */
+}
+
+.hidden {
+  display: none !important;
+}
+
+.finish-title {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 700;
+  font-size: clamp(64px, 9vw, 130px);
+  color: #fff8e6;
+  line-height: 1.1;
+  text-align: center;
+}

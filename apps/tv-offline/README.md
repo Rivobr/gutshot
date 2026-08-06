@@ -1,0 +1,48 @@
+# GUTSHOT TV Offline (Android TV APK)
+
+Офлайн-табло для Android TV / Xiaomi TV. Дизайн утверждён 2026-08-06.
+
+## Что умеет
+
+1. **Планирование** — выбор времени старта (MSK), кнопка «Запланировать»
+2. **Ожидание** — до выбранного MSK-времени
+3. **Игра** — блайнды, Ante, уровень, до смены, до перерыва
+4. **Перерыв** — крупный таймер; внизу уровень и блайнды следующего уровня
+5. **Финиш** → возврат в меню
+
+Синхронизация между TV — по wall-clock `Europe/Moscow` (на каждом TV нажать «Запланировать» на одно и то же время).
+
+Интернет не нужен.
+
+## Сборка
+
+```bash
+export ANDROID_HOME=~/android-sdk
+cd apps/tv-offline
+echo "sdk.dir=$ANDROID_HOME" > local.properties
+./gradlew assembleDebug
+```
+
+APK: `app/build/outputs/apk/debug/app-debug.apk`
+
+## Установка на TV
+
+1. Скопировать APK на флешку / через adb
+2. На TV разрешить установку из неизвестных источников
+3. Установить `app-debug.apk`
+4. Запустить **GUTSHOT TV** из раздела приложений
+
+```bash
+adb connect <TV_IP>:5555
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+## Пульт
+
+- ↑ / ↓ — ±15 минут
+- ← / → — ±1 минута
+- OK / Enter — «Запланировать» / «В меню»
+
+## Шаблон
+
+23 игровых уровня, ante = BB, перерывы 7 / 7 / 12 мин (как в утверждённом ТЗ).

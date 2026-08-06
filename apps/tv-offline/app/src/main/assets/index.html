@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GUTSHOT TV</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="board">
+    <header class="head">
+      <img class="brand-logo" src="gutshot-logo.png" alt="GUTSHOT" />
+      <div class="rule"></div>
+    </header>
+
+    <!-- MENU -->
+    <div id="menuScreen" class="screen menu-center">
+      <div class="chevs" id="btnUp">▴</div>
+      <div class="time-big" id="planTime">18:00</div>
+      <div class="chevs" id="btnDown">▾</div>
+      <div class="meta">планирование · старт по Москве · MSK</div>
+      <div class="meta">шаблон · 23 уровня · ante = BB · перерывы 7/7/12</div>
+      <button class="btn" id="btnPlan" autofocus>Запланировать</button>
+      <div class="hint">нажмите на каждом телевизоре</div>
+    </div>
+
+    <!-- WAITING -->
+    <div id="waitingScreen" class="screen menu-center hidden">
+      <div class="meta">ожидание старта</div>
+      <div class="time-big" id="waitTime">18:00</div>
+      <div class="meta" id="waitMeta">через — мин · MSK</div>
+      <div class="meta">шаблон · 23 уровня · ante = BB</div>
+      <div class="hint">все TV стартуют одновременно по часам</div>
+    </div>
+
+    <!-- PLAY -->
+    <div id="playScreen" class="screen play-screen hidden">
+      <main class="center">
+        <div class="blinds">
+          <div class="blind">
+            <div class="lbl">Малый</div>
+            <div class="big" id="sb">—</div>
+          </div>
+          <div class="sep"></div>
+          <div class="blind">
+            <div class="lbl">Большой</div>
+            <div class="big" id="bb">—</div>
+          </div>
+        </div>
+        <div class="ante-bar">
+          <span class="albl">ANTE</span>
+          <span class="aval" id="ante">—</span>
+        </div>
+      </main>
+      <p class="next" id="nextLine">Далее<b>—</b></p>
+      <section class="stats">
+        <div class="stat">
+          <div class="lbl">Уровень</div>
+          <div class="val" id="levelVal">—</div>
+        </div>
+        <div class="stat">
+          <div class="lbl">До смены</div>
+          <div class="val" id="levelLeftVal">—</div>
+        </div>
+        <div class="stat">
+          <div class="lbl">До перерыва</div>
+          <div class="val" id="breakLeftVal">—</div>
+        </div>
+      </section>
+    </div>
+
+    <!-- BREAK -->
+    <div id="breakScreen" class="screen play-screen hidden">
+      <main class="center" style="flex-direction:row">
+        <div class="break-box">
+          <div class="lbl">Перерыв</div>
+          <div class="big" id="breakClock">—</div>
+        </div>
+      </main>
+      <section class="stats stats2">
+        <div class="stat">
+          <div class="lbl">Уровень</div>
+          <div class="val" id="breakLevel">—</div>
+        </div>
+        <div class="stat">
+          <div class="lbl">Блайнды</div>
+          <div class="val" id="breakBlinds" style="font-size:clamp(40px,5.5vw,92px)">—</div>
+        </div>
+      </section>
+    </div>
+
+    <!-- FINISH -->
+    <div id="finishScreen" class="screen menu-center hidden">
+      <div class="lbl">Финиш</div>
+      <div class="finish-title">Турнир завершён</div>
+      <div class="meta">возврат в меню планирования</div>
+      <button class="btn" id="btnMenu">В меню</button>
+    </div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
