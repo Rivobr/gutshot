@@ -70,6 +70,33 @@ body,
   text-shadow: 0 2px 18px rgba(199, 154, 61, 0.35);
 }
 
+.logo {
+  display: inline-flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: clamp(8px, 0.9vw, 14px);
+  height: clamp(40px, 5.2vh, 64px);
+  margin: 0 auto;
+}
+
+.logo .bar {
+  display: block;
+  width: clamp(9px, 1.05vw, 14px);
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(150deg, #7d5417 0%, #c89a3d 42%, #f7d98a 58%, #8a5c1c 100%);
+  box-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.logo .bar.ruby {
+  background: linear-gradient(150deg, #7a0b2c 0%, #e0115f 45%, #ff4d7d 60%, #a10d3d 100%);
+  box-shadow:
+    0 0 12px rgba(224, 17, 95, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
 .rule {
   width: min(520px, 40vw);
   height: 1px;

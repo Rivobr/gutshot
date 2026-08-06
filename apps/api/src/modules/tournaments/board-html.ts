@@ -73,6 +73,13 @@ function liveSecondsLeft(
   return fallback ?? null;
 }
 
+/** Фирменный знак: 5 полосок без текста GUTSHOT. */
+const LOGO_MARK = `<div class="logo" aria-hidden="true"><span class="bar"></span><span class="bar"></span><span class="bar ruby"></span><span class="bar"></span><span class="bar"></span></div>`;
+
+const LOGO_CSS = `.logo{display:inline-flex;align-items:flex-end;justify-content:center;gap:10px;height:56px;margin:0 auto}
+.logo .bar{display:block;width:12px;height:56px;border-radius:4px;background:linear-gradient(150deg,#7d5417 0%,#c89a3d 42%,#f7d98a 58%,#8a5c1c 100%);box-shadow:0 1px 4px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.3)}
+.logo .bar.ruby{background:linear-gradient(150deg,#7a0b2c 0%,#e0115f 45%,#ff4d7d 60%,#a10d3d 100%);box-shadow:0 0 12px rgba(224,17,95,.45),inset 0 1px 0 rgba(255,255,255,.35)}`;
+
 /** Inline ES5: живой тик + опрос API 1с. Без modules/fetch. */
 function liveScript(apiUrl: string, initialJson: string): string {
   return `<script>
@@ -143,7 +150,7 @@ function liveScript(apiUrl: string, initialJson: string): string {
     if(board) board.style.display='flex';
     var title=state.tournament&&state.tournament.title?state.tournament.title:'\\u0422\\u0443\\u0440\\u043d\\u0438\\u0440';
     var ev=$('event'); if(ev) ev.innerHTML=title;
-    document.title='GUTSHOT \\u2014 '+title;
+    document.title=title;
     var center=$('center');
     if(center){
       if(isBreak){
@@ -231,16 +238,16 @@ export function renderBoardHtml(board: BoardLike, opts?: { tournamentId?: string
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <meta http-equiv="refresh" content="1" id="fallbackRefresh"/>
-<title>GUTSHOT — табло</title>
+<title>Табло</title>
 <style>
 html,body{margin:0;height:100%;background:#090907;color:#f7d98a;font-family:Arial,Helvetica,sans-serif}
-.wrap{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
-h1{letter-spacing:.22em;font-size:48px;margin:0}
-p{color:#7a6e5a;letter-spacing:.12em;text-transform:uppercase;font-size:22px}
+.wrap{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:18px}
+p{color:#7a6e5a;letter-spacing:.12em;text-transform:uppercase;font-size:22px;margin:0}
 .board{display:none}
+${LOGO_CSS}
 </style></head>
 <body>
-<div class="wrap" id="empty"><h1>GUTSHOT</h1><p>Ближайших турниров нет</p></div>
+<div class="wrap" id="empty">${LOGO_MARK}<p>Ближайших турниров нет</p></div>
 <div class="board" id="board" style="display:none"></div>
 ${liveScript(apiPath, initialJson)}
 </body></html>`;
@@ -279,15 +286,14 @@ ${liveScript(apiPath, initialJson)}
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <meta http-equiv="refresh" content="1" id="fallbackRefresh"/>
-<title>GUTSHOT — ${title}</title>
+<title>${title}</title>
 <style>
 html,body{margin:0;height:100%;background:#090907;color:#f5edd6;font-family:Arial,Helvetica,sans-serif;overflow:hidden}
-#empty{display:none;height:100%;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#f7d98a}
-#empty h1{letter-spacing:.22em;font-size:48px;margin:0}
-#empty p{color:#7a6e5a;letter-spacing:.12em;text-transform:uppercase;font-size:22px}
+#empty{display:none;height:100%;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#f7d98a;gap:18px}
+#empty p{color:#7a6e5a;letter-spacing:.12em;text-transform:uppercase;font-size:22px;margin:0}
 .board{height:100%;padding:3vh 4vw;box-sizing:border-box;display:flex;flex-direction:column;background:linear-gradient(180deg,#120e09 0%,#090907 45%,#0c0a08 100%)}
 .head{text-align:center}
-.wordmark{font-size:42px;font-weight:700;letter-spacing:.22em;color:#f7d98a;margin:0}
+${LOGO_CSS}
 .rule{width:40%;max-width:520px;height:1px;margin:1.2vh auto;background:#c89a3d}
 .event{font-size:16px;letter-spacing:.24em;text-transform:uppercase;color:#f7d98a;opacity:.85}
 .center{flex:1;display:flex;align-items:center;justify-content:center;min-height:0}
@@ -308,10 +314,10 @@ html,body{margin:0;height:100%;background:#090907;color:#f5edd6;font-family:Aria
 .pill{border:1px solid rgba(199,154,61,.5);background:rgba(199,154,61,.12);color:#f7d98a;border-radius:999px;padding:.4em 1em}
 </style></head>
 <body>
-<div id="empty"><h1>GUTSHOT</h1><p>Ближайших турниров нет</p></div>
+<div id="empty">${LOGO_MARK}<p>Ближайших турниров нет</p></div>
 <div class="board" id="board">
   <header class="head">
-    <h1 class="wordmark">GUTSHOT</h1>
+    ${LOGO_MARK}
     <div class="rule"></div>
     <div class="event" id="event">${title}</div>
   </header>

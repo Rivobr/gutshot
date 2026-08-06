@@ -85,6 +85,14 @@
     return node;
   }
 
+  function logoMark() {
+    var logo = el('div', 'logo');
+    for (var i = 0; i < 5; i++) {
+      logo.appendChild(el('span', i === 2 ? 'bar ruby' : 'bar'));
+    }
+    return logo;
+  }
+
   function clear(node) {
     while (node.firstChild) node.removeChild(node.firstChild);
   }
@@ -93,7 +101,7 @@
     clear(root);
     var wrap = el('div', 'board');
     var notice = el('div', 'notice');
-    notice.appendChild(el('div', 'wordmark', 'GUTSHOT'));
+    notice.appendChild(logoMark());
     notice.appendChild(el('div', 'rule'));
     notice.appendChild(el('p', 'notice-text', text));
     wrap.appendChild(notice);
@@ -132,7 +140,7 @@
     }
 
     var head = el('header', 'head');
-    head.appendChild(el('div', 'wordmark', 'GUTSHOT'));
+    head.appendChild(logoMark());
     head.appendChild(el('div', 'rule'));
     head.appendChild(el('div', 'event', board.tournament ? board.tournament.title : ''));
     wrap.appendChild(head);

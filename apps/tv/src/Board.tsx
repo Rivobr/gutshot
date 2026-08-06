@@ -14,6 +14,19 @@ function formatAmount(value: number | null | undefined): string {
   return value == null ? '—' : value.toLocaleString('ru-RU');
 }
 
+/** Фирменный знак: 5 полосок без текста названия. */
+function BrandLogo(): JSX.Element {
+  return (
+    <div className="logo" aria-hidden="true">
+      <span className="bar" />
+      <span className="bar" />
+      <span className="bar ruby" />
+      <span className="bar" />
+      <span className="bar" />
+    </div>
+  );
+}
+
 export function Board(): JSX.Element {
   const { board, clockSkewMs, isOffline, isLoading } = useBoard();
   const clock = board?.clock;
@@ -26,7 +39,7 @@ export function Board(): JSX.Element {
     return (
       <div className="board">
         <div className="notice">
-          <div className="wordmark">GUTSHOT</div>
+          <BrandLogo />
           <p className="notice-text">Загружаем табло…</p>
         </div>
       </div>
@@ -37,7 +50,7 @@ export function Board(): JSX.Element {
     return (
       <div className="board">
         <div className="notice">
-          <div className="wordmark">GUTSHOT</div>
+          <BrandLogo />
           <div className="rule" />
           <p className="notice-text">Ближайших турниров нет</p>
         </div>
@@ -67,7 +80,7 @@ export function Board(): JSX.Element {
       )}
 
       <header className="head">
-        <div className="wordmark">GUTSHOT</div>
+        <BrandLogo />
         <div className="rule" />
         <div className="event">{board.tournament.title}</div>
       </header>
