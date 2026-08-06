@@ -11,6 +11,23 @@ const BOARD_STATUSES = [
   TournamentStatus.REGISTRATION_CLOSED,
 ];
 
+/** Активные регистрации — отменённые места не занимают. */
+const ACTIVE_REGISTRATION_STATUSES: RegistrationStatus[] = [
+  RegistrationStatus.REGISTERED,
+  RegistrationStatus.CHECKED_IN,
+  RegistrationStatus.PLAYING,
+  RegistrationStatus.FINISHED,
+  RegistrationStatus.WAITING,
+];
+
+const activeRegistrationsCount = {
+  select: {
+    registrations: {
+      where: { status: { in: ACTIVE_REGISTRATION_STATUSES } },
+    },
+  },
+} as const;
+
 @Injectable()
 export class TournamentsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -21,7 +38,7 @@ export class TournamentsService {
       where: { status: { in: BOARD_STATUSES } },
       orderBy: { date: 'asc' },
       take: 20,
-      include: { _count: { select: { registrations: true } } },
+      include: { _count: activeRegistrationsCount },
     });
 
     return rows.map((row) => {
@@ -45,7 +62,7 @@ export class TournamentsService {
     const running = await this.prisma.tournament.findFirst({
       where: { status: TournamentStatus.IN_PROGRESS },
       orderBy: { date: 'asc' },
-      include: { blindLevels: true, _count: { select: { registrations: true } } },
+      include: { blindLevels: true, _count: activeRegistrationsCount },
     });
 
     const tournament =
@@ -56,7 +73,7 @@ export class TournamentsService {
           date: { gte: new Date(Date.now() - 6 * 3600_000) },
         },
         orderBy: { date: 'asc' },
-        include: { blindLevels: true, _count: { select: { registrations: true } } },
+        include: { blindLevels: true, _count: activeRegistrationsCount },
       }));
 
     return tournament ? this.toBoardPayload(tournament) : null;
@@ -65,7 +82,7 @@ export class TournamentsService {
   async findBoardById(id: string) {
     const tournament = await this.prisma.tournament.findUnique({
       where: { id },
-      include: { blindLevels: true, _count: { select: { registrations: true } } },
+      include: { blindLevels: true, _count: activeRegistrationsCount },
     });
 
     if (!tournament) {
@@ -126,7 +143,7 @@ export class TournamentsService {
     const registrations = await this.prisma.registration.findMany({
       where: {
         tournamentId: id,
-        status: { in: ['REGISTERED', 'CHECKED_IN', 'PLAYING', 'FINISHED', 'WAITING'] },
+        status: { in: ACTIVE_REGISTRATION_STATUSES },
       },
       orderBy: { registeredAt: 'asc' },
       include: {
@@ -171,7 +188,7 @@ export class TournamentsService {
           : undefined,
       },
       orderBy: { date: 'asc' },
-      include: { blindLevels: true, _count: { select: { registrations: true } } },
+      include: { blindLevels: true, _count: activeRegistrationsCount },
     });
     return rows.map(serializeTournament);
   }
@@ -179,7 +196,7 @@ export class TournamentsService {
   async findById(id: string) {
     const tournament = await this.prisma.tournament.findUnique({
       where: { id },
-      include: { blindLevels: true, _count: { select: { registrations: true } } },
+      include: { blindLevels: true, _count: activeRegistrationsCount },
     });
 
     if (!tournament) {
@@ -202,7 +219,7 @@ export class TournamentsService {
         },
       },
       orderBy: { date: 'asc' },
-      include: { blindLevels: true, _count: { select: { registrations: true } } },
+      include: { blindLevels: true, _count: activeRegistrationsCount },
     });
     return tournament ? serializeTournament(tournament) : null;
   }
