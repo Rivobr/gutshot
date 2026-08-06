@@ -292,7 +292,7 @@ export function renderBoardHtml(board: BoardLike, opts?: { tournamentId?: string
 <html lang="ru"><head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<meta http-equiv="refresh" content="1" id="fallbackRefresh"/>
+<meta http-equiv="refresh" content="5" id="fallbackRefresh"/>
 <title>Табло</title>
 ${FONTS_LINK}
 <style>
@@ -343,7 +343,7 @@ ${liveScript(apiPath, initialJson)}
 <html lang="ru"><head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<meta http-equiv="refresh" content="1" id="fallbackRefresh"/>
+<meta http-equiv="refresh" content="5" id="fallbackRefresh"/>
 <title>${title}</title>
 ${FONTS_LINK}
 <style>
