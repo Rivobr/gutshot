@@ -82,7 +82,11 @@ const FONTS_LINK = `<link rel="preconnect" href="https://fonts.googleapis.com"/>
 
 const LOGO_CSS = `.brand-logo{display:block;height:clamp(72px,11vh,120px);width:auto;margin:0 auto;object-fit:contain;filter:drop-shadow(0 8px 28px rgba(199,154,61,.22))}
 .serif{font-family:'Fraunces',Georgia,'Times New Roman',serif}
-.sans{font-family:'Sora',system-ui,Arial,sans-serif}`;
+.sans{font-family:'Sora',system-ui,Arial,sans-serif}
+.fs-btn{position:fixed;right:18px;bottom:18px;z-index:60;border:1px solid rgba(199,154,61,.55);background:rgba(9,9,7,.78);color:#f7d98a;border-radius:999px;padding:10px 16px;font:600 13px/1 'Sora',system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
+.fs-btn:hover{background:rgba(199,154,61,.18)}
+.fs-hint{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:60;color:rgba(247,217,138,.55);font:500 12px/1 'Sora',system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;pointer-events:none}
+body.is-fs .fs-btn,body.is-fs .fs-hint{display:none}`;
 
 /** Inline ES5: живой тик + опрос API. Устойчиво к обрывам (ноут→HDMI). */
 function liveScript(apiUrl: string, initialJson: string): string {
@@ -259,6 +263,33 @@ function liveScript(apiUrl: string, initialJson: string): string {
       }).catch(function(){});
     }catch(e){}
   }
+  function isFs(){
+    return !!(document.fullscreenElement||document.webkitFullscreenElement);
+  }
+  function syncFsUi(){
+    if(isFs()) document.body.className=(document.body.className||'').replace(/\\bis-fs\\b/g,'').replace(/\\s+/g,' ').trim()+' is-fs';
+    else document.body.className=(document.body.className||'').replace(/\\bis-fs\\b/g,'').replace(/\\s+/g,' ').trim();
+    var btn=$('fsBtn');
+    if(btn) btn.innerHTML=isFs()?'\\u0412\\u044b\\u0439\\u0442\\u0438':'\\u041d\\u0430 \\u0432\\u0435\\u0441\\u044c \\u044d\\u043a\\u0440\\u0430\\u043d';
+  }
+  function enterFs(){
+    var el=document.documentElement;
+    try{
+      if(el.requestFullscreen) el.requestFullscreen();
+      else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    }catch(e){}
+    requestWake();
+  }
+  function exitFs(){
+    try{
+      if(document.exitFullscreen) document.exitFullscreen();
+      else if(document.webkitExitFullscreen) document.webkitExitFullscreen();
+    }catch(e){}
+  }
+  function toggleFs(){
+    if(isFs()) exitFs();
+    else enterFs();
+  }
   function onVisible(){
     if(document.visibilityState==='visible'){
       requestWake();
@@ -269,10 +300,26 @@ function liveScript(apiUrl: string, initialJson: string): string {
   setInterval(tick,250);
   pull();
   requestWake();
+  syncFsUi();
   document.addEventListener('visibilitychange', onVisible);
+  document.addEventListener('fullscreenchange', syncFsUi);
+  document.addEventListener('webkitfullscreenchange', syncFsUi);
   window.addEventListener('online', function(){ fails=0; pull(); });
   window.addEventListener('focus', function(){ pull(); });
-  document.addEventListener('click', requestWake);
+  document.addEventListener('click', function(ev){
+    requestWake();
+    var t=ev.target;
+    if(t&&t.id==='fsBtn'){ toggleFs(); return; }
+  });
+  document.addEventListener('dblclick', function(ev){
+    var t=ev.target;
+    if(t&&(t.tagName==='INPUT'||t.tagName==='BUTTON'||t.id==='fsBtn')) return;
+    toggleFs();
+  });
+  document.addEventListener('keydown', function(ev){
+    var k=ev.key||'';
+    if(k==='f'||k==='F'||k==='\\u0444'||k==='\\u0424'){ ev.preventDefault(); toggleFs(); }
+  });
 })();
 </script>`;
 }
@@ -307,6 +354,8 @@ ${LOGO_CSS}
 <div class="offline" id="offline">нет связи — табло держит последние данные, переподключение…</div>
 <div class="wrap" id="empty">${LOGO_MARK}<p>Ближайших турниров нет</p></div>
 <div class="board" id="board" style="display:none"></div>
+<button type="button" class="fs-btn" id="fsBtn">На весь экран</button>
+<div class="fs-hint">F11 или F · двойной клик</div>
 ${liveScript(apiPath, initialJson)}
 </body></html>`;
   }
@@ -397,6 +446,8 @@ ${LOGO_CSS}
     <span>Ante<b id="ante">${isBreak ? '—' : formatAmount(current.ante)}</b></span>
   </footer>
 </div>
+<button type="button" class="fs-btn" id="fsBtn">На весь экран</button>
+<div class="fs-hint">F11 или F · двойной клик</div>
 ${liveScript(apiPath, initialJson)}
 </body></html>`;
 }
