@@ -3,6 +3,13 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { LevelsService } from '../../progression/levels.service';
 import { PlayerEventsService } from '../../progression/player-events.service';
 
+/** Прячет URL вида api.telegram.org/file/bot<TOKEN>/… из ответов админки. */
+function safePhotoUrl(photoUrl: string | null | undefined): string | null {
+  if (!photoUrl) return null;
+  if (/api\.telegram\.org\/file\/bot/i.test(photoUrl)) return null;
+  return photoUrl;
+}
+
 @Injectable()
 export class AdminPlayersService {
   constructor(
@@ -35,7 +42,7 @@ export class AdminPlayersService {
       firstName: user.firstName,
       lastName: user.lastName,
       nickname: user.nickname,
-      photoUrl: user.photoUrl,
+      photoUrl: safePhotoUrl(user.photoUrl),
       isBlocked: user.isBlocked,
       isVerified: user.isVerified,
       qrCode: user.qrCode,

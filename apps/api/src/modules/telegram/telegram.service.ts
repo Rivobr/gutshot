@@ -34,32 +34,43 @@ export class TelegramService {
       return false;
     }
 
-    try {
-      const body: Record<string, unknown> = {
-        chat_id: telegramId,
-        text,
-        parse_mode: 'HTML',
-      };
-      if (replyMarkup) {
-        body.reply_markup = replyMarkup;
-      }
-
-      const response = await fetch(`https://api.telegram.org/bot${this.botToken}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      if (!response.ok) {
-        this.logger.error(`Telegram API error: ${response.status} ${await response.text()}`);
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      this.logger.error('Ошибка отправки Telegram сообщения', error as Error);
-      return false;
+    const body: Record<string, unknown> = {
+      chat_id: telegramId,
+      text,
+      parse_mode: 'HTML',
+    };
+    if (replyMarkup) {
+      body.reply_markup = replyMarkup;
     }
+
+    // Outbound к api.telegram.org с VPS иногда падает (DNS/сеть) —
+    // без ретраев /start «молчит» и игрок думает, что клуб мёртв.
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      try {
+        const response = await fetch(`https://api.telegram.org/bot${this.botToken}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+
+        if (!response.ok) {
+          this.logger.error(`Telegram API error: ${response.status} ${await response.text()}`);
+          return false;
+        }
+
+        return true;
+      } catch (error) {
+        lastError = error;
+        this.logger.warn(
+          `Telegram sendMessage attempt ${attempt}/3 failed: ${(error as Error).message}`,
+        );
+        await new Promise((r) => setTimeout(r, 400 * attempt));
+      }
+    }
+
+    this.logger.error('Ошибка отправки Telegram сообщения', lastError as Error);
+    return false;
   }
 
   async sendWelcome(chatId: string): Promise<boolean> {
@@ -81,7 +92,7 @@ export class TelegramService {
       { typ: 'miniapp_ticket', telegramId: String(chatId) },
       { expiresIn: '7d' },
     );
-    const entryUrl = `${miniAppUrl}/enter.html?t=${Date.now()}&v=20260807e&ticket=${encodeURIComponent(ticket)}`;
+    const entryUrl = `${miniAppUrl}/enter.html?t=${Date.now()}&v=20260807f&ticket=${encodeURIComponent(ticket)}`;
     const openAppKeyboard = {
       inline_keyboard: [[{ text: '♠️ Открыть GUTSHOT', web_app: { url: entryUrl } }]],
     };
@@ -222,7 +233,12 @@ export class TelegramService {
         return undefined;
       }
 
-      return `https://api.telegram.org/file/bot${this.botToken}/${filePayload.result.file_path}`;
+      // Never return/persist bot-token file URLs — они светят TELEGRAM_BOT_TOKEN
+      // в admin/API ответах. Аватар из initData (CDN t.me) безопасен.
+      this.logger.debug(
+        `Telegram avatar file for ${telegramId} resolved but skipped (token leak guard)`,
+      );
+      return undefined;
     } catch (error) {
       this.logger.warn(
         `Не удалось получить аватар Telegram ${telegramId}: ${(error as Error).message}`,

@@ -11,8 +11,9 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+    # Only localhost — public 5432 was reachable from the internet.
     ports:
-      - '${POSTGRES_PORT:-5432}:5432'
+      - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
     volumes:
       - ./docker/postgres/data:/var/lib/postgresql/data
     networks:
@@ -22,8 +23,11 @@ services:
     image: redis:7-alpine
     container_name: gutshot-redis
     restart: unless-stopped
+    # Only localhost — open 6379 was mined (cron payloads in keys).
+    # App talks to redis over the docker network, not the published port.
     ports:
-      - '${REDIS_PORT:-6379}:6379'
+      - '127.0.0.1:${REDIS_PORT:-6379}:6379'
+    command: ['redis-server', '--appendonly', 'yes', '--protected-mode', 'yes']
     volumes:
       - ./docker/redis/data:/data
     networks:
@@ -38,8 +42,9 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    # API is published via nginx (:443). Keep 3000 local-only.
     ports:
-      - '${API_PORT:-3000}:3000'
+      - '127.0.0.1:${API_PORT:-3000}:3000'
     depends_on:
       - postgres
       - redis
