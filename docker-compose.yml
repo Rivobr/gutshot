@@ -63,7 +63,7 @@ services:
     container_name: gutshot-mini-app
     restart: unless-stopped
     ports:
-      - '8080:80'
+      - '127.0.0.1:8080:80'
     depends_on:
       - api
     networks:
@@ -79,7 +79,7 @@ services:
     container_name: gutshot-admin
     restart: unless-stopped
     ports:
-      - '8081:80'
+      - '127.0.0.1:8081:80'
     depends_on:
       - api
     networks:
