@@ -45,7 +45,11 @@ export function TournamentPage(): JSX.Element {
 
   const handleRegister = (): void => {
     registerMutation.mutate(tournament.id, {
-      onSuccess: () => {
+      onSuccess: (result) => {
+        if (result.status === 'WAITING') {
+          showToast('Мест нет — вы в листе ожидания', 'info');
+          return;
+        }
         showToast('Вы записаны на турнир');
       },
       onError: (error) => {
@@ -284,16 +288,21 @@ export function TournamentPage(): JSX.Element {
             <div className="px-5 mt-6">
               <button
                 type="button"
-                disabled={registerMutation.isPending}
+                disabled={tournament.status !== 'REGISTRATION_OPEN' || registerMutation.isPending}
                 onClick={handleRegister}
                 className="btn-shine w-full py-4 rounded-[18px] serif font-semibold tracking-widest disabled:opacity-50"
                 style={goldButtonStyle()}
               >
-                ЗАРЕГИСТРИРОВАТЬСЯ
+                {tournament.status === 'REGISTRATION_OPEN'
+                  ? 'ЗАРЕГИСТРИРОВАТЬСЯ'
+                  : 'РЕГИСТРАЦИЯ ЗАКРЫТА'}
               </button>
-              <p className="sans text-center mt-2.5" style={{ fontSize: 10, color: '#6B614E' }}>
-                Свободно {seats} · Можно записаться на несколько турниров
-              </p>
+              {tournament.status === 'REGISTRATION_OPEN' && (
+                <p className="sans text-center mt-2.5" style={{ fontSize: 10, color: '#6B614E' }}>
+                  Свободно {seats}
+                  {seats === 0 ? ' · лист ожидания' : ''} · Можно записаться на несколько турниров
+                </p>
+              )}
             </div>
           )}
         </>

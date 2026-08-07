@@ -9,6 +9,7 @@ import {
   PlayerEventType,
   Registration,
   RegistrationStatus,
+  TournamentStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TelegramService } from '../telegram/telegram.service';
@@ -32,8 +33,9 @@ export class RegistrationsService {
   ];
 
   /**
-   * Регистрация без ограничений по статусу турнира, вместимости и «один турнир на игрока».
-   * Остаются только: авторизация, блок игрока, существование турнира, дубликат записи.
+   * Регистрация на турнир с открытой записью.
+   * Лимит мест и лист ожидания работают как раньше.
+   * Можно быть записанным на несколько турниров одновременно.
    */
   async register(userId: string, tournamentId: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
@@ -52,6 +54,10 @@ export class RegistrationsService {
       throw new NotFoundException('Турнир не найден');
     }
 
+    if (tournament.status !== TournamentStatus.REGISTRATION_OPEN) {
+      throw new BadRequestException('Регистрация закрыта');
+    }
+
     const existing = await this.prisma.registration.findUnique({
       where: { userId_tournamentId: { userId, tournamentId } },
     });
@@ -60,7 +66,15 @@ export class RegistrationsService {
       throw new ConflictException('Игрок уже зарегистрирован на этот турнир');
     }
 
-    const status = RegistrationStatus.REGISTERED;
+    const activeCount = await this.prisma.registration.count({
+      where: {
+        tournamentId,
+        status: { in: [RegistrationStatus.REGISTERED, RegistrationStatus.CHECKED_IN] },
+      },
+    });
+
+    const hasFreeSlot = activeCount < tournament.maxPlayers;
+    const status = hasFreeSlot ? RegistrationStatus.REGISTERED : RegistrationStatus.WAITING;
 
     const registration = await this.prisma.registration.upsert({
       where: { userId_tournamentId: { userId, tournamentId } },
@@ -78,13 +92,23 @@ export class RegistrationsService {
       },
     });
 
-    await this.notificationsService.notify({
-      userId: user.id,
-      telegramId: user.telegramId,
-      type: NotificationType.REGISTRATION,
-      title: 'Регистрация подтверждена',
-      message: this.telegramService.templates.registrationSuccess(tournament.title),
-    });
+    if (status === RegistrationStatus.REGISTERED) {
+      await this.notificationsService.notify({
+        userId: user.id,
+        telegramId: user.telegramId,
+        type: NotificationType.REGISTRATION,
+        title: 'Регистрация подтверждена',
+        message: this.telegramService.templates.registrationSuccess(tournament.title),
+      });
+    } else {
+      await this.notificationsService.notify({
+        userId: user.id,
+        telegramId: user.telegramId,
+        type: NotificationType.REGISTRATION,
+        title: 'Лист ожидания',
+        message: `⏳ Свободных мест нет. Вы поставлены в лист ожидания турнира «${tournament.title}».`,
+      });
+    }
 
     return registration;
   }
