@@ -335,11 +335,13 @@ html, body {
   .board { padding: 0.8vh 1.6vw 0.6vh; gap: 0.4vh; }
   .head { max-height: 14vh; }
   .brand-logo { height: clamp(72px, 12vh, 120px); }
-  .play-screen { gap: 0.7vh; }
-  .big { font-size: clamp(56px, min(16vh, 10vw), 160px); }
-  .big[data-digits="5"] { font-size: clamp(48px, min(13vh, 8.5vw), 130px); }
-  .big[data-digits="6"] { font-size: clamp(40px, min(11vh, 7vw), 110px); }
-  .ante-bar .aval { font-size: clamp(32px, min(6.5vh, 5.5vw), 72px); }
-  .stat .val { font-size: clamp(30px, 5vh, 56px); }
+  .play-screen { gap: 1vh; }
+  .next { padding: 0.6vh 1vw 0.3vh; font-size: clamp(16px, 2.6vh, 26px); }
+  .stats { padding: 1.4vh 0 0.3vh; }
+  .big { font-size: clamp(56px, min(15vh, 10vw), 150px); }
+  .big[data-digits="5"] { font-size: clamp(48px, min(12.5vh, 8.5vw), 124px); }
+  .big[data-digits="6"] { font-size: clamp(40px, min(10.5vh, 7vw), 104px); }
+  .ante-bar .aval { font-size: clamp(30px, min(6vh, 5.2vw), 68px); }
+  .stat .val { font-size: clamp(28px, 4.8vh, 52px); }
   .time-big { font-size: clamp(72px, min(16vh, 14vw), 180px); }
 }
