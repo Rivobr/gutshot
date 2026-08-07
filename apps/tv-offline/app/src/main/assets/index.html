@@ -33,8 +33,12 @@
       <div class="hint">все TV стартуют одновременно по часам</div>
     </div>
 
-    <!-- PLAY -->
+    <!-- PLAY — вариант C: ANTE сверху под логотипом -->
     <div id="playScreen" class="screen play-screen hidden">
+      <div class="ante-bar ante-top">
+        <span class="albl">ANTE</span>
+        <span class="aval" id="ante">—</span>
+      </div>
       <main class="center">
         <div class="blinds">
           <div class="blind">
@@ -46,10 +50,6 @@
             <div class="lbl">Большой</div>
             <div class="big" id="bb">—</div>
           </div>
-        </div>
-        <div class="ante-bar">
-          <span class="albl">ANTE</span>
-          <span class="aval" id="ante">—</span>
         </div>
       </main>
       <p class="next" id="nextLine">Далее<b>—</b></p>
@@ -71,7 +71,7 @@
 
     <!-- BREAK -->
     <div id="breakScreen" class="screen play-screen hidden">
-      <main class="center" style="flex-direction:row">
+      <main class="center center-row">
         <div class="break-box">
           <div class="lbl">Перерыв</div>
           <div class="big" id="breakClock">—</div>
@@ -84,7 +84,7 @@
         </div>
         <div class="stat">
           <div class="lbl">Блайнды</div>
-          <div class="val" id="breakBlinds" style="font-size:clamp(40px,5.5vw,92px)">—</div>
+          <div class="val" id="breakBlinds">—</div>
         </div>
       </section>
     </div>

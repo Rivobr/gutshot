@@ -59,6 +59,21 @@
     }
   }
 
+  /** Mark digit length so CSS can shrink late-level amounts (200 000 etc.). */
+  function setDigits(el, formatted) {
+    if (!el) return;
+    var digits = String(formatted || '').replace(/\D/g, '').length;
+    if (digits < 1) digits = 1;
+    if (digits > 8) digits = 8;
+    el.setAttribute('data-digits', String(digits));
+  }
+
+  function setAmt(el, value) {
+    var formatted = fmtAmt(value);
+    el.textContent = formatted;
+    setDigits(el, formatted);
+  }
+
   function fmtClock(totalSec) {
     if (totalSec == null || isNaN(totalSec) || totalSec < 0) return '—';
     totalSec = Math.floor(totalSec);
@@ -213,21 +228,25 @@
     if (seg.isBreak) {
       show('break');
       $('breakClock').textContent = fmtClock(left);
+      setDigits($('breakClock'), $('breakClock').textContent);
       var next = nextPlayableAfter(state.idx);
       if (next) {
         $('breakLevel').textContent = String(next.level);
-        $('breakBlinds').textContent = fmtAmt(next.sb) + ' / ' + fmtAmt(next.bb);
+        var breakBlinds = fmtAmt(next.sb) + ' / ' + fmtAmt(next.bb);
+        $('breakBlinds').textContent = breakBlinds;
+        setDigits($('breakBlinds'), String(next.sb) + String(next.bb));
       } else {
         $('breakLevel').textContent = '—';
         $('breakBlinds').textContent = '—';
+        setDigits($('breakBlinds'), '0');
       }
       return;
     }
 
     show('play');
-    $('sb').textContent = fmtAmt(seg.sb);
-    $('bb').textContent = fmtAmt(seg.bb);
-    $('ante').textContent = fmtAmt(seg.ante);
+    setAmt($('sb'), seg.sb);
+    setAmt($('bb'), seg.bb);
+    setAmt($('ante'), seg.ante);
     $('levelVal').textContent = String(seg.level);
     $('levelLeftVal').textContent = fmtClock(left);
     $('breakLeftVal').textContent = fmtClock(secondsToNextBreak(state.idx, elapsed));

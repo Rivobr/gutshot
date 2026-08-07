@@ -1,3 +1,5 @@
+/* GUTSHOT TV Offline — Variant C: ANTE under logo, larger logo + type */
+
 html, body {
   margin: 0;
   height: 100%;
@@ -9,7 +11,10 @@ html, body {
 
 .board {
   height: 100%;
-  padding: 2.2vh 3.2vw;
+  padding:
+    max(1.8vh, 14px)
+    max(2.8vw, 20px)
+    max(1.6vh, 12px);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -18,49 +23,79 @@ html, body {
 
 .head {
   text-align: center;
-  padding-top: 0.4vh;
+  padding-top: 0;
+  flex: 0 0 auto;
 }
 
 .brand-logo {
   display: block;
-  height: clamp(96px, 14vh, 160px);
+  /* Variant C: logo intentionally dominant */
+  height: clamp(120px, 19vmin, 260px);
   width: auto;
+  max-width: 62vw;
   margin: 0 auto;
   object-fit: contain;
   filter: drop-shadow(0 8px 28px rgba(199, 154, 61, 0.22));
 }
 
 .rule {
-  width: 46%;
-  max-width: 640px;
+  width: min(48%, 680px);
   height: 2px;
-  margin: 1.6vh auto 0;
+  margin: 1vh auto 0;
   background: #c89a3d;
 }
 
+.screen {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.play-screen {
+  width: 100%;
+}
+
+/* Variant C: ante sits under logo, above blinds */
+.ante-top {
+  flex: 0 0 auto;
+  margin: 1.6vh auto 0.4vh;
+}
+
 .center {
-  flex: 1;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: 0;
-  gap: 2.2vh;
+  gap: clamp(8px, 1.4vh, 22px);
+  width: 100%;
+}
+
+.center-row {
+  flex-direction: row;
 }
 
 .blinds {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: min(100%, 96vw);
+  max-width: 100%;
+  gap: clamp(14px, 2.4vw, 48px);
 }
 
 .blind {
   text-align: center;
-  margin: 0 clamp(28px, 4vw, 64px);
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 46%;
 }
 
 .lbl {
-  font-size: clamp(18px, 1.8vw, 30px);
+  font-size: clamp(20px, 2.8vmin, 38px);
   letter-spacing: 0.24em;
   text-transform: uppercase;
   color: #c89a3d;
@@ -70,69 +105,93 @@ html, body {
 .big {
   font-family: Georgia, "Times New Roman", serif;
   font-weight: 700;
-  font-size: clamp(110px, 18vw, 280px);
-  line-height: 0.92;
+  /* Larger blinds */
+  font-size: clamp(84px, 18vmin, 290px);
+  line-height: 0.94;
   color: #fff8e6;
-  margin-top: 10px;
+  margin-top: 0.1em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
 }
 
+.big[data-digits="5"] { font-size: clamp(68px, 15vmin, 230px); }
+.big[data-digits="6"] { font-size: clamp(56px, 12.5vmin, 196px); }
+.big[data-digits="7"],
+.big[data-digits="8"] { font-size: clamp(46px, 10.5vmin, 164px); }
+
 .sep {
+  flex: 0 0 auto;
   width: 3px;
-  height: clamp(120px, 22vh, 240px);
+  height: clamp(90px, 20vmin, 240px);
   background: #c89a3d;
+  align-self: center;
 }
 
 .next {
   text-align: center;
   color: #7a6e5a;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  font-size: clamp(18px, 1.7vw, 28px);
-  margin: 0 0 1.2vh;
+  font-size: clamp(16px, 2.3vmin, 30px);
+  margin: 0 0 0.5vh;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  padding: 0 1vw;
 }
 
 .next b {
   color: #f7d98a;
   margin-left: 0.5em;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 1.15em;
+  font-size: 1.14em;
 }
 
 .stats {
   display: flex;
   border-top: 1px solid rgba(199, 154, 61, 0.22);
-  padding: 2.4vh 0 1.8vh;
+  padding: clamp(10px, 1.6vh, 26px) 0 clamp(6px, 1vh, 16px);
+  flex: 0 0 auto;
+  width: 100%;
+  gap: 0.5vw;
 }
 
 .stats2 {
-  max-width: 1100px;
+  max-width: 1200px;
   margin: 0 auto;
-  width: 100%;
 }
 
 .stat {
-  flex: 1;
+  flex: 1 1 0;
   text-align: center;
+  min-width: 0;
 }
 
 .stat .lbl {
-  font-size: clamp(16px, 1.5vw, 26px);
+  font-size: clamp(16px, 2.4vmin, 32px);
 }
 
 .stat .val {
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(48px, 6.5vw, 110px);
+  font-size: clamp(40px, 8vmin, 124px);
   font-weight: 700;
-  margin-top: 8px;
+  margin-top: 0.12em;
   color: #f5edd6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .break-box {
   text-align: center;
+  width: min(100%, 90vw);
 }
 
 .break-box .big {
-  font-size: clamp(120px, 18vw, 280px);
+  font-size: clamp(88px, 18vmin, 280px);
   color: #f7d98a;
 }
 
@@ -140,51 +199,64 @@ html, body {
   display: flex;
   align-items: baseline;
   justify-content: center;
-  gap: 1.2em;
-  border: 1px solid rgba(199, 154, 61, 0.45);
+  gap: 1em;
+  border: 1px solid rgba(199, 154, 61, 0.5);
   border-radius: 999px;
-  padding: 0.55em 2em;
-  min-width: min(70vw, 820px);
+  padding: 0.5em 2em;
+  width: fit-content;
+  max-width: min(88vw, 900px);
+  box-sizing: border-box;
 }
 
 .ante-bar .albl {
-  font-size: clamp(22px, 2.2vw, 36px);
+  font-size: clamp(22px, 3.2vmin, 42px);
   letter-spacing: 0.28em;
   color: #c89a3d;
   font-weight: 700;
+  flex: 0 0 auto;
 }
 
 .ante-bar .aval {
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(64px, 8vw, 130px);
+  font-size: clamp(56px, 9.8vmin, 160px);
   font-weight: 700;
   color: #fff8e6;
   line-height: 1;
+  white-space: nowrap;
+  min-width: 0;
 }
 
+.ante-bar .aval[data-digits="5"] { font-size: clamp(48px, 8.4vmin, 136px); }
+.ante-bar .aval[data-digits="6"] { font-size: clamp(40px, 7.2vmin, 116px); }
+.ante-bar .aval[data-digits="7"],
+.ante-bar .aval[data-digits="8"] { font-size: clamp(34px, 6vmin, 96px); }
+
 .menu-center {
-  flex: 1;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2vh;
+  gap: clamp(8px, 1.5vh, 22px);
+  min-height: 0;
+  padding: 0 2vw;
 }
 
 .time-big {
   font-family: Georgia, "Times New Roman", serif;
   font-weight: 700;
-  font-size: clamp(100px, 14vw, 220px);
+  font-size: clamp(80px, 16vmin, 240px);
   color: #fff8e6;
   line-height: 1;
 }
 
 .meta {
   color: #7a6e5a;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  font-size: clamp(16px, 1.6vw, 26px);
+  font-size: clamp(14px, 2.1vmin, 28px);
   text-align: center;
+  max-width: 92%;
 }
 
 .btn {
@@ -192,12 +264,12 @@ html, body {
   background: linear-gradient(180deg, #e0c070, #c89a3d);
   color: #1a140a;
   font-weight: 800;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  font-size: clamp(18px, 1.8vw, 28px);
-  padding: 1em 2.4em;
+  font-size: clamp(16px, 2.4vmin, 30px);
+  padding: 0.9em 2.2em;
   border-radius: 999px;
-  margin-top: 1vh;
+  margin-top: 0.4vh;
   cursor: pointer;
 }
 
@@ -210,27 +282,13 @@ html, body {
   color: #5c5345;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  font-size: clamp(14px, 1.3vw, 20px);
+  font-size: clamp(12px, 1.8vmin, 22px);
 }
 
 .chevs {
   color: #c89a3d;
-  font-size: clamp(22px, 2vw, 32px);
-}
-
-.screen {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.play-screen {
-  width: 100%;
-}
-
-.menu-center.screen {
-  /* already flex column via .menu-center */
+  font-size: clamp(20px, 2.8vmin, 34px);
+  line-height: 1;
 }
 
 .hidden {
@@ -240,8 +298,18 @@ html, body {
 .finish-title {
   font-family: Georgia, "Times New Roman", serif;
   font-weight: 700;
-  font-size: clamp(64px, 9vw, 130px);
+  font-size: clamp(48px, 10vmin, 140px);
   color: #fff8e6;
   line-height: 1.1;
   text-align: center;
+  max-width: 94%;
+}
+
+/* Short panels: keep C layout, slightly tighter */
+@media (max-height: 800px) {
+  .brand-logo { height: clamp(96px, 15vmin, 180px); }
+  .ante-top { margin-top: 0.8vh; }
+  .center { gap: 0.8vh; }
+  .stats { padding: 0.9vh 0 0.5vh; }
+  .menu-center { gap: 1vh; }
 }
