@@ -56,19 +56,33 @@ export function App(): JSX.Element {
 
 function ConsentGate({ children }: { children: JSX.Element }): JSX.Element {
   const queryClient = useQueryClient();
-  const { data: profile, isPending, isError, isFetching, refetch } = useProfile();
+  const { data: profile, isPending, isError, refetch } = useProfile();
   const [timedOut, setTimedOut] = useState(false);
   const [recovering, setRecovering] = useState(false);
   const recoveryTried = useRef(false);
+  // Wall-clock start of the current wait window. Survives isFetching / retry flips
+  // and React StrictMode remounts without resetting the budget to another 12s.
+  const waitStartedAt = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!isPending && !isFetching && !recovering) {
-      setTimedOut(false);
+    if (profile) {
+      waitStartedAt.current = null;
       return;
     }
-    const timer = window.setTimeout(() => setTimedOut(true), PROFILE_WAIT_MS);
+    if (!isPending && !recovering) {
+      return;
+    }
+    if (waitStartedAt.current == null) {
+      waitStartedAt.current = Date.now();
+    }
+    const remaining = PROFILE_WAIT_MS - (Date.now() - waitStartedAt.current);
+    if (remaining <= 0) {
+      setTimedOut(true);
+      return;
+    }
+    const timer = window.setTimeout(() => setTimedOut(true), remaining);
     return () => window.clearTimeout(timer);
-  }, [isPending, isFetching, recovering]);
+  }, [profile, isPending, recovering]);
 
   useEffect(() => {
     if (profile?.id) {
@@ -129,6 +143,7 @@ function ConsentGate({ children }: { children: JSX.Element }): JSX.Element {
               setTimedOut(false);
               setRecovering(true);
               recoveryTried.current = false;
+              waitStartedAt.current = null;
               try {
                 tokenStorage.clear();
                 clearReauthFlag();

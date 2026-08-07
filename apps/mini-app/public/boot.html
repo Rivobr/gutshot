@@ -125,9 +125,7 @@
             if (tg.setBackgroundColor) tg.setBackgroundColor('#090909');
             if (tg.setBottomBarColor) tg.setBottomBarColor('#090909');
             if (tg.disableVerticalSwipes) tg.disableVerticalSwipes();
-            if (tg.requestFullscreen && (!tg.isVersionAtLeast || tg.isVersionAtLeast('8.0'))) {
-              if (!tg.isFullscreen) tg.requestFullscreen();
-            }
+            // Не вызываем requestFullscreen на boot — вешает часть Android WebView.
             return tg;
           } catch (e) {
             return null;
@@ -135,7 +133,7 @@
         }
 
         function appUrl() {
-          var q = '/?from=boot&t=' + Date.now() + '&v=20260806c';
+          var q = '/?from=boot&t=' + Date.now() + '&v=20260807a';
           if (ticket) q += '&ticket=' + encodeURIComponent(ticket);
           return q + (location.hash || '');
         }

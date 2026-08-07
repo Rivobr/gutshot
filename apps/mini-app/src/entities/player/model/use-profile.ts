@@ -9,9 +9,9 @@ export function useProfile() {
   return useQuery({
     queryKey: ['profile'],
     queryFn: playerApi.getProfile,
-    // Медленный iOS/TLS: несколько попыток с паузой, пока ConsentGate ждёт до 25с.
-    retry: 3,
-    retryDelay: (attempt) => Math.min(1_500, 350 * 2 ** attempt),
+    // Keep retries short: ConsentGate hard-stops at ~12s wall clock.
+    retry: 2,
+    retryDelay: (attempt) => Math.min(800, 300 * 2 ** attempt),
     staleTime: 60_000,
     meta: { critical: true },
   });

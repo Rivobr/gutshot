@@ -61,19 +61,10 @@ function applyTopInset(webApp: TelegramWebApp): void {
   document.documentElement.style.setProperty('--app-top-pad', `${pad}px`);
 }
 
-function requestFullscreenIfSupported(webApp: TelegramWebApp): void {
-  if (!webApp.requestFullscreen) return;
-  if (webApp.isVersionAtLeast && !webApp.isVersionAtLeast('8.0')) return;
-  if (webApp.isFullscreen) return;
-
-  try {
-    webApp.requestFullscreen();
-  } catch {
-    // Клиент может отклонить запрос — остаёмся в expand().
-  }
-}
-
-/** Тёмная шапка, safe-area и максимум экрана без верхней плашки Telegram. */
+/** Тёмная шапка, safe-area и expand. Fullscreen на boot НЕ вызываем:
+ * на части Android Telegram WebView requestFullscreen() вешает страницу
+ * (бесконечный splash / frozen UI). Expand достаточно для Mini App.
+ */
 export function configureTelegramChrome(): void {
   const webApp = getTelegramWebApp();
   if (!webApp) {
@@ -105,15 +96,8 @@ export function configureTelegramChrome(): void {
     // optional
   }
 
-  requestFullscreenIfSupported(webApp);
-  window.setTimeout(() => {
-    requestFullscreenIfSupported(webApp);
-    applyTopInset(webApp);
-  }, 120);
-  window.setTimeout(() => {
-    requestFullscreenIfSupported(webApp);
-    applyTopInset(webApp);
-  }, 600);
+  window.setTimeout(() => applyTopInset(webApp), 120);
+  window.setTimeout(() => applyTopInset(webApp), 600);
 
   applyTopInset(webApp);
   webApp.onEvent?.('safeAreaChanged', () => applyTopInset(webApp));

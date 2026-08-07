@@ -100,16 +100,8 @@
             if (tg.setHeaderColor) tg.setHeaderColor(APP_BG);
             if (tg.setBackgroundColor) tg.setBackgroundColor(APP_BG);
             if (tg.setBottomBarColor) tg.setBottomBarColor(APP_BG);
-            // Fullscreen без верхней плашки (Bot API 8.0+).
-            if (
-              tg.requestFullscreen &&
-              (!tg.isVersionAtLeast || tg.isVersionAtLeast('8.0')) &&
-              !tg.isFullscreen
-            ) {
-              try {
-                tg.requestFullscreen();
-              } catch (e2) {}
-            }
+            // requestFullscreen на boot намеренно НЕ вызываем:
+            // на части Android Telegram WebView это зависает навечно.
           } catch (e) {}
         }
 
