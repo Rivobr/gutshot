@@ -29,6 +29,12 @@ export class ProfileController {
     private readonly usersService: UsersService,
   ) {}
 
+  /** Лёгкий вход Mini App: без метрик и достижений. */
+  @Get('bootstrap')
+  getBootstrap(@CurrentUser() user: JwtPayload) {
+    return this.profileService.getBootstrap(user.sub);
+  }
+
   @Get()
   getProfile(@CurrentUser() user: JwtPayload) {
     return this.profileService.getProfile(user.sub);

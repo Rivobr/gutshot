@@ -9,7 +9,7 @@ import {
   waitForInitData,
 } from '../processes/startup/use-startup';
 import { ConsentScreen } from '../pages/Onboarding/ConsentScreen';
-import { useProfile } from '../entities/player';
+import { playerApi, useBootstrap } from '../entities/player';
 import { tournamentApi } from '../entities/tournament/api/tournament.api';
 import { EmptyState, Button } from '@gutshot/ui';
 import { clearReauthFlag } from '../shared/api/client';
@@ -18,7 +18,8 @@ import { getTelegramInitData } from '../shared/lib/telegram';
 import { SplashScreen } from '../widgets/SplashScreen/SplashScreen';
 import { ToastHost } from '../shared/ui/toast';
 
-const PROFILE_WAIT_MS = 12_000;
+/** Bootstrap должен отвечать за сотни мс; 6с — жёсткий потолок. */
+const BOOTSTRAP_WAIT_MS = 6_000;
 
 export function App(): JSX.Element {
   const { status, errorMessage } = useStartup();
@@ -56,16 +57,14 @@ export function App(): JSX.Element {
 
 function ConsentGate({ children }: { children: JSX.Element }): JSX.Element {
   const queryClient = useQueryClient();
-  const { data: profile, isPending, isError, refetch } = useProfile();
+  const { data: boot, isPending, isError, refetch } = useBootstrap();
   const [timedOut, setTimedOut] = useState(false);
   const [recovering, setRecovering] = useState(false);
   const recoveryTried = useRef(false);
-  // Wall-clock start of the current wait window. Survives isFetching / retry flips
-  // and React StrictMode remounts without resetting the budget to another 12s.
   const waitStartedAt = useRef<number | null>(null);
 
   useEffect(() => {
-    if (profile) {
+    if (boot) {
       waitStartedAt.current = null;
       return;
     }
@@ -75,23 +74,24 @@ function ConsentGate({ children }: { children: JSX.Element }): JSX.Element {
     if (waitStartedAt.current == null) {
       waitStartedAt.current = Date.now();
     }
-    const remaining = PROFILE_WAIT_MS - (Date.now() - waitStartedAt.current);
+    const remaining = BOOTSTRAP_WAIT_MS - (Date.now() - waitStartedAt.current);
     if (remaining <= 0) {
       setTimedOut(true);
       return;
     }
     const timer = window.setTimeout(() => setTimedOut(true), remaining);
     return () => window.clearTimeout(timer);
-  }, [profile, isPending, recovering]);
+  }, [boot, isPending, recovering]);
 
   useEffect(() => {
-    if (profile?.id) {
+    if (boot?.id) {
       clearReauthFlag();
     }
-  }, [profile?.id]);
+  }, [boot?.id]);
 
+  // После успешного boot — тяжёлый профиль и nearest в фоне, не блокируя UI.
   useEffect(() => {
-    if (!profile?.consentAcceptedAt) {
+    if (!boot?.consentAcceptedAt) {
       return;
     }
     void queryClient.prefetchQuery({
@@ -99,11 +99,15 @@ function ConsentGate({ children }: { children: JSX.Element }): JSX.Element {
       queryFn: tournamentApi.getNearest,
       staleTime: 30_000,
     });
-  }, [profile?.consentAcceptedAt, queryClient]);
+    void queryClient.prefetchQuery({
+      queryKey: ['profile'],
+      queryFn: playerApi.getProfile,
+      staleTime: 60_000,
+    });
+  }, [boot?.consentAcceptedAt, queryClient]);
 
-  // Один тихий recovery без reload: перелогин по initData + повтор профиля.
   useEffect(() => {
-    if (!isError || profile || recoveryTried.current) {
+    if (!isError || boot || recoveryTried.current) {
       return;
     }
     recoveryTried.current = true;
@@ -123,18 +127,18 @@ function ConsentGate({ children }: { children: JSX.Element }): JSX.Element {
         setRecovering(false);
       }
     })();
-  }, [isError, profile, refetch]);
+  }, [isError, boot, refetch]);
 
   if ((isPending || recovering) && !timedOut) {
-    return <SplashScreen subtitle="Загружаем профиль…" />;
+    return <SplashScreen subtitle="Открываем клуб…" />;
   }
 
-  if (isError || !profile || timedOut) {
+  if (isError || !boot || timedOut) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-4">
         <EmptyState
           icon="⚠️"
-          title="Не удалось загрузить профиль"
+          title="Не удалось открыть клуб"
           description="Сессия могла устареть или сервер не ответил. Нажмите «Повторить»."
         />
         <Button
@@ -168,7 +172,7 @@ function ConsentGate({ children }: { children: JSX.Element }): JSX.Element {
     );
   }
 
-  if (!profile.consentAcceptedAt) {
+  if (!boot.consentAcceptedAt) {
     return <ConsentScreen />;
   }
 

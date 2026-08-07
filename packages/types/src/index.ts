@@ -17,6 +17,22 @@ export interface User {
   isBlocked: boolean;
 }
 
+/**
+ * Лёгкий профиль для boot Mini App (ConsentGate).
+ * Без метрик/ачивок/истории — один быстрый SELECT.
+ */
+export interface PlayerBootstrapDto {
+  id: string;
+  telegramId: string;
+  username?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  nickname?: string | null;
+  photoUrl?: string | null;
+  xp: number;
+  consentAcceptedAt: string | null;
+}
+
 export interface PlayerProfileDto {
   id: string;
   telegramId: string;

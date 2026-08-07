@@ -4,6 +4,7 @@ import {
   AchievementTextDto,
   LegalDocumentDto,
   NotificationDto,
+  PlayerBootstrapDto,
   PlayerEventDto,
   PlayerProfileDto,
   Registration,
@@ -18,6 +19,11 @@ export interface XPHistoryDto {
 }
 
 export const playerApi = {
+  /** Лёгкий boot-профиль для ConsentGate (быстрый вход). */
+  async getBootstrap(): Promise<PlayerBootstrapDto> {
+    const { data } = await apiClient.get('/profile/bootstrap');
+    return data.data;
+  },
   async getProfile(): Promise<PlayerProfileDto> {
     const { data } = await apiClient.get('/profile');
     return data.data;

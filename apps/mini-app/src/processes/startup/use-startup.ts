@@ -6,10 +6,10 @@ import { tokenStorage } from '../../shared/lib/token-storage';
 
 export type StartupStatus = 'loading' | 'ready' | 'error';
 
-const INIT_WAIT_MS = 3_000;
+const INIT_WAIT_MS = 2_500;
 /** Жёсткий потолок splash — не крутим экран минутами. */
-const HARD_TIMEOUT_MS = 18_000;
-const LOGIN_ATTEMPTS = 3;
+const HARD_TIMEOUT_MS = 12_000;
+const LOGIN_ATTEMPTS = 2;
 
 function readTicketFromUrl(): string {
   try {

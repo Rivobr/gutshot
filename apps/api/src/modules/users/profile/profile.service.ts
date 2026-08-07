@@ -20,6 +20,64 @@ export class ProfileService {
     private readonly achievementEngine: AchievementEngineService,
   ) {}
 
+  /**
+   * Лёгкий bootstrap для входа Mini App.
+   * Один SELECT (+ при необходимости создание пустого PlayerProfile).
+   * Без metrics / achievements / истории — это грузится через getProfile после Home.
+   */
+  async getBootstrap(userId: string) {
+    let user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        telegramId: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        nickname: true,
+        photoUrl: true,
+        consentAcceptedAt: true,
+        playerProfile: { select: { xp: true } },
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Профиль не найден');
+    }
+
+    if (!user.playerProfile) {
+      await this.prisma.playerProfile.create({
+        data: { userId: user.id, xp: 0 },
+      });
+      user = await this.prisma.user.findUniqueOrThrow({
+        where: { id: userId },
+        select: {
+          id: true,
+          telegramId: true,
+          username: true,
+          firstName: true,
+          lastName: true,
+          nickname: true,
+          photoUrl: true,
+          consentAcceptedAt: true,
+          playerProfile: { select: { xp: true } },
+        },
+      });
+    }
+
+    return {
+      id: user.id,
+      telegramId: user.telegramId,
+      username: user.username,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      nickname: user.nickname,
+      photoUrl: user.photoUrl,
+      xp: user.playerProfile?.xp ?? 0,
+      consentAcceptedAt: user.consentAcceptedAt ? user.consentAcceptedAt.toISOString() : null,
+    };
+  }
+
   async getProfile(userId: string) {
     let user = await this.prisma.user.findUnique({
       where: { id: userId },

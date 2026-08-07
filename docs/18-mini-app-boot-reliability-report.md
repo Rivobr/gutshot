@@ -2,7 +2,7 @@
 
 **Дата обновления:** 2026-08-07  
 **Прод:** `app.gutshotapp.ru` · бот `@gutshotpokerbot` · VPS `/opt/gutshot`  
-**Сейчас на сервере:** `c1ed974` · entry `enter.html?v=20260807c`
+**Сейчас на сервере:** см. деплой · entry `enter.html?v=20260807d` · boot через `GET /profile/bootstrap`
 
 ---
 

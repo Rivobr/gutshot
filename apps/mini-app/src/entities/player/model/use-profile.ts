@@ -1,19 +1,32 @@
 import { isAxiosError } from 'axios';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { PlayerProfileDto } from '@gutshot/types';
+import type { PlayerBootstrapDto, PlayerProfileDto } from '@gutshot/types';
 import { playerApi } from '../api/player.api';
 import { getTelegramInitData } from '../../../shared/lib/telegram';
 import { loginWithTelegramInitData } from '../../../processes/startup/use-startup';
+
+export const BOOTSTRAP_QUERY_KEY = ['profile', 'bootstrap'] as const;
+
+/** Лёгкий профиль для входа (ConsentGate). Не тянет метрики/ачивки. */
+export function useBootstrap() {
+  return useQuery({
+    queryKey: BOOTSTRAP_QUERY_KEY,
+    queryFn: playerApi.getBootstrap,
+    retry: 1,
+    retryDelay: 400,
+    staleTime: 60_000,
+    meta: { critical: true },
+  });
+}
 
 export function useProfile() {
   return useQuery({
     queryKey: ['profile'],
     queryFn: playerApi.getProfile,
-    // Keep retries short: ConsentGate hard-stops at ~12s wall clock.
-    retry: 2,
-    retryDelay: (attempt) => Math.min(800, 300 * 2 ** attempt),
+    // Full profile is no longer on the critical boot path.
+    retry: 1,
+    retryDelay: 500,
     staleTime: 60_000,
-    meta: { critical: true },
   });
 }
 
@@ -107,6 +120,9 @@ export function useAcceptConsent() {
   return useMutation({
     mutationFn: () => acceptConsentWithRetry(),
     onSuccess: (result) => {
+      queryClient.setQueryData(BOOTSTRAP_QUERY_KEY, (current: PlayerBootstrapDto | undefined) =>
+        current ? { ...current, consentAcceptedAt: result.consentAcceptedAt } : current,
+      );
       queryClient.setQueryData(['profile'], (current: PlayerProfileDto | undefined) => {
         if (!current) {
           return current;
@@ -116,6 +132,7 @@ export function useAcceptConsent() {
           consentAcceptedAt: result.consentAcceptedAt,
         };
       });
+      void queryClient.invalidateQueries({ queryKey: BOOTSTRAP_QUERY_KEY });
       void queryClient.invalidateQueries({ queryKey: ['profile'] });
     },
   });
