@@ -131,11 +131,26 @@ export function useStartup(): { status: StartupStatus; errorMessage?: string } {
       }
 
       const ticket = readTicketFromUrl();
+      const fromEnter =
+        typeof window !== 'undefined' &&
+        /(?:^|[?&])from=(?:enter|boot)(?:&|$)/.test(window.location.search);
       const runReady = () => {
         if (!cancelled) {
           finish('ready');
         }
       };
+
+      // FAST PATH: enter.html уже положил JWT. Не блокируем splash повторным логином
+      // (раньше initData → axios 12с × 3 оставлял «Открываем клуб…» на десятки секунд).
+      if (tokenStorage.get() && (fromEnter || !getTelegramInitData())) {
+        runReady();
+        // Фоном освежим сессию, если есть initData — без блокировки UI.
+        const bgInit = getTelegramInitData();
+        if (bgInit) {
+          void loginWithTelegramInitData(bgInit).catch(() => undefined);
+        }
+        return;
+      }
 
       // 1) Свежий initData
       const immediateInit = getTelegramInitData();
@@ -174,7 +189,7 @@ export function useStartup(): { status: StartupStatus; errorMessage?: string } {
         }
       }
 
-      // 3) Уже есть токен с enter.html
+      // 3) Уже есть токен
       if (tokenStorage.get()) {
         runReady();
         return;

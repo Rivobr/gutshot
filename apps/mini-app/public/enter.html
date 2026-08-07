@@ -8,7 +8,6 @@
     />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <title>GUTSHOT</title>
-    <!-- Сразу гасим нативный лоадер Telegram. WebView уже инжектит Telegram.WebApp. -->
     <script>
       (function () {
         try {
@@ -86,12 +85,12 @@
         color: #111;
         font-weight: 700;
         font-size: 15px;
+        text-decoration: none;
       }
       .btn.show {
         display: inline-block;
       }
     </style>
-    <!-- CDN только запасной: не блокирует парсинг и ready(). -->
     <script src="https://telegram.org/js/telegram-web-app.js" async></script>
   </head>
   <body>
@@ -99,21 +98,22 @@
       <div class="logo" aria-hidden="true"><i></i><i></i><i class="r"></i><i></i><i></i></div>
       <div class="spin" id="sp"></div>
       <div class="msg" id="m">Входим…</div>
-      <button class="btn" id="b" type="button">Повторить</button>
+      <a class="btn" id="b" href="#">Повторить</a>
     </div>
     <script>
       (function () {
         var TOKEN_KEY = 'gutshot_access_token';
-        var FETCH_MS = 10000;
+        var FETCH_MS = 8000;
         var params = new URLSearchParams(location.search);
         var ticket = params.get('ticket') || '';
         var m = document.getElementById('m');
         var b = document.getElementById('b');
         var sp = document.getElementById('sp');
         var done = false;
+        var navTarget = '';
         var hardTimer = setTimeout(function () {
           if (!done) fail('Загрузка зависла. Нажмите «Повторить» или /start в боте.');
-        }, 18000);
+        }, 12000);
 
         function bumpTg() {
           try {
@@ -124,8 +124,6 @@
             if (tg.setHeaderColor) tg.setHeaderColor('#090909');
             if (tg.setBackgroundColor) tg.setBackgroundColor('#090909');
             if (tg.setBottomBarColor) tg.setBottomBarColor('#090909');
-            if (tg.disableVerticalSwipes) tg.disableVerticalSwipes();
-            // Не вызываем requestFullscreen на boot — вешает часть Android WebView.
             return tg;
           } catch (e) {
             return null;
@@ -133,9 +131,29 @@
         }
 
         function appUrl() {
-          var q = '/?from=enter&t=' + Date.now() + '&v=20260807b';
+          var q = '/?from=enter&t=' + Date.now() + '&v=20260807c';
           if (ticket) q += '&ticket=' + encodeURIComponent(ticket);
           return q + (location.hash || '');
+        }
+
+        function navigateNow(target) {
+          navTarget = target;
+          try {
+            var meta = document.createElement('meta');
+            meta.httpEquiv = 'refresh';
+            meta.content = '0;url=' + target;
+            document.head.appendChild(meta);
+          } catch (e) {}
+          try {
+            location.replace(target);
+          } catch (e1) {
+            try {
+              location.href = target;
+            } catch (e2) {}
+          }
+          try {
+            location.assign(target);
+          } catch (e3) {}
         }
 
         function goApp() {
@@ -144,19 +162,24 @@
           clearTimeout(hardTimer);
           m.textContent = 'Открываем клуб…';
           var target = appUrl();
-          try {
-            location.replace(target);
-          } catch (e) {
-            try {
-              location.href = target;
-            } catch (e2) {}
-          }
-          // Critical: if WebView hangs on navigation (or next page freezes on
-          // requestFullscreen), we used to clear hardTimer and sit forever on
-          // «Открываем клуб…» with no retry button. Keep a short escape hatch.
+          navigateNow(target);
+
+          // iOS Telegram часто игнорит programmatic navigation —
+          // через 1.2с показываем кнопку, которую надо нажать (user gesture).
           hardTimer = setTimeout(function () {
-            fail('Не удалось открыть приложение. Нажмите «Повторить» или /start в боте.');
-          }, 5000);
+            sp.style.display = 'none';
+            m.textContent = 'Нажмите кнопку, чтобы открыть клуб';
+            b.textContent = 'Открыть клуб';
+            b.href = target;
+            b.classList.add('show');
+            b.onclick = function (ev) {
+              try {
+                ev.preventDefault();
+              } catch (e) {}
+              navigateNow(target);
+              return false;
+            };
+          }, 1200);
         }
 
         function fail(text) {
@@ -164,7 +187,23 @@
           clearTimeout(hardTimer);
           sp.style.display = 'none';
           m.textContent = text;
+          b.textContent = 'Повторить';
+          b.href = '#';
           b.classList.add('show');
+          b.onclick = function (ev) {
+            try {
+              ev.preventDefault();
+            } catch (e) {}
+            done = false;
+            sp.style.display = 'block';
+            b.classList.remove('show');
+            m.textContent = 'Входим…';
+            hardTimer = setTimeout(function () {
+              if (!done) fail('Загрузка зависла. Нажмите «Повторить» или /start в боте.');
+            }, 12000);
+            start();
+            return false;
+          };
         }
 
         function getInitData() {
@@ -211,7 +250,6 @@
               try {
                 localStorage.setItem(TOKEN_KEY, token);
               } catch (e) {}
-              m.textContent = 'Открываем клуб…';
               goApp();
             })
             .catch(function (err) {
@@ -219,7 +257,7 @@
               if (err && err.fatal) throw err;
               if (attempt < 2) {
                 return new Promise(function (resolve) {
-                  setTimeout(resolve, 400);
+                  setTimeout(resolve, 300);
                 }).then(function () {
                   return fetchJson(path, body, attempt + 1);
                 });
@@ -243,44 +281,11 @@
           } catch (e) {}
           if (!token) return Promise.reject(new Error('no token'));
 
-          m.textContent = 'Проверяем сессию…';
-          var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
-          var timer = ctrl
-            ? setTimeout(function () {
-                try {
-                  ctrl.abort();
-                } catch (e) {}
-              }, FETCH_MS)
-            : null;
-
-          return fetch('/api/v1/profile', {
-            method: 'GET',
-            cache: 'no-store',
-            credentials: 'omit',
-            headers: { Authorization: 'Bearer ' + token },
-            signal: ctrl ? ctrl.signal : undefined,
-          }).then(function (r) {
-            if (timer) clearTimeout(timer);
-            if (!r.ok) {
-              try {
-                localStorage.removeItem(TOKEN_KEY);
-              } catch (e) {}
-              throw new Error('stale token');
-            }
-            m.textContent = 'Открываем клуб…';
-            goApp();
-          });
+          // Не ждём /profile на entry — токен уже есть, сразу в SPA.
+          // Проверку сделает ConsentGate; иначе iOS часто зависает на втором запросе.
+          goApp();
+          return Promise.resolve();
         }
-
-        b.onclick = function () {
-          done = false;
-          sp.style.display = 'block';
-          b.classList.remove('show');
-          hardTimer = setTimeout(function () {
-            if (!done) fail('Загрузка зависла. Нажмите «Повторить» или /start в боте.');
-          }, 18000);
-          start();
-        };
 
         function waitInitDataOrFail() {
           var tries = 0;
@@ -295,7 +300,7 @@
               });
               return;
             }
-            if (tries >= 50) {
+            if (tries >= 40) {
               clearInterval(timer);
               if (ticket) {
                 loginWithTicket(ticket).catch(function () {
@@ -310,9 +315,7 @@
 
         function start() {
           bumpTg();
-          // CDN-скрипт мог подгрузиться чуть позже — ещё раз ready.
-          setTimeout(bumpTg, 100);
-          setTimeout(bumpTg, 500);
+          setTimeout(bumpTg, 80);
 
           var initData = getInitData();
           if (initData) {
@@ -334,10 +337,34 @@
             return;
           }
 
-          validateCachedToken().catch(function () {
-            waitInitDataOrFail();
-          });
+          try {
+            if (localStorage.getItem(TOKEN_KEY)) {
+              validateCachedToken();
+              return;
+            }
+          } catch (e) {}
+
+          waitInitDataOrFail();
         }
+
+        b.onclick = function (ev) {
+          try {
+            ev.preventDefault();
+          } catch (e) {}
+          if (navTarget) {
+            navigateNow(navTarget);
+            return false;
+          }
+          fail('Входим…');
+          sp.style.display = 'block';
+          b.classList.remove('show');
+          done = false;
+          hardTimer = setTimeout(function () {
+            if (!done) fail('Загрузка зависла. Нажмите «Повторить» или /start в боте.');
+          }, 12000);
+          start();
+          return false;
+        };
 
         start();
       })();

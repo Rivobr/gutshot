@@ -90,11 +90,8 @@ export function configureTelegramChrome(): void {
     // optional
   }
 
-  try {
-    webApp.enableClosingConfirmation?.();
-  } catch {
-    // optional
-  }
+  // enableClosingConfirmation намеренно НЕ вызываем на boot —
+  // на части iOS клиентов даёт лишние диалоги/задержки при входе.
 
   window.setTimeout(() => applyTopInset(webApp), 120);
   window.setTimeout(() => applyTopInset(webApp), 600);
