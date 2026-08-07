@@ -30,9 +30,9 @@ html, body {
 .brand-logo {
   display: block;
   /* Variant C: logo intentionally dominant */
-  height: clamp(120px, 19vmin, 260px);
+  height: clamp(140px, 23vmin, 320px);
   width: auto;
-  max-width: 62vw;
+  max-width: 72vw;
   margin: 0 auto;
   object-fit: contain;
   filter: drop-shadow(0 8px 28px rgba(199, 154, 61, 0.22));
@@ -95,7 +95,7 @@ html, body {
 }
 
 .lbl {
-  font-size: clamp(20px, 2.8vmin, 38px);
+  font-size: clamp(22px, 3.2vmin, 44px);
   letter-spacing: 0.24em;
   text-transform: uppercase;
   color: #c89a3d;
@@ -106,19 +106,19 @@ html, body {
   font-family: Georgia, "Times New Roman", serif;
   font-weight: 700;
   /* Larger blinds */
-  font-size: clamp(84px, 18vmin, 290px);
-  line-height: 0.94;
+  font-size: clamp(96px, 21vmin, 340px);
+  line-height: 0.93;
   color: #fff8e6;
-  margin-top: 0.1em;
+  margin-top: 0.08em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: clip;
 }
 
-.big[data-digits="5"] { font-size: clamp(68px, 15vmin, 230px); }
-.big[data-digits="6"] { font-size: clamp(56px, 12.5vmin, 196px); }
+.big[data-digits="5"] { font-size: clamp(76px, 17vmin, 270px); }
+.big[data-digits="6"] { font-size: clamp(62px, 14vmin, 220px); }
 .big[data-digits="7"],
-.big[data-digits="8"] { font-size: clamp(46px, 10.5vmin, 164px); }
+.big[data-digits="8"] { font-size: clamp(52px, 11.5vmin, 180px); }
 
 .sep {
   flex: 0 0 auto;
@@ -133,7 +133,7 @@ html, body {
   color: #7a6e5a;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  font-size: clamp(16px, 2.3vmin, 30px);
+  font-size: clamp(18px, 2.7vmin, 34px);
   margin: 0 0 0.5vh;
   flex: 0 0 auto;
   white-space: nowrap;
@@ -171,12 +171,12 @@ html, body {
 }
 
 .stat .lbl {
-  font-size: clamp(16px, 2.4vmin, 32px);
+  font-size: clamp(18px, 2.8vmin, 36px);
 }
 
 .stat .val {
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(40px, 8vmin, 124px);
+  font-size: clamp(46px, 9.2vmin, 140px);
   font-weight: 700;
   margin-top: 0.12em;
   color: #f5edd6;
@@ -191,7 +191,7 @@ html, body {
 }
 
 .break-box .big {
-  font-size: clamp(88px, 18vmin, 280px);
+  font-size: clamp(100px, 21vmin, 320px);
   color: #f7d98a;
 }
 
@@ -209,7 +209,7 @@ html, body {
 }
 
 .ante-bar .albl {
-  font-size: clamp(22px, 3.2vmin, 42px);
+  font-size: clamp(24px, 3.6vmin, 48px);
   letter-spacing: 0.28em;
   color: #c89a3d;
   font-weight: 700;
@@ -218,7 +218,7 @@ html, body {
 
 .ante-bar .aval {
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(56px, 9.8vmin, 160px);
+  font-size: clamp(64px, 11vmin, 180px);
   font-weight: 700;
   color: #fff8e6;
   line-height: 1;
@@ -226,10 +226,10 @@ html, body {
   min-width: 0;
 }
 
-.ante-bar .aval[data-digits="5"] { font-size: clamp(48px, 8.4vmin, 136px); }
-.ante-bar .aval[data-digits="6"] { font-size: clamp(40px, 7.2vmin, 116px); }
+.ante-bar .aval[data-digits="5"] { font-size: clamp(54px, 9.4vmin, 152px); }
+.ante-bar .aval[data-digits="6"] { font-size: clamp(46px, 8vmin, 128px); }
 .ante-bar .aval[data-digits="7"],
-.ante-bar .aval[data-digits="8"] { font-size: clamp(34px, 6vmin, 96px); }
+.ante-bar .aval[data-digits="8"] { font-size: clamp(38px, 6.8vmin, 108px); }
 
 .menu-center {
   flex: 1 1 auto;
@@ -245,7 +245,7 @@ html, body {
 .time-big {
   font-family: Georgia, "Times New Roman", serif;
   font-weight: 700;
-  font-size: clamp(80px, 16vmin, 240px);
+  font-size: clamp(96px, 18vmin, 280px);
   color: #fff8e6;
   line-height: 1;
 }
@@ -307,9 +307,9 @@ html, body {
 
 /* Short panels: keep C layout, slightly tighter */
 @media (max-height: 800px) {
-  .brand-logo { height: clamp(96px, 15vmin, 180px); }
-  .ante-top { margin-top: 0.8vh; }
-  .center { gap: 0.8vh; }
-  .stats { padding: 0.9vh 0 0.5vh; }
-  .menu-center { gap: 1vh; }
+  .brand-logo { height: clamp(110px, 17vmin, 200px); }
+  .ante-top { margin-top: 0.6vh; }
+  .center { gap: 0.6vh; }
+  .stats { padding: 0.7vh 0 0.4vh; }
+  .menu-center { gap: 0.8vh; }
 }
