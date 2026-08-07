@@ -23,11 +23,12 @@ services:
     image: redis:7-alpine
     container_name: gutshot-redis
     restart: unless-stopped
-    # Only localhost — open 6379 was mined (cron payloads in keys).
-    # App talks to redis over the docker network, not the published port.
-    ports:
-      - '127.0.0.1:${REDIS_PORT:-6379}:6379'
-    command: ['redis-server', '--appendonly', 'yes', '--protected-mode', 'yes']
+    # Not published to the public internet. App reaches redis via docker network.
+    # protected-mode must stay off without a password — docker bridge IPs are
+    # non-loopback and would otherwise break API↔redis.
+    expose:
+      - '6379'
+    command: ['redis-server', '--appendonly', 'yes', '--protected-mode', 'no', '--bind', '0.0.0.0']
     volumes:
       - ./docker/redis/data:/data
     networks:
