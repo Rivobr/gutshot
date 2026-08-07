@@ -9,7 +9,6 @@ import {
   PlayerEventType,
   Registration,
   RegistrationStatus,
-  TournamentStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TelegramService } from '../telegram/telegram.service';
@@ -25,10 +24,6 @@ export class RegistrationsService {
     private readonly playerEventsService: PlayerEventsService,
   ) {}
 
-  /**
-   * Статусы, при которых игрок «занят» другим турниром.
-   * После завершения турнира регистрация уходит в FINISHED — снова можно записываться.
-   */
   private static readonly ACTIVE_REGISTRATION_STATUSES: RegistrationStatus[] = [
     RegistrationStatus.REGISTERED,
     RegistrationStatus.WAITING,
@@ -36,12 +31,10 @@ export class RegistrationsService {
     RegistrationStatus.PLAYING,
   ];
 
-  /** Эти статусы можно автоматически снять при записи на другой турнир. */
-  private static readonly SWITCHABLE_REGISTRATION_STATUSES: RegistrationStatus[] = [
-    RegistrationStatus.REGISTERED,
-    RegistrationStatus.WAITING,
-  ];
-
+  /**
+   * Регистрация без ограничений по статусу турнира, вместимости и «один турнир на игрока».
+   * Остаются только: авторизация, блок игрока, существование турнира, дубликат записи.
+   */
   async register(userId: string, tournamentId: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
 
@@ -59,10 +52,6 @@ export class RegistrationsService {
       throw new NotFoundException('Турнир не найден');
     }
 
-    if (tournament.status !== TournamentStatus.REGISTRATION_OPEN) {
-      throw new BadRequestException('Регистрация закрыта');
-    }
-
     const existing = await this.prisma.registration.findUnique({
       where: { userId_tournamentId: { userId, tournamentId } },
     });
@@ -71,18 +60,7 @@ export class RegistrationsService {
       throw new ConflictException('Игрок уже зарегистрирован на этот турнир');
     }
 
-    // Один активный турнир на игрока: старую запись снимаем (или блокируем, если уже играют).
-    const cancelledPrevious = await this.releaseOtherActiveRegistrations(userId, tournamentId);
-
-    const activeCount = await this.prisma.registration.count({
-      where: {
-        tournamentId,
-        status: { in: [RegistrationStatus.REGISTERED, RegistrationStatus.CHECKED_IN] },
-      },
-    });
-
-    const hasFreeSlot = activeCount < tournament.maxPlayers;
-    const status = hasFreeSlot ? RegistrationStatus.REGISTERED : RegistrationStatus.WAITING;
+    const status = RegistrationStatus.REGISTERED;
 
     const registration = await this.prisma.registration.upsert({
       where: { userId_tournamentId: { userId, tournamentId } },
@@ -97,114 +75,18 @@ export class RegistrationsService {
       metadata: {
         status,
         title: tournament.title,
-        cancelledPrevious: cancelledPrevious?.title ?? null,
       },
     });
 
-    if (status === RegistrationStatus.REGISTERED) {
-      const base = this.telegramService.templates.registrationSuccess(tournament.title);
-      const message = cancelledPrevious
-        ? `${base}\n\nПредыдущая запись на «${cancelledPrevious.title}» отменена — можно быть записанным только на один турнир.`
-        : base;
-      await this.notificationsService.notify({
-        userId: user.id,
-        telegramId: user.telegramId,
-        type: NotificationType.REGISTRATION,
-        title: 'Регистрация подтверждена',
-        message,
-      });
-    } else {
-      await this.notificationsService.notify({
-        userId: user.id,
-        telegramId: user.telegramId,
-        type: NotificationType.REGISTRATION,
-        title: 'Лист ожидания',
-        message: `⏳ Свободных мест нет. Вы поставлены в лист ожидания турнира «${tournament.title}».`,
-      });
-    }
-
-    return {
-      ...registration,
-      cancelledPrevious,
-    };
-  }
-
-  /**
-   * Снимает активные записи игрока с других незавершённых турниров.
-   * Если игрок уже отметился / играет — новую запись запрещаем.
-   */
-  private async releaseOtherActiveRegistrations(
-    userId: string,
-    tournamentId: string,
-  ): Promise<{ tournamentId: string; title: string } | null> {
-    const others = await this.prisma.registration.findMany({
-      where: {
-        userId,
-        tournamentId: { not: tournamentId },
-        status: { in: RegistrationsService.ACTIVE_REGISTRATION_STATUSES },
-        tournament: {
-          status: {
-            notIn: [TournamentStatus.FINISHED, TournamentStatus.ARCHIVED],
-          },
-        },
-      },
-      include: { tournament: true, user: true },
-      orderBy: { registeredAt: 'desc' },
+    await this.notificationsService.notify({
+      userId: user.id,
+      telegramId: user.telegramId,
+      type: NotificationType.REGISTRATION,
+      title: 'Регистрация подтверждена',
+      message: this.telegramService.templates.registrationSuccess(tournament.title),
     });
 
-    if (others.length === 0) {
-      return null;
-    }
-
-    const locked = others.find(
-      (row) =>
-        row.status === RegistrationStatus.CHECKED_IN || row.status === RegistrationStatus.PLAYING,
-    );
-    if (locked) {
-      throw new ConflictException(
-        `Вы уже участвуете в турнире «${locked.tournament.title}». Дождитесь его окончания, чтобы записаться на другой.`,
-      );
-    }
-
-    let cancelledPrevious: { tournamentId: string; title: string } | null = null;
-
-    for (const other of others) {
-      if (!RegistrationsService.SWITCHABLE_REGISTRATION_STATUSES.includes(other.status)) {
-        continue;
-      }
-
-      const promoted = await this.cancelRegistrationAndPromote(other.id);
-
-      if (!cancelledPrevious) {
-        cancelledPrevious = {
-          tournamentId: other.tournamentId,
-          title: other.tournament.title,
-        };
-      }
-
-      await this.playerEventsService.record({
-        userId: other.userId,
-        type: PlayerEventType.TOURNAMENT_CANCELLED,
-        tournamentId: other.tournamentId,
-        metadata: {
-          title: other.tournament.title,
-          reason: 'switched_to_another_tournament',
-          nextTournamentId: tournamentId,
-        },
-      });
-
-      if (promoted) {
-        await this.notificationsService.notify({
-          userId: promoted.userId,
-          telegramId: promoted.user.telegramId,
-          type: NotificationType.REGISTRATION,
-          title: 'Вы в основном списке',
-          message: this.telegramService.templates.movedFromWaiting(other.tournament.title),
-        });
-      }
-    }
-
-    return cancelledPrevious;
+    return registration;
   }
 
   /** Отмена записи + перевод следующего из листа ожидания. */
@@ -298,17 +180,13 @@ export class RegistrationsService {
     });
   }
 
-  async getCurrent(userId: string): Promise<Registration | null> {
-    return this.prisma.registration.findFirst({
+  /** Все активные регистрации игрока (можно быть записанным на несколько турниров). */
+  async getCurrent(userId: string): Promise<Registration[]> {
+    return this.prisma.registration.findMany({
       where: {
         userId,
         status: {
-          in: [
-            RegistrationStatus.REGISTERED,
-            RegistrationStatus.CHECKED_IN,
-            RegistrationStatus.PLAYING,
-            RegistrationStatus.WAITING,
-          ],
+          in: RegistrationsService.ACTIVE_REGISTRATION_STATUSES,
         },
       },
       orderBy: { registeredAt: 'desc' },

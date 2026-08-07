@@ -33,10 +33,10 @@ function Chip({ icon, children }: { icon: string; children: string }): JSX.Eleme
 export function HomePage(): JSX.Element {
   const navigate = useNavigate();
   const { data: nearest, isLoading } = useNearestTournament();
-  const { data: registration } = useCurrentRegistration();
+  const { data: registrations = [] } = useCurrentRegistration();
 
   const taken = nearest?._count?.registrations ?? 0;
-  const isRegistered = registration?.tournamentId === nearest?.id;
+  const isRegistered = Boolean(nearest && registrations.some((r) => r.tournamentId === nearest.id));
 
   return (
     <div className="relative min-h-full">

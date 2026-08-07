@@ -29,7 +29,7 @@ export function TournamentPage(): JSX.Element {
   const [tab, setTab] = useState<Tab>('about');
   const { data: tournament, isLoading } = useTournament(id ?? '');
   const { data: participants } = useTournamentParticipants(id ?? '');
-  const { data: currentRegistration } = useCurrentRegistration();
+  const { data: myRegistrations = [] } = useCurrentRegistration();
   const registerMutation = useRegister();
   const cancelMutation = useCancelRegistration();
 
@@ -40,18 +40,12 @@ export function TournamentPage(): JSX.Element {
   const registrationsCount = tournament._count?.registrations ?? 0;
   const seats = Math.max(tournament.maxPlayers - registrationsCount, 0);
   const upcoming = UPCOMING_STATUSES.includes(tournament.status);
-  const isMine = currentRegistration?.tournamentId === tournament.id;
+  const myRegistration = myRegistrations.find((r) => r.tournamentId === tournament.id);
+  const isMine = Boolean(myRegistration);
 
   const handleRegister = (): void => {
     registerMutation.mutate(tournament.id, {
-      onSuccess: (result) => {
-        if (result.cancelledPrevious?.title) {
-          showToast(
-            `Записаны. Предыдущая запись на «${result.cancelledPrevious.title}» отменена`,
-            'info',
-          );
-          return;
-        }
+      onSuccess: () => {
         showToast('Вы записаны на турнир');
       },
       onError: (error) => {
@@ -64,8 +58,8 @@ export function TournamentPage(): JSX.Element {
   };
 
   const handleCancel = (): void => {
-    if (!currentRegistration) return;
-    cancelMutation.mutate(currentRegistration.id, {
+    if (!myRegistration) return;
+    cancelMutation.mutate(myRegistration.id, {
       onSuccess: () => showToast('Регистрация отменена', 'info'),
       onError: () => showToast('Не удалось отменить регистрацию', 'error'),
     });
@@ -265,10 +259,10 @@ export function TournamentPage(): JSX.Element {
                 className="w-full py-4 rounded-[18px] serif font-semibold tracking-widest text-center"
                 style={{ ...goldButtonStyle(), opacity: 0.92 }}
               >
-                {currentRegistration?.status === 'WAITING' ? 'В ЛИСТЕ ОЖИДАНИЯ' : 'ВЫ ЗАПИСАНЫ'}
+                {myRegistration?.status === 'WAITING' ? 'В ЛИСТЕ ОЖИДАНИЯ' : 'ВЫ ЗАПИСАНЫ'}
               </div>
-              {(currentRegistration?.status === 'REGISTERED' ||
-                currentRegistration?.status === 'WAITING') && (
+              {(myRegistration?.status === 'REGISTERED' ||
+                myRegistration?.status === 'WAITING') && (
                 <button
                   type="button"
                   disabled={cancelMutation.isPending}
@@ -290,20 +284,16 @@ export function TournamentPage(): JSX.Element {
             <div className="px-5 mt-6">
               <button
                 type="button"
-                disabled={tournament.status !== 'REGISTRATION_OPEN' || registerMutation.isPending}
+                disabled={registerMutation.isPending}
                 onClick={handleRegister}
                 className="btn-shine w-full py-4 rounded-[18px] serif font-semibold tracking-widest disabled:opacity-50"
                 style={goldButtonStyle()}
               >
-                {tournament.status === 'REGISTRATION_OPEN'
-                  ? 'ЗАРЕГИСТРИРОВАТЬСЯ'
-                  : 'РЕГИСТРАЦИЯ ЗАКРЫТА'}
+                ЗАРЕГИСТРИРОВАТЬСЯ
               </button>
-              {tournament.status === 'REGISTRATION_OPEN' && (
-                <p className="sans text-center mt-2.5" style={{ fontSize: 10, color: '#6B614E' }}>
-                  Свободно {seats} · Регистрация закрывается за 2 часа до начала
-                </p>
-              )}
+              <p className="sans text-center mt-2.5" style={{ fontSize: 10, color: '#6B614E' }}>
+                Свободно {seats} · Можно записаться на несколько турниров
+              </p>
             </div>
           )}
         </>

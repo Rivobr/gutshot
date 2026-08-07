@@ -9,8 +9,11 @@ export const registrationApi = {
   async cancel(registrationId: string): Promise<void> {
     await apiClient.delete(`/registrations/${registrationId}`);
   },
-  async getCurrent(): Promise<Registration | null> {
+  async getCurrent(): Promise<Registration[]> {
     const { data } = await apiClient.get('/registrations/current');
-    return data.data;
+    const payload = data.data;
+    if (Array.isArray(payload)) return payload;
+    // backward-compat if API still returns a single registration
+    return payload ? [payload] : [];
   },
 };
