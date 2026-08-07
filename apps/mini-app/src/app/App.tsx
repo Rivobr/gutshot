@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { isAxiosError } from 'axios';
 import { RouterProvider } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { QueryProvider } from './providers/query-provider';
@@ -18,8 +19,11 @@ import { getTelegramInitData } from '../shared/lib/telegram';
 import { SplashScreen } from '../widgets/SplashScreen/SplashScreen';
 import { ToastHost } from '../shared/ui/toast';
 
-/** Bootstrap должен отвечать за сотни мс; 6с — жёсткий потолок. */
-const BOOTSTRAP_WAIT_MS = 6_000;
+/**
+ * Потолок ожидания входа. Должен быть больше таймаута самого запроса (8с),
+ * иначе на медленной сети показываем ошибку, пока ответ ещё идёт.
+ */
+const BOOTSTRAP_WAIT_MS = 10_000;
 
 export function App(): JSX.Element {
   const { status, errorMessage } = useStartup();
@@ -55,17 +59,41 @@ export function App(): JSX.Element {
   );
 }
 
+/** Текст ошибки от сервера — иначе всё сводится к общей фразе. */
+function serverMessage(error: unknown): string | null {
+  if (!isAxiosError(error)) {
+    return null;
+  }
+  const message = (error.response?.data as { message?: string | string[] } | undefined)?.message;
+  if (typeof message === 'string' && message.trim()) {
+    return message;
+  }
+  if (Array.isArray(message) && typeof message[0] === 'string') {
+    return message[0];
+  }
+  return null;
+}
+
 function ConsentGate({ children }: { children: JSX.Element }): JSX.Element {
   const queryClient = useQueryClient();
-  const { data: boot, isPending, isError, refetch } = useBootstrap();
+  const { data: boot, isPending, isError, error, refetch } = useBootstrap();
   const [timedOut, setTimedOut] = useState(false);
   const [recovering, setRecovering] = useState(false);
   const recoveryTried = useRef(false);
   const waitStartedAt = useRef<number | null>(null);
 
+  const isBlocked = isAxiosError(error) && error.response?.status === 403;
+  const blockedMessage = isBlocked
+    ? (serverMessage(error) ?? 'Аккаунт заблокирован. Обратитесь к администратору клуба.')
+    : null;
+  const errorDescription =
+    serverMessage(error) ?? 'Сессия могла устареть или сервер не ответил. Нажмите «Повторить».';
+
   useEffect(() => {
     if (boot) {
+      // Ответ мог прийти уже после срабатывания таймера — тогда ошибку не показываем.
       waitStartedAt.current = null;
+      setTimedOut(false);
       return;
     }
     if (!isPending && !recovering) {
@@ -107,7 +135,8 @@ function ConsentGate({ children }: { children: JSX.Element }): JSX.Element {
   }, [boot?.consentAcceptedAt, queryClient]);
 
   useEffect(() => {
-    if (!isError || boot || recoveryTried.current) {
+    // Заблокированного перелогин не спасёт — не дёргаем сервер зря.
+    if (!isError || boot || recoveryTried.current || isBlocked) {
       return;
     }
     recoveryTried.current = true;
@@ -127,7 +156,15 @@ function ConsentGate({ children }: { children: JSX.Element }): JSX.Element {
         setRecovering(false);
       }
     })();
-  }, [isError, boot, refetch]);
+  }, [isError, boot, isBlocked, refetch]);
+
+  if (blockedMessage) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-4">
+        <EmptyState icon="🚫" title="Доступ закрыт" description={blockedMessage} />
+      </div>
+    );
+  }
 
   if ((isPending || recovering) && !timedOut) {
     return <SplashScreen subtitle="Открываем клуб…" />;
@@ -136,11 +173,7 @@ function ConsentGate({ children }: { children: JSX.Element }): JSX.Element {
   if (isError || !boot || timedOut) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-4">
-        <EmptyState
-          icon="⚠️"
-          title="Не удалось открыть клуб"
-          description="Сессия могла устареть или сервер не ответил. Нажмите «Повторить»."
-        />
+        <EmptyState icon="⚠️" title="Не удалось открыть клуб" description={errorDescription} />
         <Button
           onClick={() => {
             void (async () => {

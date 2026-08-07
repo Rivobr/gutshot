@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button, Card } from '@gutshot/ui';
 import type { BlindLevel } from '@gutshot/types';
 import {
@@ -8,7 +8,6 @@ import {
   useSetClockLevel,
   useTournamentClock,
 } from '../../entities/tournament';
-import { env } from '../../shared/config/env';
 
 function formatClock(totalSec: number | null | undefined): string {
   if (totalSec == null || totalSec < 0) return '—';
@@ -63,12 +62,6 @@ export function TournamentClockPanel({ tournamentId }: { tournamentId: string })
   const secondsLeft = useCountdown(clock?.levelEndsAt, running);
   const secondsToBreak = useCountdown(clock?.breakAt, running);
 
-  const tvUrl = useMemo(
-    // Прямой IP: tv.* за Cloudflare — без VPN на Xiaomi часто не открывается.
-    () => `${env.tvBoardUrl}/?tournament=${tournamentId}`,
-    [tournamentId],
-  );
-
   if (isLoading) {
     return (
       <Card>
@@ -114,18 +107,10 @@ export function TournamentClockPanel({ tournamentId }: { tournamentId: string })
         <div>
           <h2 className="font-medium">Турнирные часы</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Структура задаётся один раз. После старта блайнды и перерывы переключаются сами — на
-            TV-табло и в Mini App.
+            Структура задаётся один раз. После старта блайнды и перерывы переключаются сами — в Mini
+            App у игроков. Табло в зале работает офлайн из приложения на телевизоре.
           </p>
         </div>
-        <a
-          href={tvUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="rounded-md border border-border px-3 py-2 text-sm hover:bg-secondary"
-        >
-          Открыть TV-табло →
-        </a>
       </div>
 
       {hasStructure && clock && (

@@ -2,14 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { RegistrationStatus, Tournament, TournamentStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { calculateLevel } from '../../common/utils/level.util';
-import { serializeClock, serializeTournament } from './tournament.serializer';
-
-/** Статусы турнира, при которых он имеет смысл на табло. */
-const BOARD_STATUSES = [
-  TournamentStatus.IN_PROGRESS,
-  TournamentStatus.REGISTRATION_OPEN,
-  TournamentStatus.REGISTRATION_CLOSED,
-];
+import { serializeTournament } from './tournament.serializer';
 
 /** Активные регистрации — отменённые места не занимают. */
 const ACTIVE_REGISTRATION_STATUSES: RegistrationStatus[] = [
@@ -31,111 +24,6 @@ const activeRegistrationsCount = {
 @Injectable()
 export class TournamentsService {
   constructor(private readonly prisma: PrismaService) {}
-
-  /** Афиша для публичного сайта: без регистраций и личных данных. */
-  async findPublicSchedule() {
-    const rows = await this.prisma.tournament.findMany({
-      where: { status: { in: BOARD_STATUSES } },
-      orderBy: { date: 'asc' },
-      take: 20,
-      include: { _count: activeRegistrationsCount },
-    });
-
-    return rows.map((row) => {
-      const item = serializeTournament(row);
-      return {
-        id: item.id,
-        title: item.title,
-        description: item.description,
-        date: item.date,
-        buyIn: item.buyIn,
-        maxPlayers: item.maxPlayers,
-        status: item.status,
-        imageUrl: item.imageUrl,
-        registered: row._count?.registrations ?? 0,
-      };
-    });
-  }
-
-  /** Табло: идущий турнир, иначе ближайший к старту. */
-  async findBoard() {
-    const running = await this.prisma.tournament.findFirst({
-      where: { status: TournamentStatus.IN_PROGRESS },
-      orderBy: { date: 'asc' },
-      include: { blindLevels: true, _count: activeRegistrationsCount },
-    });
-
-    const tournament =
-      running ??
-      (await this.prisma.tournament.findFirst({
-        where: {
-          status: { in: BOARD_STATUSES },
-          date: { gte: new Date(Date.now() - 6 * 3600_000) },
-        },
-        orderBy: { date: 'asc' },
-        include: { blindLevels: true, _count: activeRegistrationsCount },
-      }));
-
-    return tournament ? this.toBoardPayload(tournament) : null;
-  }
-
-  async findBoardById(id: string) {
-    const tournament = await this.prisma.tournament.findUnique({
-      where: { id },
-      include: { blindLevels: true, _count: activeRegistrationsCount },
-    });
-
-    if (!tournament) {
-      throw new NotFoundException('Турнир не найден');
-    }
-
-    return this.toBoardPayload(tournament);
-  }
-
-  private async toBoardPayload(
-    tournament: Parameters<typeof serializeTournament>[0] & {
-      blindLevels?: Parameters<typeof serializeClock>[1];
-    },
-  ) {
-    const levels = tournament.blindLevels ?? [];
-    const playing = await this.prisma.registration.count({
-      where: {
-        tournamentId: tournament.id,
-        status: { in: [RegistrationStatus.PLAYING, RegistrationStatus.CHECKED_IN] },
-      },
-    });
-
-    const clock = serializeClock(tournament, levels);
-
-    return {
-      tournament: {
-        id: tournament.id,
-        title: tournament.title,
-        date: tournament.date.toISOString(),
-        buyIn: tournament.buyIn,
-        maxPlayers: tournament.maxPlayers,
-        status: tournament.status,
-        imageUrl: tournament.imageUrl,
-        registered: tournament._count?.registrations ?? 0,
-      },
-      clock: {
-        ...clock,
-        // Явку считаем по регистрациям, ручное значение — только как запасное.
-        playersIn: clock.playersIn ?? (playing > 0 ? playing : null),
-      },
-      levels: levels
-        .slice()
-        .sort((a, b) => a.idx - b.idx)
-        .map((level) => ({
-          idx: level.idx,
-          isBreak: level.isBreak,
-          smallBlind: level.smallBlind,
-          bigBlind: level.bigBlind,
-          ante: level.ante,
-          durationSec: level.durationSec,
-        })),
-    };
-  }
 
   async getParticipants(id: string) {
     await this.findById(id);

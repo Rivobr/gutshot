@@ -146,8 +146,40 @@
       <div id="boot">
         <img src="/gutshot-logo.png" alt="GUTSHOT" />
         <div id="boot-bar"><i></i></div>
+        <div id="boot-fallback" style="display: none; text-align: center">
+          <div style="font-size: 13px; color: #8a7a62; max-width: 260px; line-height: 1.5">
+            Приложение не загрузилось. Проверьте интернет и попробуйте снова.
+          </div>
+          <a
+            href="/enter.html"
+            style="
+              display: inline-block;
+              margin-top: 14px;
+              padding: 12px 20px;
+              border-radius: 12px;
+              background: #c89a3d;
+              color: #111;
+              font-weight: 700;
+              font-size: 15px;
+              text-decoration: none;
+            "
+            >Повторить</a
+          >
+        </div>
       </div>
     </div>
+    <script>
+      // Если бандл не загрузился (сеть/CDN), React никогда не смонтируется
+      // и логотип крутится вечно. Показываем кнопку вместо бесконечного boot.
+      window.setTimeout(function () {
+        var boot = document.getElementById('boot');
+        if (!boot || !boot.isConnected) return;
+        var bar = document.getElementById('boot-bar');
+        var fallback = document.getElementById('boot-fallback');
+        if (bar) bar.style.display = 'none';
+        if (fallback) fallback.style.display = 'block';
+      }, 15000);
+    </script>
     <script type="module" src="/src/app/main.tsx"></script>
   </body>
 </html>

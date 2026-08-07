@@ -7,13 +7,16 @@ import { loginWithTelegramInitData } from '../../../processes/startup/use-startu
 
 export const BOOTSTRAP_QUERY_KEY = ['profile', 'bootstrap'] as const;
 
-/** Лёгкий профиль для входа (ConsentGate). Не тянет метрики/ачивки. */
+/**
+ * Лёгкий профиль для входа (ConsentGate). Не тянет метрики/ачивки.
+ * Без ретраев: ConsentGate ждёт по своему таймауту, а повторы только
+ * растягивали ожидание за его пределы и давали ложную ошибку.
+ */
 export function useBootstrap() {
   return useQuery({
     queryKey: BOOTSTRAP_QUERY_KEY,
     queryFn: playerApi.getBootstrap,
-    retry: 1,
-    retryDelay: 400,
+    retry: false,
     staleTime: 60_000,
     meta: { critical: true },
   });

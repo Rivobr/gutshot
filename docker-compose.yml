@@ -79,22 +79,6 @@ services:
     networks:
       - gutshot-network
 
-  tv:
-    build:
-      context: .
-      dockerfile: apps/tv/Dockerfile
-      network: host
-      args:
-        VITE_API_URL: ${VITE_TV_API_URL:-/api/v1}
-    container_name: gutshot-tv
-    restart: unless-stopped
-    ports:
-      - '8082:80'
-    depends_on:
-      - api
-    networks:
-      - gutshot-network
-
   nginx:
     image: nginx:1.27-alpine
     container_name: gutshot-nginx
@@ -102,8 +86,6 @@ services:
     ports:
       - '80:80'
       - '443:443'
-      # Админка без Cloudflare для Xiaomi TV: https://tv.gutshotapp.ru:8443
-      - '8443:8443'
     volumes:
       - ./docker/nginx/conf.d:/etc/nginx/conf.d
       - ./docker/nginx/certs:/etc/letsencrypt
@@ -112,7 +94,6 @@ services:
       - api
       - mini-app
       - admin
-      - tv
     networks:
       - gutshot-network
 

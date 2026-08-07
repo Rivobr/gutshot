@@ -81,7 +81,7 @@ export class TelegramService {
       { typ: 'miniapp_ticket', telegramId: String(chatId) },
       { expiresIn: '7d' },
     );
-    const entryUrl = `${miniAppUrl}/enter.html?t=${Date.now()}&v=20260807d&ticket=${encodeURIComponent(ticket)}`;
+    const entryUrl = `${miniAppUrl}/enter.html?t=${Date.now()}&v=20260807e&ticket=${encodeURIComponent(ticket)}`;
     const openAppKeyboard = {
       inline_keyboard: [[{ text: '♠️ Открыть GUTSHOT', web_app: { url: entryUrl } }]],
     };
@@ -91,6 +91,10 @@ export class TelegramService {
       if (!photoSent) {
         this.logger.warn(`Welcome photo не отправлено в chat ${chatId}, шлём только текст`);
       }
+
+      // Персональная кнопка меню с ticket: глобальная кнопка его не содержит,
+      // и на WebView без initData вход упирался в «Откройте кнопкой из бота».
+      void this.setChatMenuButton(entryUrl, 'Открыть', String(chatId)).catch(() => undefined);
 
       // Сначала убираем старую reply-клавиатуру, затем шлём кнопку web_app.
       await this.sendMessage(chatId, WELCOME_CAPTION, removeKeyboard);
@@ -229,6 +233,52 @@ export class TelegramService {
     }
   }
 
+  /**
+   * Профиль игрока через Bot API.
+   * Нужен для входов по ticket/кнопке бота, где нет initData:
+   * иначе в админке игрок остаётся без имени и @username.
+   */
+  async getChatProfile(telegramId: string): Promise<{
+    username?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+  } | null> {
+    if (!this.botToken) {
+      return null;
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2_500);
+
+    try {
+      const response = await fetch(
+        `https://api.telegram.org/bot${this.botToken}/getChat?chat_id=${encodeURIComponent(telegramId)}`,
+        { signal: controller.signal },
+      );
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        result?: { username?: string; first_name?: string; last_name?: string };
+      };
+
+      if (!payload.ok || !payload.result) {
+        return null;
+      }
+
+      return {
+        username: payload.result.username ?? null,
+        firstName: payload.result.first_name ?? null,
+        lastName: payload.result.last_name ?? null,
+      };
+    } catch (error) {
+      this.logger.warn(
+        `Не удалось получить профиль Telegram ${telegramId}: ${(error as Error).message}`,
+      );
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   async getWebhookInfo(): Promise<{
     url?: string;
     lastErrorMessage?: string;
@@ -265,7 +315,7 @@ export class TelegramService {
    * Кнопка меню слева от поля ввода. Должна открывать Mini App,
    * а не админ-панель — иначе игроки видят CRM-логин.
    */
-  async setChatMenuButton(miniAppUrl: string, text = 'Открыть'): Promise<boolean> {
+  async setChatMenuButton(miniAppUrl: string, text = 'Открыть', chatId?: string): Promise<boolean> {
     if (!this.botToken) {
       this.logger.warn('TELEGRAM_BOT_TOKEN не задан — menu button не установлен');
       return false;
@@ -282,18 +332,23 @@ export class TelegramService {
     }
 
     try {
+      const body: Record<string, unknown> = {
+        menu_button: {
+          type: 'web_app',
+          text,
+          web_app: { url },
+        },
+      };
+      if (chatId) {
+        body.chat_id = Number(chatId);
+      }
+
       const response = await fetch(
         `https://api.telegram.org/bot${this.botToken}/setChatMenuButton`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            menu_button: {
-              type: 'web_app',
-              text,
-              web_app: { url },
-            },
-          }),
+          body: JSON.stringify(body),
         },
       );
 
@@ -303,7 +358,9 @@ export class TelegramService {
         return false;
       }
 
-      this.logger.log(`Telegram menu button → Mini App: ${url}`);
+      if (!chatId) {
+        this.logger.log(`Telegram menu button → Mini App: ${url}`);
+      }
       return true;
     } catch (error) {
       this.logger.error('Ошибка setChatMenuButton', error as Error);

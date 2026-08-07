@@ -6,7 +6,10 @@ import { PlayerQrModal } from '../../widgets/PlayerQrModal/PlayerQrModal';
 
 function playerName(player: AdminPlayerListItem): string {
   const full = [player.firstName, player.lastName].filter(Boolean).join(' ').trim();
-  return player.nickname || full || `@${player.username ?? 'player'}`;
+  if (full) return full;
+  if (player.nickname) return player.nickname;
+  if (player.username) return `@${player.username}`;
+  return `Игрок ${player.telegramId}`;
 }
 
 function verifyBadgeStyle(verified: boolean): CSSProperties {
@@ -78,15 +81,13 @@ export function PlayersPage(): JSX.Element {
               <tr key={player.id} className="border-t border-border">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
-                    <Avatar
-                      src={player.photoUrl}
-                      fallback={`${player.firstName ?? ''} ${player.lastName ?? ''}`}
-                      size={32}
-                    />
-                    {player.firstName} {player.lastName}
+                    <Avatar src={player.photoUrl} fallback={playerName(player)} size={32} />
+                    {playerName(player)}
                   </div>
                 </td>
-                <td className="px-4 py-3 text-muted-foreground">@{player.username ?? '—'}</td>
+                <td className="px-4 py-3 text-muted-foreground">
+                  {player.username ? `@${player.username}` : `ID ${player.telegramId}`}
+                </td>
                 <td className="px-4 py-3">{player.xp}</td>
                 <td className="px-4 py-3">{player.level}</td>
                 <td className="px-4 py-3">{player.visits}</td>
@@ -143,16 +144,12 @@ export function PlayersPage(): JSX.Element {
         {filtered.map((player) => (
           <div key={player.id} className="rounded-lg border border-border bg-card p-4">
             <div className="flex items-center gap-3">
-              <Avatar
-                src={player.photoUrl}
-                fallback={`${player.firstName ?? ''} ${player.lastName ?? ''}`}
-                size={40}
-              />
+              <Avatar src={player.photoUrl} fallback={playerName(player)} size={40} />
               <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">
-                  {player.firstName} {player.lastName}
+                <p className="truncate font-medium">{playerName(player)}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {player.username ? `@${player.username}` : `ID ${player.telegramId}`}
                 </p>
-                <p className="truncate text-xs text-muted-foreground">@{player.username ?? '—'}</p>
               </div>
               <Badge style={statusBadgeStyle(player.isBlocked)}>
                 {player.isBlocked ? 'Заблок.' : 'Активен'}

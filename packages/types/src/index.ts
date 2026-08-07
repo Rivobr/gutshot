@@ -158,22 +158,6 @@ export interface TournamentClock {
   serverTime: string;
 }
 
-/** Ответ публичного табло для TV-экрана. */
-export interface TournamentBoard {
-  tournament: {
-    id: string;
-    title: string;
-    date: string;
-    buyIn: number;
-    maxPlayers: number;
-    status: TournamentStatus;
-    imageUrl?: string | null;
-    registered: number;
-  };
-  clock: TournamentClock;
-  levels: BlindLevel[];
-}
-
 export interface Tournament {
   id: string;
   title: string;

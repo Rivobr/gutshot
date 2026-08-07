@@ -49,7 +49,29 @@
         font-size: 14px;
         opacity: 0.75;
       }
+      .btn {
+        display: none;
+        margin-top: 8px;
+        padding: 12px 20px;
+        border-radius: 12px;
+        background: #c9a227;
+        color: #111;
+        font-weight: 700;
+        font-size: 15px;
+        text-decoration: none;
+      }
+      .btn.show {
+        display: inline-block;
+      }
     </style>
+  </head>
+  <body>
+    <div id="s">
+      <div class="logo">GUTSHOT</div>
+      <div class="spin" id="sp"></div>
+      <div class="msg" id="m">Открываем…</div>
+      <a class="btn" id="b" href="/enter.html">Открыть клуб</a>
+    </div>
     <script>
       (function () {
         try {
@@ -58,16 +80,30 @@
             Telegram.WebApp.expand();
           }
         } catch (e) {}
+
+        var target = '/?from=go&t=' + Date.now();
         // Immediate redirect — no health fetch (fetch itself can hang on flaky TLS).
-        location.replace("/?from=go&t=" + Date.now());
+        try {
+          location.replace(target);
+        } catch (e) {
+          try {
+            location.href = target;
+          } catch (e2) {}
+        }
+
+        // Часть Telegram WebView игнорит programmatic navigation — даём кнопку.
+        setTimeout(function () {
+          var sp = document.getElementById('sp');
+          var m = document.getElementById('m');
+          var b = document.getElementById('b');
+          if (sp) sp.style.display = 'none';
+          if (m) m.textContent = 'Нажмите кнопку, чтобы открыть клуб';
+          if (b) {
+            b.href = target;
+            b.className = 'btn show';
+          }
+        }, 1500);
       })();
     </script>
-  </head>
-  <body>
-    <div id="s">
-      <div class="logo">GUTSHOT</div>
-      <div class="spin"></div>
-      <div class="msg">Открываем…</div>
-    </div>
   </body>
 </html>

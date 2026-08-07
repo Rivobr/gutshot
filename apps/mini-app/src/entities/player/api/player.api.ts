@@ -21,7 +21,8 @@ export interface XPHistoryDto {
 export const playerApi = {
   /** Лёгкий boot-профиль для ConsentGate (быстрый вход). */
   async getBootstrap(): Promise<PlayerBootstrapDto> {
-    const { data } = await apiClient.get('/profile/bootstrap');
+    // Свой таймаут: вход не должен зависеть от общего 12с axios.
+    const { data } = await apiClient.get('/profile/bootstrap', { timeout: 8_000 });
     return data.data;
   },
   async getProfile(): Promise<PlayerProfileDto> {

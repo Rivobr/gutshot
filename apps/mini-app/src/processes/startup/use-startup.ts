@@ -140,15 +140,10 @@ export function useStartup(): { status: StartupStatus; errorMessage?: string } {
         }
       };
 
-      // FAST PATH: enter.html уже положил JWT. Не блокируем splash повторным логином
-      // (раньше initData → axios 12с × 3 оставлял «Открываем клуб…» на десятки секунд).
+      // FAST PATH: enter.html уже положил свежий JWT. Не блокируем splash повторным
+      // логином и не дублируем его в фоне — сессия только что выдана сервером.
       if (tokenStorage.get() && (fromEnter || !getTelegramInitData())) {
         runReady();
-        // Фоном освежим сессию, если есть initData — без блокировки UI.
-        const bgInit = getTelegramInitData();
-        if (bgInit) {
-          void loginWithTelegramInitData(bgInit).catch(() => undefined);
-        }
         return;
       }
 

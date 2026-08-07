@@ -47,11 +47,14 @@ export class UsersService {
     const id = String(telegramId);
     const existing = await this.findByTelegramId(id);
     if (existing) {
+      if (!existing.username && !existing.firstName) {
+        void this.refreshTelegramProfileInBackground(existing.id, id);
+      }
       return existing.qrCode ? existing : this.ensureQrCode(existing.id);
     }
 
     const nickname = await this.allocateUniqueNickname(`player_${id.slice(-6)}`);
-    return this.prisma.user.create({
+    const created = await this.prisma.user.create({
       data: {
         telegramId: id,
         nickname,
@@ -59,6 +62,53 @@ export class UsersService {
         playerProfile: { create: { xp: 0 } },
       },
     });
+
+    void this.refreshTelegramProfileInBackground(created.id, id);
+    void this.refreshPhotoInBackground(created.id, id);
+    return created;
+  }
+
+  /**
+   * Догружает имя/username через Bot API для входов без initData.
+   * Без этого игрок висит в админке пустым (только `player_XXXXXX`).
+   */
+  private async refreshTelegramProfileInBackground(
+    userId: string,
+    telegramId: string,
+  ): Promise<void> {
+    try {
+      const profile = await this.telegramService.getChatProfile(telegramId);
+      if (!profile || (!profile.username && !profile.firstName)) {
+        return;
+      }
+
+      const current = await this.prisma.user.findUnique({ where: { id: userId } });
+      if (!current) {
+        return;
+      }
+
+      const looksAutoNickname = !current.nickname || /^player_\d+$/.test(current.nickname);
+      const nameFromTelegram = [profile.firstName, profile.lastName]
+        .filter(Boolean)
+        .join(' ')
+        .trim();
+      const nickname =
+        looksAutoNickname && nameFromTelegram
+          ? await this.allocateUniqueNickname(nameFromTelegram.slice(0, 32), userId)
+          : current.nickname;
+
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          username: current.username ?? profile.username,
+          firstName: current.firstName ?? profile.firstName,
+          lastName: current.lastName ?? profile.lastName,
+          nickname,
+        },
+      });
+    } catch {
+      // не критично для входа
+    }
   }
 
   async findById(id: string): Promise<User | null> {

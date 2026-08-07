@@ -8,19 +8,6 @@
     />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <title>GUTSHOT</title>
-    <script>
-      (function () {
-        try {
-          var tg = window.Telegram && window.Telegram.WebApp;
-          if (!tg) return;
-          tg.ready();
-          tg.expand();
-          if (tg.setHeaderColor) tg.setHeaderColor('#090909');
-          if (tg.setBackgroundColor) tg.setBackgroundColor('#090909');
-          if (tg.setBottomBarColor) tg.setBottomBarColor('#090909');
-        } catch (e) {}
-      })();
-    </script>
     <style>
       html,
       body {
@@ -40,28 +27,6 @@
         padding: 24px;
         text-align: center;
       }
-      .logo {
-        display: inline-flex;
-        align-items: flex-end;
-        gap: 8px;
-        height: 48px;
-      }
-      .logo i {
-        display: block;
-        width: 10px;
-        height: 48px;
-        border-radius: 3px;
-        background: linear-gradient(150deg, #7d5417 0%, #c89a3d 42%, #f7d98a 58%, #8a5c1c 100%);
-      }
-      .logo i.r {
-        background: linear-gradient(150deg, #7a0b2c 0%, #e0115f 45%, #ff4d7d 60%, #a10d3d 100%);
-      }
-      .msg {
-        font-size: 14px;
-        opacity: 0.85;
-        max-width: 280px;
-        line-height: 1.4;
-      }
       .spin {
         width: 28px;
         height: 28px;
@@ -79,7 +44,6 @@
         display: none;
         margin-top: 8px;
         padding: 12px 20px;
-        border: 0;
         border-radius: 12px;
         background: #c9a227;
         color: #111;
@@ -90,283 +54,51 @@
       .btn.show {
         display: inline-block;
       }
+      .msg {
+        font-size: 14px;
+        opacity: 0.85;
+      }
     </style>
-    <script src="https://telegram.org/js/telegram-web-app.js" async></script>
   </head>
   <body>
     <div id="s">
-      <div class="logo" aria-hidden="true"><i></i><i></i><i class="r"></i><i></i><i></i></div>
       <div class="spin" id="sp"></div>
-      <div class="msg" id="m">Входим…</div>
-      <a class="btn" id="b" href="#">Повторить</a>
+      <div class="msg" id="m">Открываем…</div>
+      <a class="btn" id="b" href="/enter.html">Открыть клуб</a>
     </div>
     <script>
+      // Единая точка входа — enter.html. Раньше boot.html был его копией
+      // и расходился при правках; теперь только редирект с ticket.
       (function () {
-        var TOKEN_KEY = 'gutshot_access_token';
-        var FETCH_MS = 8000;
-        var params = new URLSearchParams(location.search);
-        var ticket = params.get('ticket') || '';
-        var m = document.getElementById('m');
-        var b = document.getElementById('b');
-        var sp = document.getElementById('sp');
-        var done = false;
-        var navTarget = '';
-        var hardTimer = setTimeout(function () {
-          if (!done) fail('Загрузка зависла. Нажмите «Повторить» или /start в боте.');
-        }, 12000);
-
-        function bumpTg() {
-          try {
-            var tg = window.Telegram && window.Telegram.WebApp;
-            if (!tg) return null;
-            tg.ready();
-            tg.expand();
-            if (tg.setHeaderColor) tg.setHeaderColor('#090909');
-            if (tg.setBackgroundColor) tg.setBackgroundColor('#090909');
-            if (tg.setBottomBarColor) tg.setBottomBarColor('#090909');
-            return tg;
-          } catch (e) {
-            return null;
+        try {
+          if (window.Telegram && Telegram.WebApp) {
+            Telegram.WebApp.ready();
+            Telegram.WebApp.expand();
           }
+        } catch (e) {}
+
+        var search = location.search || '';
+        var target = '/enter.html' + (search ? search + '&' : '?') + 'from=boot';
+
+        try {
+          location.replace(target);
+        } catch (e) {
+          try {
+            location.href = target;
+          } catch (e2) {}
         }
 
-        function appUrl() {
-          var q = '/?from=boot&t=' + Date.now() + '&v=20260807d';
-          if (ticket) q += '&ticket=' + encodeURIComponent(ticket);
-          return q + (location.hash || '');
-        }
-
-        function navigateNow(target) {
-          navTarget = target;
-          try {
-            var meta = document.createElement('meta');
-            meta.httpEquiv = 'refresh';
-            meta.content = '0;url=' + target;
-            document.head.appendChild(meta);
-          } catch (e) {}
-          try {
-            location.replace(target);
-          } catch (e1) {
-            try {
-              location.href = target;
-            } catch (e2) {}
-          }
-          try {
-            location.assign(target);
-          } catch (e3) {}
-        }
-
-        function goApp() {
-          if (done) return;
-          done = true;
-          clearTimeout(hardTimer);
-          m.textContent = 'Открываем клуб…';
-          var target = appUrl();
-          navigateNow(target);
-
-          // iOS Telegram часто игнорит programmatic navigation —
-          // через 1.2с показываем кнопку, которую надо нажать (user gesture).
-          hardTimer = setTimeout(function () {
-            sp.style.display = 'none';
-            m.textContent = 'Нажмите кнопку, чтобы открыть клуб';
-            b.textContent = 'Открыть клуб';
+        setTimeout(function () {
+          var sp = document.getElementById('sp');
+          var m = document.getElementById('m');
+          var b = document.getElementById('b');
+          if (sp) sp.style.display = 'none';
+          if (m) m.textContent = 'Нажмите кнопку, чтобы открыть клуб';
+          if (b) {
             b.href = target;
-            b.classList.add('show');
-            b.onclick = function (ev) {
-              try {
-                ev.preventDefault();
-              } catch (e) {}
-              navigateNow(target);
-              return false;
-            };
-          }, 1200);
-        }
-
-        function fail(text) {
-          done = false;
-          clearTimeout(hardTimer);
-          sp.style.display = 'none';
-          m.textContent = text;
-          b.textContent = 'Повторить';
-          b.href = '#';
-          b.classList.add('show');
-          b.onclick = function (ev) {
-            try {
-              ev.preventDefault();
-            } catch (e) {}
-            done = false;
-            sp.style.display = 'block';
-            b.classList.remove('show');
-            m.textContent = 'Входим…';
-            hardTimer = setTimeout(function () {
-              if (!done) fail('Загрузка зависла. Нажмите «Повторить» или /start в боте.');
-            }, 12000);
-            start();
-            return false;
-          };
-        }
-
-        function getInitData() {
-          try {
-            return (window.Telegram && Telegram.WebApp && Telegram.WebApp.initData) || '';
-          } catch (e) {
-            return '';
+            b.className = 'btn show';
           }
-        }
-
-        function fetchJson(path, body, attempt) {
-          attempt = attempt || 1;
-          m.textContent = attempt > 1 ? 'Повтор входа… ' + attempt : 'Входим…';
-          var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
-          var timer = ctrl
-            ? setTimeout(function () {
-                try {
-                  ctrl.abort();
-                } catch (e) {}
-              }, FETCH_MS)
-            : null;
-
-          return fetch(path, {
-            method: 'POST',
-            cache: 'no-store',
-            credentials: 'omit',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-            signal: ctrl ? ctrl.signal : undefined,
-          })
-            .then(function (r) {
-              if (timer) clearTimeout(timer);
-              if (r.status === 401) {
-                var fatal = new Error('http 401');
-                fatal.fatal = true;
-                throw fatal;
-              }
-              if (!r.ok) throw new Error('http ' + r.status);
-              return r.json();
-            })
-            .then(function (json) {
-              var token = json && json.data && json.data.accessToken;
-              if (!token) throw new Error('no token');
-              try {
-                localStorage.setItem(TOKEN_KEY, token);
-              } catch (e) {}
-              goApp();
-            })
-            .catch(function (err) {
-              if (timer) clearTimeout(timer);
-              if (err && err.fatal) throw err;
-              if (attempt < 2) {
-                return new Promise(function (resolve) {
-                  setTimeout(resolve, 300);
-                }).then(function () {
-                  return fetchJson(path, body, attempt + 1);
-                });
-              }
-              throw err;
-            });
-        }
-
-        function loginWithInitData(initData) {
-          return fetchJson('/api/v1/auth/telegram', { initData: initData });
-        }
-
-        function loginWithTicket(value) {
-          return fetchJson('/api/v1/auth/telegram/ticket', { ticket: value });
-        }
-
-        function validateCachedToken() {
-          var token = null;
-          try {
-            token = localStorage.getItem(TOKEN_KEY);
-          } catch (e) {}
-          if (!token) return Promise.reject(new Error('no token'));
-
-          // Не ждём /profile на entry — токен уже есть, сразу в SPA.
-          // Проверку сделает ConsentGate; иначе iOS часто зависает на втором запросе.
-          goApp();
-          return Promise.resolve();
-        }
-
-        function waitInitDataOrFail() {
-          var tries = 0;
-          var timer = setInterval(function () {
-            tries += 1;
-            bumpTg();
-            var initData = getInitData();
-            if (initData) {
-              clearInterval(timer);
-              loginWithInitData(initData).catch(function () {
-                fail('Не удалось войти. Нажмите /start в боте и откройте новой кнопкой.');
-              });
-              return;
-            }
-            if (tries >= 40) {
-              clearInterval(timer);
-              if (ticket) {
-                loginWithTicket(ticket).catch(function () {
-                  fail('Ссылка устарела. Нажмите /start в боте и откройте новой кнопкой.');
-                });
-                return;
-              }
-              fail('Откройте приложение кнопкой из бота.');
-            }
-          }, 50);
-        }
-
-        function start() {
-          bumpTg();
-          setTimeout(bumpTg, 80);
-
-          var initData = getInitData();
-          if (initData) {
-            loginWithInitData(initData).catch(function () {
-              if (ticket) {
-                return loginWithTicket(ticket).catch(function () {
-                  fail('Не удалось войти. Нажмите /start в боте и откройте новой кнопкой.');
-                });
-              }
-              fail('Не удалось войти. Закройте и откройте кнопкой из бота.');
-            });
-            return;
-          }
-
-          if (ticket) {
-            loginWithTicket(ticket).catch(function () {
-              waitInitDataOrFail();
-            });
-            return;
-          }
-
-          try {
-            if (localStorage.getItem(TOKEN_KEY)) {
-              validateCachedToken();
-              return;
-            }
-          } catch (e) {}
-
-          waitInitDataOrFail();
-        }
-
-        b.onclick = function (ev) {
-          try {
-            ev.preventDefault();
-          } catch (e) {}
-          if (navTarget) {
-            navigateNow(navTarget);
-            return false;
-          }
-          fail('Входим…');
-          sp.style.display = 'block';
-          b.classList.remove('show');
-          done = false;
-          hardTimer = setTimeout(function () {
-            if (!done) fail('Загрузка зависла. Нажмите «Повторить» или /start в боте.');
-          }, 12000);
-          start();
-          return false;
-        };
-
-        start();
+        }, 1500);
       })();
     </script>
   </body>
