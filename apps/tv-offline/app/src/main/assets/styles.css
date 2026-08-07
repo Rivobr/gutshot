@@ -1,4 +1,4 @@
-/* GUTSHOT TV Offline — Variant C: ANTE under logo, larger logo + type */
+/* GUTSHOT TV Offline — Variant C, ultra TV scale */
 
 html, body {
   margin: 0;
@@ -12,9 +12,9 @@ html, body {
 .board {
   height: 100%;
   padding:
-    max(1.8vh, 14px)
-    max(2.8vw, 20px)
-    max(1.6vh, 12px);
+    max(0.2vh, 2px)
+    max(1vw, 10px)
+    max(0.3vh, 4px);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -29,19 +29,19 @@ html, body {
 
 .brand-logo {
   display: block;
-  /* Variant C: logo intentionally dominant */
-  height: clamp(140px, 23vmin, 320px);
+  /* Dominant brand mark for distance viewing (cropped asset) */
+  height: clamp(220px, 40vmin, 520px);
   width: auto;
-  max-width: 72vw;
+  max-width: 96vw;
   margin: 0 auto;
   object-fit: contain;
-  filter: drop-shadow(0 8px 28px rgba(199, 154, 61, 0.22));
+  filter: drop-shadow(0 12px 36px rgba(199, 154, 61, 0.32));
 }
 
 .rule {
-  width: min(48%, 680px);
-  height: 2px;
-  margin: 1vh auto 0;
+  width: min(70%, 960px);
+  height: 3px;
+  margin: 0.25vh auto 0;
   background: #c89a3d;
 }
 
@@ -57,10 +57,9 @@ html, body {
   width: 100%;
 }
 
-/* Variant C: ante sits under logo, above blinds */
 .ante-top {
   flex: 0 0 auto;
-  margin: 1.6vh auto 0.4vh;
+  margin: 0.5vh auto 0;
 }
 
 .center {
@@ -70,7 +69,7 @@ html, body {
   align-items: center;
   justify-content: center;
   min-height: 0;
-  gap: clamp(8px, 1.4vh, 22px);
+  gap: 0.3vh;
   width: 100%;
 }
 
@@ -82,21 +81,21 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: min(100%, 96vw);
+  width: min(100%, 99vw);
   max-width: 100%;
-  gap: clamp(14px, 2.4vw, 48px);
+  gap: clamp(8px, 1.6vw, 28px);
 }
 
 .blind {
   text-align: center;
   flex: 1 1 0;
   min-width: 0;
-  max-width: 46%;
+  max-width: 48%;
 }
 
 .lbl {
-  font-size: clamp(22px, 3.2vmin, 44px);
-  letter-spacing: 0.24em;
+  font-size: clamp(28px, 4.2vmin, 56px);
+  letter-spacing: 0.22em;
   text-transform: uppercase;
   color: #c89a3d;
   font-weight: 700;
@@ -105,25 +104,24 @@ html, body {
 .big {
   font-family: Georgia, "Times New Roman", serif;
   font-weight: 700;
-  /* Larger blinds */
-  font-size: clamp(96px, 21vmin, 340px);
-  line-height: 0.93;
+  font-size: clamp(160px, 34vmin, 580px);
+  line-height: 0.88;
   color: #fff8e6;
-  margin-top: 0.08em;
+  margin-top: 0.02em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: clip;
 }
 
-.big[data-digits="5"] { font-size: clamp(76px, 17vmin, 270px); }
-.big[data-digits="6"] { font-size: clamp(62px, 14vmin, 220px); }
+.big[data-digits="5"] { font-size: clamp(120px, 26vmin, 440px); }
+.big[data-digits="6"] { font-size: clamp(96px, 21vmin, 350px); }
 .big[data-digits="7"],
-.big[data-digits="8"] { font-size: clamp(52px, 11.5vmin, 180px); }
+.big[data-digits="8"] { font-size: clamp(76px, 16.5vmin, 270px); }
 
 .sep {
   flex: 0 0 auto;
-  width: 3px;
-  height: clamp(90px, 20vmin, 240px);
+  width: 4px;
+  height: clamp(130px, 28vmin, 360px);
   background: #c89a3d;
   align-self: center;
 }
@@ -133,8 +131,8 @@ html, body {
   color: #7a6e5a;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  font-size: clamp(18px, 2.7vmin, 34px);
-  margin: 0 0 0.5vh;
+  font-size: clamp(18px, 2.6vmin, 34px);
+  margin: 0 0 0.15vh;
   flex: 0 0 auto;
   white-space: nowrap;
   overflow: hidden;
@@ -153,14 +151,14 @@ html, body {
 .stats {
   display: flex;
   border-top: 1px solid rgba(199, 154, 61, 0.22);
-  padding: clamp(10px, 1.6vh, 26px) 0 clamp(6px, 1vh, 16px);
+  padding: clamp(4px, 0.7vh, 12px) 0 clamp(2px, 0.4vh, 8px);
   flex: 0 0 auto;
   width: 100%;
-  gap: 0.5vw;
+  gap: 0.4vw;
 }
 
 .stats2 {
-  max-width: 1200px;
+  max-width: 1300px;
   margin: 0 auto;
 }
 
@@ -171,14 +169,14 @@ html, body {
 }
 
 .stat .lbl {
-  font-size: clamp(18px, 2.8vmin, 36px);
+  font-size: clamp(16px, 2.6vmin, 34px);
 }
 
 .stat .val {
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(46px, 9.2vmin, 140px);
+  font-size: clamp(44px, 8.5vmin, 130px);
   font-weight: 700;
-  margin-top: 0.12em;
+  margin-top: 0.04em;
   color: #f5edd6;
   white-space: nowrap;
   overflow: hidden;
@@ -187,11 +185,11 @@ html, body {
 
 .break-box {
   text-align: center;
-  width: min(100%, 90vw);
+  width: min(100%, 92vw);
 }
 
 .break-box .big {
-  font-size: clamp(100px, 21vmin, 320px);
+  font-size: clamp(150px, 32vmin, 540px);
   color: #f7d98a;
 }
 
@@ -199,17 +197,17 @@ html, body {
   display: flex;
   align-items: baseline;
   justify-content: center;
-  gap: 1em;
-  border: 1px solid rgba(199, 154, 61, 0.5);
+  gap: 0.9em;
+  border: 3px solid rgba(199, 154, 61, 0.6);
   border-radius: 999px;
-  padding: 0.5em 2em;
+  padding: 0.4em 2em;
   width: fit-content;
-  max-width: min(88vw, 900px);
+  max-width: min(96vw, 1100px);
   box-sizing: border-box;
 }
 
 .ante-bar .albl {
-  font-size: clamp(24px, 3.6vmin, 48px);
+  font-size: clamp(30px, 4.6vmin, 62px);
   letter-spacing: 0.28em;
   color: #c89a3d;
   font-weight: 700;
@@ -218,7 +216,7 @@ html, body {
 
 .ante-bar .aval {
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(64px, 11vmin, 180px);
+  font-size: clamp(96px, 16.5vmin, 280px);
   font-weight: 700;
   color: #fff8e6;
   line-height: 1;
@@ -226,10 +224,16 @@ html, body {
   min-width: 0;
 }
 
-.ante-bar .aval[data-digits="5"] { font-size: clamp(54px, 9.4vmin, 152px); }
-.ante-bar .aval[data-digits="6"] { font-size: clamp(46px, 8vmin, 128px); }
+.ante-bar .aval[data-digits="5"] { font-size: clamp(72px, 12.5vmin, 210px); }
+.ante-bar .aval[data-digits="6"] { font-size: clamp(60px, 10.5vmin, 176px); }
 .ante-bar .aval[data-digits="7"],
-.ante-bar .aval[data-digits="8"] { font-size: clamp(38px, 6.8vmin, 108px); }
+.ante-bar .aval[data-digits="8"] { font-size: clamp(48px, 8.5vmin, 140px); }
+.ante-bar .aval[data-digits="9"],
+.ante-bar .aval[data-digits="10"],
+.ante-bar .aval[data-digits="11"],
+.ante-bar .aval[data-digits="12"],
+.ante-bar .aval[data-digits="13"],
+.ante-bar .aval[data-digits="14"] { font-size: clamp(40px, 7vmin, 120px); }
 
 .menu-center {
   flex: 1 1 auto;
@@ -237,15 +241,15 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: clamp(8px, 1.5vh, 22px);
+  gap: clamp(6px, 1.2vh, 18px);
   min-height: 0;
-  padding: 0 2vw;
+  padding: 0 1.5vw;
 }
 
 .time-big {
   font-family: Georgia, "Times New Roman", serif;
   font-weight: 700;
-  font-size: clamp(96px, 18vmin, 280px);
+  font-size: clamp(140px, 28vmin, 420px);
   color: #fff8e6;
   line-height: 1;
 }
@@ -254,9 +258,9 @@ html, body {
   color: #7a6e5a;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  font-size: clamp(14px, 2.1vmin, 28px);
+  font-size: clamp(18px, 2.8vmin, 36px);
   text-align: center;
-  max-width: 92%;
+  max-width: 94%;
 }
 
 .btn {
@@ -266,10 +270,10 @@ html, body {
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  font-size: clamp(16px, 2.4vmin, 30px);
-  padding: 0.9em 2.2em;
+  font-size: clamp(20px, 3.2vmin, 40px);
+  padding: 0.85em 2.2em;
   border-radius: 999px;
-  margin-top: 0.4vh;
+  margin-top: 0.3vh;
   cursor: pointer;
 }
 
@@ -282,12 +286,12 @@ html, body {
   color: #5c5345;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  font-size: clamp(12px, 1.8vmin, 22px);
+  font-size: clamp(14px, 2.2vmin, 28px);
 }
 
 .chevs {
   color: #c89a3d;
-  font-size: clamp(20px, 2.8vmin, 34px);
+  font-size: clamp(26px, 3.8vmin, 48px);
   line-height: 1;
 }
 
@@ -298,18 +302,19 @@ html, body {
 .finish-title {
   font-family: Georgia, "Times New Roman", serif;
   font-weight: 700;
-  font-size: clamp(48px, 10vmin, 140px);
+  font-size: clamp(64px, 14vmin, 210px);
   color: #fff8e6;
-  line-height: 1.1;
+  line-height: 1.08;
   text-align: center;
-  max-width: 94%;
+  max-width: 96%;
 }
 
-/* Short panels: keep C layout, slightly tighter */
 @media (max-height: 800px) {
-  .brand-logo { height: clamp(110px, 17vmin, 200px); }
-  .ante-top { margin-top: 0.6vh; }
-  .center { gap: 0.6vh; }
-  .stats { padding: 0.7vh 0 0.4vh; }
-  .menu-center { gap: 0.8vh; }
+  .brand-logo { height: clamp(140px, 24vmin, 280px); }
+  .ante-top { margin-top: 0.3vh; }
+  .center { gap: 0.2vh; }
+  .stats { padding: 0.35vh 0 0.2vh; }
+  .menu-center { gap: 0.5vh; }
+  .big { font-size: clamp(100px, 24vmin, 320px); }
+  .ante-bar .aval { font-size: clamp(64px, 12vmin, 180px); }
 }
