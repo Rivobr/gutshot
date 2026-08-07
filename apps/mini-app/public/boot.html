@@ -133,7 +133,7 @@
         }
 
         function appUrl() {
-          var q = '/?from=boot&t=' + Date.now() + '&v=20260807a';
+          var q = '/?from=boot&t=' + Date.now() + '&v=20260807b';
           if (ticket) q += '&ticket=' + encodeURIComponent(ticket);
           return q + (location.hash || '');
         }
@@ -142,7 +142,19 @@
           if (done) return;
           done = true;
           clearTimeout(hardTimer);
-          location.replace(appUrl());
+          m.textContent = 'Открываем клуб…';
+          var target = appUrl();
+          try {
+            location.replace(target);
+          } catch (e) {
+            try {
+              location.href = target;
+            } catch (e2) {}
+          }
+          // If navigation hangs, don't leave user on spinner forever.
+          hardTimer = setTimeout(function () {
+            fail('Не удалось открыть приложение. Нажмите «Повторить» или /start в боте.');
+          }, 5000);
         }
 
         function fail(text) {
