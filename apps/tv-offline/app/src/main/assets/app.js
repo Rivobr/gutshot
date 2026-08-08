@@ -2,21 +2,21 @@
 (function () {
   'use strict';
 
-  /** Клубный шаблон APK (ante = BB), перерывы 7/7/12. */
+  /** Клубный шаблон APK (ante = BB), перерывы 10/10/15. */
   var STRUCTURE = [
     { isBreak: false, level: 1, sb: 100, bb: 100, ante: 100, minutes: 12 },
     { isBreak: false, level: 2, sb: 100, bb: 200, ante: 200, minutes: 12 },
     { isBreak: false, level: 3, sb: 200, bb: 400, ante: 400, minutes: 15 },
     { isBreak: false, level: 4, sb: 300, bb: 600, ante: 600, minutes: 20 },
+    { isBreak: true, minutes: 10 },
     { isBreak: false, level: 5, sb: 400, bb: 800, ante: 800, minutes: 25 },
-    { isBreak: true, minutes: 7 },
     { isBreak: false, level: 6, sb: 500, bb: 1000, ante: 1000, minutes: 30 },
     { isBreak: false, level: 7, sb: 600, bb: 1200, ante: 1200, minutes: 20 },
+    { isBreak: true, minutes: 10 },
     { isBreak: false, level: 8, sb: 800, bb: 1600, ante: 1600, minutes: 23 },
-    { isBreak: true, minutes: 7 },
     { isBreak: false, level: 9, sb: 1000, bb: 2000, ante: 2000, minutes: 23 },
     { isBreak: false, level: 10, sb: 1500, bb: 3000, ante: 3000, minutes: 20 },
-    { isBreak: true, minutes: 12 },
+    { isBreak: true, minutes: 15 }, // конец поздней регистрации
     { isBreak: false, level: 11, sb: 2000, bb: 4000, ante: 4000, minutes: 12 },
     { isBreak: false, level: 12, sb: 3000, bb: 6000, ante: 6000, minutes: 12 },
     { isBreak: false, level: 13, sb: 5000, bb: 10000, ante: 10000, minutes: 10 },
@@ -32,7 +32,7 @@
     { isBreak: false, level: 23, sb: 200000, bb: 400000, ante: 400000, minutes: 8 },
   ];
 
-  var STORAGE_KEY = 'gutshot.tv.offline.v1';
+  var STORAGE_KEY = 'gutshot.tv.offline.v2';
 
   var state = {
     mode: 'menu', // menu | waiting | running | finished

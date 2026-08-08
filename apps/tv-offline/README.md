@@ -45,4 +45,4 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 ## Шаблон
 
-23 игровых уровня, ante = BB, перерывы 7 / 7 / 12 мин (как в утверждённом ТЗ).
+23 игровых уровня, ante = BB, перерывы 10 / 10 / 15 мин.
