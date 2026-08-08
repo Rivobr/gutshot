@@ -120,16 +120,75 @@ export function TournamentPage(): JSX.Element {
         >
           Турнир
         </p>
-        <h1
-          className="relative serif font-semibold mt-2 mb-2"
-          style={{ fontSize: 26, lineHeight: 1.15, color: '#F5EDD6' }}
-        >
-          {tournament.title}
-        </h1>
+        <div className="relative mt-2 mb-2 flex items-center justify-between gap-3">
+          <h1
+            className="serif font-semibold min-w-0 flex-1"
+            style={{ fontSize: 24, lineHeight: 1.15, color: '#F5EDD6' }}
+          >
+            {tournament.title}
+          </h1>
+          {isMine ? (
+            <div
+              className="shrink-0 rounded-full px-3.5 py-2.5 sans font-semibold uppercase text-center"
+              style={{
+                ...goldButtonStyle(),
+                opacity: 0.92,
+                fontSize: 11,
+                letterSpacing: '0.08em',
+                lineHeight: 1.1,
+              }}
+            >
+              {myRegistration?.status === 'WAITING' ? 'Лист ожидания' : 'Вы записаны'}
+            </div>
+          ) : (
+            <button
+              type="button"
+              disabled={tournament.status !== 'REGISTRATION_OPEN' || registerMutation.isPending}
+              onClick={handleRegister}
+              className="btn-shine shrink-0 rounded-full px-3.5 py-2.5 sans font-semibold uppercase disabled:opacity-50"
+              style={{
+                ...goldButtonStyle(),
+                fontSize: 11,
+                letterSpacing: '0.08em',
+                lineHeight: 1.1,
+                cursor:
+                  tournament.status !== 'REGISTRATION_OPEN' || registerMutation.isPending
+                    ? 'default'
+                    : 'pointer',
+              }}
+            >
+              {tournament.status === 'REGISTRATION_OPEN' ? 'Записаться' : 'Закрыта'}
+            </button>
+          )}
+        </div>
         <p className="relative sans num" style={{ fontSize: 12, color: '#8A7A62' }}>
           {formatDate(tournament.date)} · {formatTime(tournament.date)} · {registrationsCount}{' '}
           участников
+          {tournament.status === 'REGISTRATION_OPEN' && !isMine && seats === 0
+            ? ' · лист ожидания'
+            : ''}
         </p>
+        {isMine &&
+          (myRegistration?.status === 'REGISTERED' || myRegistration?.status === 'WAITING') && (
+            <button
+              type="button"
+              disabled={cancelMutation.isPending}
+              onClick={handleCancel}
+              className="relative sans mt-2 disabled:opacity-50"
+              style={{
+                background: 'transparent',
+                border: 'none',
+                padding: 0,
+                color: '#E07A6E',
+                fontSize: 12,
+                cursor: cancelMutation.isPending ? 'default' : 'pointer',
+                textDecoration: 'underline',
+                textUnderlineOffset: 3,
+              }}
+            >
+              Отменить запись
+            </button>
+          )}
       </div>
 
       <div className="px-5 pt-4 flex gap-2">
@@ -254,55 +313,6 @@ export function TournamentPage(): JSX.Element {
                     ))}
                 </div>
               </div>
-            </div>
-          )}
-
-          {isMine ? (
-            <div className="px-5 mt-6 flex flex-col gap-3">
-              <div
-                className="w-full py-4 rounded-[18px] serif font-semibold tracking-widest text-center"
-                style={{ ...goldButtonStyle(), opacity: 0.92 }}
-              >
-                {myRegistration?.status === 'WAITING' ? 'В ЛИСТЕ ОЖИДАНИЯ' : 'ВЫ ЗАПИСАНЫ'}
-              </div>
-              {(myRegistration?.status === 'REGISTERED' ||
-                myRegistration?.status === 'WAITING') && (
-                <button
-                  type="button"
-                  disabled={cancelMutation.isPending}
-                  onClick={handleCancel}
-                  className="w-full py-3.5 rounded-[18px] sans font-medium disabled:opacity-50"
-                  style={{
-                    background: 'rgba(192,57,43,0.12)',
-                    border: '1px solid rgba(192,57,43,0.4)',
-                    color: '#E07A6E',
-                    fontSize: 13,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Отменить регистрацию
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="px-5 mt-6">
-              <button
-                type="button"
-                disabled={tournament.status !== 'REGISTRATION_OPEN' || registerMutation.isPending}
-                onClick={handleRegister}
-                className="btn-shine w-full py-4 rounded-[18px] serif font-semibold tracking-widest disabled:opacity-50"
-                style={goldButtonStyle()}
-              >
-                {tournament.status === 'REGISTRATION_OPEN'
-                  ? 'ЗАРЕГИСТРИРОВАТЬСЯ'
-                  : 'РЕГИСТРАЦИЯ ЗАКРЫТА'}
-              </button>
-              {tournament.status === 'REGISTRATION_OPEN' && (
-                <p className="sans text-center mt-2.5" style={{ fontSize: 10, color: '#6B614E' }}>
-                  Свободно {seats}
-                  {seats === 0 ? ' · лист ожидания' : ''} · Можно записаться на несколько турниров
-                </p>
-              )}
             </div>
           )}
         </>
