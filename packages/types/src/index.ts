@@ -500,6 +500,7 @@ export interface ScannedPlayerDto {
   username?: string | null;
   firstName?: string | null;
   lastName?: string | null;
+  nickname?: string | null;
   photoUrl?: string | null;
   isBlocked: boolean;
   level: number;
@@ -566,6 +567,8 @@ export interface AdminTournamentRegistration {
     lastName?: string | null;
     nickname?: string | null;
     photoUrl?: string | null;
+    /** Постоянный персональный QR — для печати из карточки турнира. */
+    qrCode?: string | null;
     xp: number;
     level: number;
   };

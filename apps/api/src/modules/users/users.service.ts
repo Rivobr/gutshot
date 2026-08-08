@@ -47,8 +47,10 @@ export class UsersService {
     const id = String(telegramId);
     const existing = await this.findByTelegramId(id);
     if (existing) {
-      if (!existing.username && !existing.firstName) {
+      // Догружаем профиль, если неполный (тикет/админ-создание без initData).
+      if (!existing.username || !existing.firstName || !existing.photoUrl) {
         void this.refreshTelegramProfileInBackground(existing.id, id);
+        void this.refreshPhotoInBackground(existing.id, id);
       }
       return existing.qrCode ? existing : this.ensureQrCode(existing.id);
     }
@@ -123,8 +125,8 @@ export class UsersService {
     const photoFromInit = telegramUser.photo_url ?? null;
 
     if (existing) {
-      // Никнейм не трогаем, если уже задан — его меняет только сам игрок.
-      // QR-код тоже никогда не перегенерируется.
+      // Синк Telegram-профиля: обновляем поля из initData, но не затираем
+      // уже известные значения пустотой. Никнейм/QR/XP не трогаем.
       const nickname =
         existing.nickname ??
         (await this.allocateUniqueNickname(defaultNickname(telegramUser), existing.id));
@@ -132,9 +134,9 @@ export class UsersService {
       const updated = await this.prisma.user.update({
         where: { id: existing.id },
         data: {
-          username: telegramUser.username,
-          firstName: telegramUser.first_name,
-          lastName: telegramUser.last_name,
+          username: telegramUser.username ?? existing.username,
+          firstName: telegramUser.first_name ?? existing.firstName,
+          lastName: telegramUser.last_name ?? existing.lastName,
           photoUrl: photoFromInit ?? existing.photoUrl,
           nickname,
         },

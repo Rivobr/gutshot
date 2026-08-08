@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { QueryProvider } from './providers/query-provider';
 import { router } from './router/router';
 import {
+  loginWithTicket,
   loginWithTelegramInitData,
   useStartup,
   waitForInitData,
@@ -24,6 +25,26 @@ import { ToastHost } from '../shared/ui/toast';
  * иначе на медленной сети показываем ошибку, пока ответ ещё идёт.
  */
 const BOOTSTRAP_WAIT_MS = 10_000;
+
+function readTicketFromUrl(): string {
+  try {
+    return new URLSearchParams(window.location.search).get('ticket') || '';
+  } catch {
+    return '';
+  }
+}
+
+async function recoverSession(): Promise<void> {
+  const initData = getTelegramInitData() || (await waitForInitData(2_000));
+  if (initData) {
+    await loginWithTelegramInitData(initData);
+    return;
+  }
+  const ticket = readTicketFromUrl();
+  if (ticket) {
+    await loginWithTicket(ticket);
+  }
+}
 
 export function App(): JSX.Element {
   const { status, errorMessage } = useStartup();
@@ -144,11 +165,7 @@ function ConsentGate({ children }: { children: JSX.Element }): JSX.Element {
 
     void (async () => {
       try {
-        const initData = getTelegramInitData() || (await waitForInitData(1_500));
-        if (!initData) {
-          return;
-        }
-        await loginWithTelegramInitData(initData);
+        await recoverSession();
         await refetch();
       } catch {
         // UI покажет кнопку «Повторить»
@@ -184,10 +201,7 @@ function ConsentGate({ children }: { children: JSX.Element }): JSX.Element {
               try {
                 tokenStorage.clear();
                 clearReauthFlag();
-                const initData = getTelegramInitData() || (await waitForInitData(3_000));
-                if (initData) {
-                  await loginWithTelegramInitData(initData);
-                }
+                await recoverSession();
                 await refetch();
               } catch {
                 tokenStorage.clear();

@@ -5,6 +5,15 @@ export function usePlayers() {
   return useQuery({ queryKey: ['admin', 'players'], queryFn: adminPlayersApi.getAll });
 }
 
+export function useCreatePlayer() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { telegramId: string; isVerified?: boolean }) =>
+      adminPlayersApi.createByTelegramId(payload),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'players'] }),
+  });
+}
+
 export function usePlayer(id: string) {
   return useQuery({
     queryKey: ['admin', 'players', id],

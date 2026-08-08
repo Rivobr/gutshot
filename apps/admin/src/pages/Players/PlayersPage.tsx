@@ -1,16 +1,14 @@
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useMemo, useState, type CSSProperties, type FormEvent } from 'react';
 import type { AdminPlayerListItem } from '@gutshot/types';
 import { Avatar, Badge, Button, Loader } from '@gutshot/ui';
-import { usePlayers, useTogglePlayerBlock, useTogglePlayerVerify } from '../../entities/player';
+import {
+  useCreatePlayer,
+  usePlayers,
+  useTogglePlayerBlock,
+  useTogglePlayerVerify,
+} from '../../entities/player';
+import { displayPlayerName } from '../../shared/lib/display-name';
 import { PlayerQrModal } from '../../widgets/PlayerQrModal/PlayerQrModal';
-
-function playerName(player: AdminPlayerListItem): string {
-  const full = [player.firstName, player.lastName].filter(Boolean).join(' ').trim();
-  if (full) return full;
-  if (player.nickname) return player.nickname;
-  if (player.username) return `@${player.username}`;
-  return `Игрок ${player.telegramId}`;
-}
 
 function verifyBadgeStyle(verified: boolean): CSSProperties {
   return verified
@@ -25,24 +23,74 @@ function statusBadgeStyle(blocked: boolean): CSSProperties {
 }
 
 export function PlayersPage(): JSX.Element {
-  const { data: players, isLoading } = usePlayers();
+  const { data: players, isLoading, isError, refetch, isFetching } = usePlayers();
   const toggleBlock = useTogglePlayerBlock();
   const toggleVerify = useTogglePlayerVerify();
+  const createPlayer = useCreatePlayer();
   const [search, setSearch] = useState('');
   const [qrPlayer, setQrPlayer] = useState<AdminPlayerListItem | null>(null);
+  const [telegramId, setTelegramId] = useState('');
+  const [createMessage, setCreateMessage] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
     if (!query) return players ?? [];
-    return (players ?? []).filter((player) =>
-      [playerName(player), player.username, player.qrCode, player.telegramId]
-        .filter(Boolean)
-        .some((field) => String(field).toLowerCase().includes(query)),
-    );
+    return (players ?? []).filter((player) => {
+      const fields = [
+        displayPlayerName(player),
+        player.nickname,
+        player.firstName,
+        player.lastName,
+        player.username,
+        player.username ? `@${player.username}` : null,
+        player.qrCode,
+        player.telegramId,
+      ];
+      return fields.filter(Boolean).some((field) => String(field).toLowerCase().includes(query));
+    });
   }, [players, search]);
+
+  const onCreate = (event: FormEvent) => {
+    event.preventDefault();
+    setCreateMessage(null);
+    const id = telegramId.trim();
+    if (!/^\d{5,20}$/.test(id)) {
+      setCreateMessage('Введите числовой Telegram ID (5–20 цифр)');
+      return;
+    }
+    createPlayer.mutate(
+      { telegramId: id },
+      {
+        onSuccess: (player) => {
+          setTelegramId('');
+          setCreateMessage(
+            `Игрок добавлен: ${displayPlayerName(player)} · ${player.qrCode ?? 'QR позже'}`,
+          );
+          setQrPlayer(player);
+        },
+        onError: () => {
+          setCreateMessage('Не удалось добавить игрока. Проверьте ID и соединение.');
+        },
+      },
+    );
+  };
 
   if (isLoading) {
     return <Loader />;
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-start gap-4">
+        <h1 className="text-xl font-medium sm:text-2xl">Игроки</h1>
+        <p className="rounded-lg border border-border bg-card px-4 py-6 text-sm text-destructive">
+          Не удалось загрузить список игроков. Это не «пустой клуб» — запрос к серверу не прошёл.
+        </p>
+        <Button onClick={() => void refetch()} isLoading={isFetching}>
+          Повторить
+        </Button>
+      </div>
+    );
   }
 
   return (
@@ -55,10 +103,32 @@ export function PlayersPage(): JSX.Element {
         <input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Поиск по имени, @username или QR"
+          placeholder="Поиск: ник, имя, @username, QR, Telegram ID"
           className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary sm:max-w-xs"
         />
       </div>
+
+      <form
+        onSubmit={onCreate}
+        className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-end"
+      >
+        <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
+          <span className="text-muted-foreground">Добавить по Telegram ID</span>
+          <input
+            value={telegramId}
+            onChange={(event) => setTelegramId(event.target.value.replace(/\D/g, ''))}
+            inputMode="numeric"
+            placeholder="Например 123456789"
+            className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+          />
+        </label>
+        <Button type="submit" className="sm:w-auto" isLoading={createPlayer.isPending}>
+          Добавить игрока
+        </Button>
+        {createMessage && (
+          <p className="w-full text-sm text-muted-foreground sm:basis-full">{createMessage}</p>
+        )}
+      </form>
 
       {/* Desktop table */}
       <div className="hidden overflow-x-auto rounded-lg border border-border md:block">
@@ -81,8 +151,8 @@ export function PlayersPage(): JSX.Element {
               <tr key={player.id} className="border-t border-border">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
-                    <Avatar src={player.photoUrl} fallback={playerName(player)} size={32} />
-                    {playerName(player)}
+                    <Avatar src={player.photoUrl} fallback={displayPlayerName(player)} size={32} />
+                    {displayPlayerName(player)}
                   </div>
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">
@@ -144,9 +214,9 @@ export function PlayersPage(): JSX.Element {
         {filtered.map((player) => (
           <div key={player.id} className="rounded-lg border border-border bg-card p-4">
             <div className="flex items-center gap-3">
-              <Avatar src={player.photoUrl} fallback={playerName(player)} size={40} />
+              <Avatar src={player.photoUrl} fallback={displayPlayerName(player)} size={40} />
               <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">{playerName(player)}</p>
+                <p className="truncate font-medium">{displayPlayerName(player)}</p>
                 <p className="truncate text-xs text-muted-foreground">
                   {player.username ? `@${player.username}` : `ID ${player.telegramId}`}
                 </p>
@@ -212,14 +282,14 @@ export function PlayersPage(): JSX.Element {
 
       {filtered.length === 0 && (
         <p className="rounded-lg border border-border bg-card px-4 py-8 text-center text-sm text-muted-foreground">
-          Игроки не найдены
+          Игроки не найдены по текущему поиску
         </p>
       )}
 
       <PlayerQrModal
         open={qrPlayer !== null}
         qrCode={qrPlayer?.qrCode ?? null}
-        playerName={qrPlayer ? playerName(qrPlayer) : ''}
+        playerName={qrPlayer ? displayPlayerName(qrPlayer) : ''}
         username={qrPlayer?.username}
         onClose={() => setQrPlayer(null)}
       />

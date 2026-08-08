@@ -131,7 +131,7 @@
         }
 
         function appUrl() {
-          var q = '/?from=enter&t=' + Date.now() + '&v=20260807f';
+          var q = '/?from=enter&t=' + Date.now() + '&v=20260808a';
           if (ticket) q += '&ticket=' + encodeURIComponent(ticket);
           return q + (location.hash || '');
         }
@@ -239,6 +239,7 @@
               if (r.status === 401) {
                 var fatal = new Error('http 401');
                 fatal.fatal = true;
+                fatal.status = 401;
                 throw fatal;
               }
               if (!r.ok) throw new Error('http ' + r.status);
@@ -319,19 +320,31 @@
 
           var initData = getInitData();
           if (initData) {
-            loginWithInitData(initData).catch(function () {
+            loginWithInitData(initData).catch(function (err) {
               if (ticket) {
                 return loginWithTicket(ticket).catch(function () {
-                  fail('Не удалось войти. Нажмите /start в боте и откройте новой кнопкой.');
+                  fail(
+                    err && err.status === 401
+                      ? 'Ссылка устарела. Нажмите /start в боте и откройте новой кнопкой.'
+                      : 'Не удалось войти. Нажмите /start в боте и откройте новой кнопкой.',
+                  );
                 });
               }
-              fail('Не удалось войти. Закройте и откройте кнопкой из бота.');
+              fail(
+                err && err.status === 401
+                  ? 'Ссылка устарела. Нажмите /start в боте и откройте новой кнопкой.'
+                  : 'Не удалось войти. Закройте и откройте кнопкой из бота.',
+              );
             });
             return;
           }
 
           if (ticket) {
-            loginWithTicket(ticket).catch(function () {
+            loginWithTicket(ticket).catch(function (err) {
+              if (err && err.status === 401) {
+                fail('Ссылка устарела. Нажмите /start в боте и откройте новой кнопкой.');
+                return;
+              }
               waitInitDataOrFail();
             });
             return;

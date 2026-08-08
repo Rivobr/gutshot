@@ -4,6 +4,7 @@ import type { ScannedPlayerDto, ScannerEventType } from '@gutshot/types';
 import { Avatar, Badge, Button, Card } from '@gutshot/ui';
 import { useApplyScannerEvent, useScanPlayer } from '../../entities/scanner';
 import { QrScanner } from '../../widgets/QrScanner/QrScanner';
+import { displayPlayerName } from '../../shared/lib/display-name';
 import { PLAYER_EVENT_LABELS, SCANNER_EVENTS, formatDateTime } from '../../shared/lib/event-labels';
 
 interface EventFeedback {
@@ -12,11 +13,6 @@ interface EventFeedback {
   levelUp: boolean;
   level: number;
   achievementUnlocked: string | null;
-}
-
-function playerName(player: ScannedPlayerDto): string {
-  const name = `${player.firstName ?? ''} ${player.lastName ?? ''}`.trim();
-  return name || player.username || 'Игрок';
 }
 
 export function ScannerPage(): JSX.Element {
@@ -90,7 +86,11 @@ export function ScannerPage(): JSX.Element {
             placeholder="Код игрока, например GS-XXXXXXXXXXXXXXXX"
             className="flex-1 rounded-md border border-border bg-secondary px-3 py-2.5 text-foreground outline-none focus:ring-2 focus:ring-primary"
           />
-          <Button onClick={() => lookup(qrCode)} isLoading={scanPlayer.isPending} disabled={!qrCode}>
+          <Button
+            onClick={() => lookup(qrCode)}
+            isLoading={scanPlayer.isPending}
+            disabled={!qrCode}
+          >
             Найти
           </Button>
           <Button variant="ghost" onClick={() => setScanning((value) => !value)}>
@@ -129,11 +129,15 @@ export function ScannerPage(): JSX.Element {
         <>
           <Card className="gap-4">
             <div className="flex items-start gap-4">
-              <Avatar src={player.photoUrl ?? undefined} fallback={playerName(player)} size={64} />
+              <Avatar
+                src={player.photoUrl ?? undefined}
+                fallback={displayPlayerName(player)}
+                size={64}
+              />
 
               <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-lg font-medium">{playerName(player)}</h2>
+                  <h2 className="text-lg font-medium">{displayPlayerName(player)}</h2>
                   {player.isBlocked && (
                     <Badge style={{ background: 'var(--destructive)', color: '#fff' }}>
                       Заблокирован
@@ -192,7 +196,9 @@ export function ScannerPage(): JSX.Element {
                     key={event.value}
                     variant="secondary"
                     disabled={
-                      applyEvent.isPending || player.isBlocked || (needsRegistration && !registration)
+                      applyEvent.isPending ||
+                      player.isBlocked ||
+                      (needsRegistration && !registration)
                     }
                     onClick={() => handleEvent(event.value, event.label)}
                     className="flex-col gap-1 py-4"

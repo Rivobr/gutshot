@@ -445,6 +445,7 @@ export class AdminTournamentsService {
           lastName: registration.user.lastName,
           nickname: registration.user.nickname,
           photoUrl: registration.user.photoUrl,
+          qrCode: registration.user.qrCode,
           xp,
           level: this.levelsService.computeProgress(thresholds, xp).level,
         },

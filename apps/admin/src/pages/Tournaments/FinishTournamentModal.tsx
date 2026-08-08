@@ -3,16 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import type { AdminTournamentRegistration } from '@gutshot/types';
 import { Button } from '@gutshot/ui';
 import { useFinishTournament } from '../../entities/tournament';
-
-function displayName(
-  user: AdminTournamentRegistration['user'] & { nickname?: string | null },
-): string {
-  if (user.nickname?.trim()) {
-    return user.nickname.trim();
-  }
-  const name = `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim();
-  return name || user.username || 'Игрок';
-}
+import { displayPlayerName } from '../../shared/lib/display-name';
 
 export interface FinishTournamentModalProps {
   open: boolean;
@@ -126,7 +117,7 @@ export function FinishTournamentModal({
                     key={player.id}
                     className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2"
                   >
-                    <span className="text-sm">{displayName(player.user)}</span>
+                    <span className="text-sm">{displayPlayerName(player.user)}</span>
                     <input
                       type="number"
                       min={1}
@@ -145,7 +136,7 @@ export function FinishTournamentModal({
               <p className="mt-3 text-sm text-amber-500">
                 Не указаны места у {missingPlaces.length} игроков
                 {missingPlaces.length <= 5
-                  ? `: ${missingPlaces.map((item) => displayName(item.user)).join(', ')}`
+                  ? `: ${missingPlaces.map((item) => displayPlayerName(item.user)).join(', ')}`
                   : ''}
               </p>
             )}

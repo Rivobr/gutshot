@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TelegramModule } from '../telegram/telegram.module';
 import { RegistrationsModule } from '../registrations/registrations.module';
 import { ProgressionModule } from '../progression/progression.module';
+import { UsersModule } from '../users/users.module';
 import { DashboardController } from './dashboard/dashboard.controller';
 import { DashboardService } from './dashboard/dashboard.service';
 import { AdminPlayersController } from './players/players.controller';
@@ -17,7 +18,7 @@ import { XpSettingsController } from './xp-settings/xp-settings.controller';
 import { AdminHistoryController } from './history/admin-history.controller';
 
 @Module({
-  imports: [TelegramModule, RegistrationsModule, ProgressionModule],
+  imports: [TelegramModule, RegistrationsModule, ProgressionModule, UsersModule],
   controllers: [
     DashboardController,
     AdminPlayersController,

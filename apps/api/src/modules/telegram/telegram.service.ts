@@ -92,7 +92,7 @@ export class TelegramService {
       { typ: 'miniapp_ticket', telegramId: String(chatId) },
       { expiresIn: '7d' },
     );
-    const entryUrl = `${miniAppUrl}/enter.html?t=${Date.now()}&v=20260807f&ticket=${encodeURIComponent(ticket)}`;
+    const entryUrl = `${miniAppUrl}/enter.html?t=${Date.now()}&v=20260808a&ticket=${encodeURIComponent(ticket)}`;
     const openAppKeyboard = {
       inline_keyboard: [[{ text: '♠️ Открыть GUTSHOT', web_app: { url: entryUrl } }]],
     };

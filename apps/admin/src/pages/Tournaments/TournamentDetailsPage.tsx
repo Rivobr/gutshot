@@ -11,23 +11,15 @@ import {
   type AdminTournament,
 } from '../../entities/tournament';
 import { useAdminHistory } from '../../entities/history';
+import { displayPlayerName } from '../../shared/lib/display-name';
 import { PLAYER_EVENT_LABELS, formatDateTime } from '../../shared/lib/event-labels';
 import { tournamentStatusLabel } from '../../shared/lib/tournament-status';
+import { PlayerQrModal } from '../../widgets/PlayerQrModal/PlayerQrModal';
 import { TournamentActions } from './TournamentActions';
 import { TournamentFormModal } from './TournamentFormModal';
 import { FinishTournamentModal } from './FinishTournamentModal';
 import { TournamentLivePanel } from './TournamentLivePanel';
 import { TournamentClockPanel } from './TournamentClockPanel';
-
-function displayName(
-  user: AdminTournamentRegistration['user'] & { nickname?: string | null },
-): string {
-  if (user.nickname?.trim()) {
-    return user.nickname.trim();
-  }
-  const name = `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim();
-  return name || user.username || 'Игрок';
-}
 
 function sortRegistrations(items: AdminTournamentRegistration[]): AdminTournamentRegistration[] {
   return items.slice().sort((a, b) => {
@@ -59,6 +51,7 @@ export function TournamentDetailsPage(): JSX.Element {
   const [isEditOpen, setEditOpen] = useState(false);
   const [isFinishOpen, setFinishOpen] = useState(false);
   const [placeDrafts, setPlaceDrafts] = useState<Record<string, string>>({});
+  const [qrPlayer, setQrPlayer] = useState<AdminTournamentRegistration['user'] | null>(null);
 
   useEffect(() => {
     if (searchParams.get('finish') === '1') {
@@ -222,10 +215,10 @@ export function TournamentDetailsPage(): JSX.Element {
                         <div className="flex items-center gap-2">
                           <Avatar
                             src={registration.user.photoUrl ?? undefined}
-                            fallback={displayName(registration.user)}
+                            fallback={displayPlayerName(registration.user)}
                             size={32}
                           />
-                          <span>{displayName(registration.user)}</span>
+                          <span>{displayPlayerName(registration.user)}</span>
                         </div>
                       </td>
                       <td className="py-2.5 pr-3">
@@ -237,6 +230,13 @@ export function TournamentDetailsPage(): JSX.Element {
                       </td>
                       <td className="py-2.5">
                         <div className="flex flex-wrap gap-2">
+                          <Button
+                            variant="secondary"
+                            className="px-3 py-1.5 text-xs"
+                            onClick={() => setQrPlayer(registration.user)}
+                          >
+                            QR
+                          </Button>
                           {isLive && registration.place == null && (
                             <Button
                               className="px-3 py-1.5 text-xs"
@@ -288,11 +288,11 @@ export function TournamentDetailsPage(): JSX.Element {
                   <div className="flex items-center gap-3">
                     <Avatar
                       src={registration.user.photoUrl ?? undefined}
-                      fallback={displayName(registration.user)}
+                      fallback={displayPlayerName(registration.user)}
                       size={40}
                     />
                     <div className="flex min-w-0 flex-1 flex-col">
-                      <span className="font-medium">{displayName(registration.user)}</span>
+                      <span className="font-medium">{displayPlayerName(registration.user)}</span>
                       <span className="text-xs text-muted-foreground">
                         Ур. {registration.user.level} ·{' '}
                         {registration.user.xp.toLocaleString('ru-RU')} XP
@@ -309,44 +309,53 @@ export function TournamentDetailsPage(): JSX.Element {
 
                   <AttendanceBadge registration={registration} />
 
-                  {isLive && (
-                    <div className="flex flex-wrap items-center gap-2">
-                      <PlaceInput
-                        value={placeDrafts[registration.id] ?? ''}
-                        disabled={placeBusy}
-                        onChange={(value) =>
-                          setPlaceDrafts((prev) => ({
-                            ...prev,
-                            [registration.id]: value,
-                          }))
-                        }
-                        onSave={() => savePlace(registration.id)}
-                      />
-                      {registration.place == null ? (
-                        <Button
-                          className="px-3 py-1.5 text-xs"
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="secondary"
+                      className="px-3 py-1.5 text-xs"
+                      onClick={() => setQrPlayer(registration.user)}
+                    >
+                      QR · печать
+                    </Button>
+                    {isLive && (
+                      <>
+                        <PlaceInput
+                          value={placeDrafts[registration.id] ?? ''}
                           disabled={placeBusy}
-                          onClick={() => eliminatePlayer.mutate(registration.id)}
-                        >
-                          Выбыл
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="ghost"
-                          className="px-3 py-1.5 text-xs"
-                          disabled={placeBusy}
-                          onClick={() =>
-                            setPlace.mutate({
-                              registrationId: registration.id,
-                              place: null,
-                            })
+                          onChange={(value) =>
+                            setPlaceDrafts((prev) => ({
+                              ...prev,
+                              [registration.id]: value,
+                            }))
                           }
-                        >
-                          Сбросить
-                        </Button>
-                      )}
-                    </div>
-                  )}
+                          onSave={() => savePlace(registration.id)}
+                        />
+                        {registration.place == null ? (
+                          <Button
+                            className="px-3 py-1.5 text-xs"
+                            disabled={placeBusy}
+                            onClick={() => eliminatePlayer.mutate(registration.id)}
+                          >
+                            Выбыл
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            className="px-3 py-1.5 text-xs"
+                            disabled={placeBusy}
+                            onClick={() =>
+                              setPlace.mutate({
+                                registrationId: registration.id,
+                                place: null,
+                              })
+                            }
+                          >
+                            Сбросить
+                          </Button>
+                        )}
+                      </>
+                    )}
+                  </div>
 
                   <AttendanceActions
                     registration={registration}
@@ -412,6 +421,14 @@ export function TournamentDetailsPage(): JSX.Element {
         tournamentId={id}
         registrations={registrations ?? []}
         onClose={() => setFinishOpen(false)}
+      />
+
+      <PlayerQrModal
+        open={qrPlayer !== null}
+        qrCode={qrPlayer?.qrCode ?? null}
+        playerName={qrPlayer ? displayPlayerName(qrPlayer) : ''}
+        username={qrPlayer?.username}
+        onClose={() => setQrPlayer(null)}
       />
     </div>
   );

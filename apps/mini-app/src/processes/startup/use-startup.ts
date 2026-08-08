@@ -68,7 +68,7 @@ function isRetryableNetworkError(error: unknown): boolean {
   return !error.response || error.code === 'ECONNABORTED';
 }
 
-/** Логин по initData. Флаг reauth снимается только после успешного /profile. */
+/** Логин по initData. Флаг reauth снимается после успешного bootstrap в App. */
 export async function loginWithTelegramInitData(initData: string): Promise<string> {
   let lastError: unknown;
   for (let attempt = 1; attempt <= LOGIN_ATTEMPTS; attempt += 1) {
@@ -199,6 +199,27 @@ export function useStartup(): { status: StartupStatus; errorMessage?: string } {
       if (initData) {
         try {
           await loginWithTelegramInitData(initData);
+          runReady();
+          return;
+        } catch (error) {
+          if (ticket) {
+            try {
+              await loginWithTicket(ticket);
+              runReady();
+              return;
+            } catch {
+              finish('error', extractAuthError(error));
+              return;
+            }
+          }
+          finish('error', extractAuthError(error));
+          return;
+        }
+      }
+
+      if (ticket) {
+        try {
+          await loginWithTicket(ticket);
           runReady();
           return;
         } catch (error) {
