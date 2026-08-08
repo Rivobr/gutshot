@@ -249,12 +249,11 @@ export function ProfilePage(): JSX.Element {
           </h2>
           {profile.isLegendGutshot && (
             <p
-              className="sans mt-1 font-medium uppercase"
+              className="legend-title sans mt-1 font-medium uppercase"
               style={{
                 fontSize: 11,
                 letterSpacing: '0.14em',
                 color: '#F7D98A',
-                textShadow: '0 0 12px rgba(247,217,138,0.35)',
               }}
             >
               👑 Легенда Gutshot

@@ -8,7 +8,7 @@ export interface PlayerAvatarProps {
   nickname?: string | null;
   size?: number;
   className?: string;
-  /** Золотая рамка / корона для «Легенды Gutshot». */
+  /** Анимированная золотая рамка / корона для «Легенды Gutshot». */
   legend?: boolean;
 }
 
@@ -27,32 +27,26 @@ export function PlayerAvatar({
     : initialsOf(firstName, lastName);
 
   const showPhoto = Boolean(photoUrl) && !failed;
-  const ring = legend ? Math.max(3, Math.round(size * 0.06)) : size >= 64 ? 3 : 1;
+  const crownSize = Math.max(14, Math.round(size * 0.28));
 
   return (
     <div
-      className={className}
-      style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}
+      className={['legend-avatar', className].filter(Boolean).join(' ')}
+      style={{ width: size, height: size }}
     >
       {legend && (
-        <span
-          aria-hidden
-          style={{
-            position: 'absolute',
-            top: -Math.round(size * 0.18),
-            left: '50%',
-            transform: 'translateX(-50%)',
-            fontSize: Math.round(size * 0.28),
-            lineHeight: 1,
-            zIndex: 2,
-            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.45))',
-          }}
-        >
-          👑
-        </span>
+        <>
+          <span className="legend-avatar__glow" aria-hidden />
+          <span className="legend-avatar__ring" aria-hidden />
+          <span className="legend-avatar__crown" style={{ fontSize: crownSize }} aria-hidden>
+            👑
+          </span>
+        </>
       )}
       <div
         style={{
+          position: 'relative',
+          zIndex: 2,
           width: size,
           height: size,
           borderRadius: '9999px',
@@ -66,7 +60,7 @@ export function PlayerAvatar({
           color: '#0A0A0A',
           fontSize: Math.round(size * 0.35),
           boxShadow: legend
-            ? `0 0 0 ${ring}px rgba(247,217,138,0.85), 0 0 0 ${ring + 3}px rgba(184,134,11,0.35), 0 0 28px rgba(247,217,138,0.45)`
+            ? '0 0 18px rgba(247,217,138,0.35)'
             : size >= 64
               ? '0 0 0 3px rgba(199,154,61,0.18), 0 0 32px rgba(156,106,31,0.28)'
               : '0 0 0 1px rgba(199,154,61,0.2)',
