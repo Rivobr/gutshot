@@ -27,10 +27,13 @@ APK: `app/build/outputs/apk/debug/app-debug.apk`
 
 ## Установка на TV
 
-1. Скопировать APK на флешку / через adb
-2. На TV разрешить установку из неизвестных источников
-3. Установить `app-debug.apk`
-4. Запустить **GUTSHOT TV** из раздела приложений
+Скачать APK **только с GitHub Release**:
+
+https://github.com/Rivobr/gutshot/releases/download/tv-offline-latest/gutshot-tv-offline.apk
+
+1. На TV разрешить установку из неизвестных источников
+2. Установить скачанный APK
+3. Запустить **GUTSHOT TV**
 
 ```bash
 adb connect <TV_IP>:5555
