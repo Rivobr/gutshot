@@ -11,33 +11,106 @@ export interface PlayerQrModalProps {
   onClose: () => void;
 }
 
-/** Печатный бейдж игрока: открывается в отдельном окне и уходит в печать/PDF. */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/**
+ * Печать для Xprinter XP-365B (термоэтикетка ~80 мм).
+ * QR ровно 40×40 мм, прижат в левый верхний угол.
+ */
 function printBadge(dataUrl: string, code: string, name: string, username?: string | null): void {
-  const win = window.open('', '_blank', 'width=720,height=900');
+  const win = window.open('', '_blank', 'width=480,height=360');
   if (!win) return;
 
+  const safeName = escapeHtml(name);
+  const safeCode = escapeHtml(code);
+  const safeUser = username ? escapeHtml(username) : '';
+
   win.document.write(`<!doctype html>
-<html lang="ru"><head><meta charset="utf-8" /><title>QR ${code}</title>
+<html lang="ru"><head><meta charset="utf-8" /><title>QR ${safeCode}</title>
 <style>
-  @page { size: A4; margin: 18mm; }
-  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; color: #111; }
-  .badge { display: flex; flex-direction: column; align-items: center; gap: 14px;
-           border: 2px solid #C89A3D; border-radius: 18px; padding: 28px 24px; text-align: center; }
-  .club { font-size: 13px; letter-spacing: 0.28em; text-transform: uppercase; color: #8A7A62; }
-  .name { font-size: 26px; font-weight: 700; }
-  .username { font-size: 14px; color: #666; }
-  img { width: 320px; height: 320px; }
-  .code { font-size: 20px; font-weight: 700; letter-spacing: 0.14em; color: #8A5C1C; }
-  .hint { font-size: 12px; color: #777; max-width: 340px; line-height: 1.5; }
+  /* XP-365B: ширина рулона до ~80 мм, печать до 76 мм */
+  @page { size: 80mm 50mm; margin: 0; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 80mm;
+    height: 50mm;
+    background: #fff;
+    color: #000;
+    font-family: Arial, Helvetica, sans-serif;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .label {
+    position: relative;
+    width: 80mm;
+    height: 50mm;
+    box-sizing: border-box;
+    padding: 2mm;
+    overflow: hidden;
+  }
+  .qr {
+    position: absolute;
+    top: 2mm;
+    left: 2mm;
+    width: 40mm;
+    height: 40mm;
+    display: block;
+  }
+  .meta {
+    position: absolute;
+    top: 2mm;
+    left: 44mm;
+    right: 2mm;
+    bottom: 2mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 1.5mm;
+    overflow: hidden;
+  }
+  .club {
+    font-size: 7pt;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #333;
+  }
+  .name {
+    font-size: 11pt;
+    font-weight: 700;
+    line-height: 1.15;
+    word-break: break-word;
+  }
+  .username {
+    font-size: 8pt;
+    color: #444;
+  }
+  .code {
+    margin-top: auto;
+    font-size: 9pt;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+  @media screen {
+    body { background: #ddd; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .label { background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,.2); }
+  }
 </style></head>
 <body>
-  <div class="badge">
-    <div class="club">GUTSHOT Poker Club</div>
-    <div class="name">${name}</div>
-    ${username ? `<div class="username">@${username}</div>` : ''}
-    <img src="${dataUrl}" alt="QR" />
-    <div class="code">${code}</div>
-    <div class="hint">Покажите этот код администратору клуба для отметки явки и событий турнира.</div>
+  <div class="label">
+    <img class="qr" src="${dataUrl}" alt="QR" width="320" height="320" />
+    <div class="meta">
+      <div class="club">GUTSHOT</div>
+      <div class="name">${safeName}</div>
+      ${safeUser ? `<div class="username">@${safeUser}</div>` : ''}
+      <div class="code">${safeCode}</div>
+    </div>
   </div>
   <script>window.onload = function () { window.focus(); window.print(); };</script>
 </body></html>`);
