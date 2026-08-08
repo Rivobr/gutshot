@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { MobileDrawer, MobileTabBar, Sidebar } from '../../widgets/Sidebar/Sidebar';
+import { ToastHost } from '../../shared/ui/toast';
 
 export function Layout(): JSX.Element {
   const location = useLocation();
@@ -41,6 +42,7 @@ export function Layout(): JSX.Element {
       </div>
 
       <MobileTabBar />
+      <ToastHost />
     </div>
   );
 }
