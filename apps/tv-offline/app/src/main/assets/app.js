@@ -304,17 +304,60 @@
     }
   }
 
+  /** Выбранное время уже прошло сегодня по MSK? → старт уйдёт на завтра. */
+  function planIsTomorrow() {
+    var msk = nowMoscow();
+    var startMs = mskWallToUtcMs(
+      msk.year,
+      msk.month,
+      msk.day,
+      state.startHour,
+      state.startMinute,
+      0,
+    );
+    return startMs <= Date.now() + 5000;
+  }
+
+  function formatWaitMeta(leftSec, startAtMs) {
+    if (leftSec <= 0) return 'старт…';
+    var today = nowMoscow();
+    var startDay = nowPartsFromMs(startAtMs);
+    var isTomorrow =
+      startDay.year !== today.year || startDay.month !== today.month || startDay.day !== today.day;
+
+    var h = Math.floor(leftSec / 3600);
+    var m = Math.ceil((leftSec % 3600) / 60);
+    if (m === 60) {
+      h += 1;
+      m = 0;
+    }
+    var remain;
+    if (h <= 0) {
+      remain = 'через ' + Math.max(1, Math.ceil(leftSec / 60)) + ' мин';
+    } else if (m === 0) {
+      remain = 'через ' + h + ' ч';
+    } else {
+      remain = 'через ' + h + ' ч ' + m + ' мин';
+    }
+    return (isTomorrow ? 'завтра · ' : '') + remain + ' · MSK';
+  }
+
   function renderMenu() {
     show('menu');
     $('planTime').textContent = pad(state.startHour) + ':' + pad(state.startMinute);
+    var dayEl = $('planDay');
+    if (dayEl) {
+      dayEl.textContent = planIsTomorrow()
+        ? 'старт завтра · если время уже прошло'
+        : 'старт сегодня';
+    }
   }
 
   function renderWaiting(nowMs) {
     show('waiting');
     $('waitTime').textContent = pad(state.startHour) + ':' + pad(state.startMinute);
     var leftSec = Math.max(0, Math.ceil((state.startAtMs - nowMs) / 1000));
-    var mins = Math.ceil(leftSec / 60);
-    $('waitMeta').textContent = leftSec > 0 ? 'через ' + mins + ' мин · MSK' : 'старт…';
+    $('waitMeta').textContent = formatWaitMeta(leftSec, state.startAtMs);
   }
 
   function renderPlayOrBreak(nowMs) {
