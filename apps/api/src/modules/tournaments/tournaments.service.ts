@@ -21,6 +21,25 @@ const activeRegistrationsCount = {
   },
 } as const;
 
+const HOME_TOURNAMENT_STATUSES: TournamentStatus[] = [
+  TournamentStatus.REGISTRATION_OPEN,
+  TournamentStatus.REGISTRATION_CLOSED,
+  TournamentStatus.IN_PROGRESS,
+];
+
+/** Границы календарного дня Europe/Moscow в UTC. */
+function moscowDayBounds(now = new Date()): { start: Date; end: Date } {
+  const day = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Moscow',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
+  const start = new Date(`${day}T00:00:00+03:00`);
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+  return { start, end };
+}
+
 @Injectable()
 export class TournamentsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -94,22 +113,46 @@ export class TournamentsService {
     return serializeTournament(tournament);
   }
 
+  /**
+   * Турнир для главной:
+   * 1) идущий сейчас;
+   * 2) самый свежий на сегодня (MSK), даже если время старта уже прошло;
+   * 3) иначе ближайший будущий.
+   */
   async findNearest() {
-    const tournament = await this.prisma.tournament.findFirst({
+    const include = { blindLevels: true, _count: activeRegistrationsCount } as const;
+
+    const inProgress = await this.prisma.tournament.findFirst({
+      where: { status: TournamentStatus.IN_PROGRESS },
+      orderBy: { date: 'desc' },
+      include,
+    });
+    if (inProgress) {
+      return serializeTournament(inProgress);
+    }
+
+    const { start, end } = moscowDayBounds();
+    const today = await this.prisma.tournament.findFirst({
+      where: {
+        status: { in: HOME_TOURNAMENT_STATUSES },
+        date: { gte: start, lt: end },
+      },
+      orderBy: { date: 'desc' },
+      include,
+    });
+    if (today) {
+      return serializeTournament(today);
+    }
+
+    const upcoming = await this.prisma.tournament.findFirst({
       where: {
         date: { gte: new Date() },
-        status: {
-          in: [
-            TournamentStatus.REGISTRATION_OPEN,
-            TournamentStatus.REGISTRATION_CLOSED,
-            TournamentStatus.IN_PROGRESS,
-          ],
-        },
+        status: { in: HOME_TOURNAMENT_STATUSES },
       },
       orderBy: { date: 'asc' },
-      include: { blindLevels: true, _count: activeRegistrationsCount },
+      include,
     });
-    return tournament ? serializeTournament(tournament) : null;
+    return upcoming ? serializeTournament(upcoming) : null;
   }
 
   async create(data: {
