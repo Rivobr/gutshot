@@ -361,9 +361,11 @@ export type XpSettingKey =
 export const MAX_SCORING_PLACE = 30;
 
 /** Диапазоны мест ниже топ-30. */
-export const PLACE_BAND_KEYS: XpSettingKey[] = ['PLACE_31_40', 'PLACE_41_50', 'PLACE_51_PLUS'];
+export const PLACE_BAND_KEYS = ['PLACE_31_40', 'PLACE_41_50', 'PLACE_51_PLUS'] as const;
 
-export const PLACE_BAND_LABELS: Record<(typeof PLACE_BAND_KEYS)[number], string> = {
+export type PlaceBandKey = (typeof PLACE_BAND_KEYS)[number];
+
+export const PLACE_BAND_LABELS: Record<PlaceBandKey, string> = {
   PLACE_31_40: '31–40 место',
   PLACE_41_50: '41–50 место',
   PLACE_51_PLUS: '51+ место',
