@@ -49,6 +49,9 @@ export const XP_SETTING_LABELS: Record<XpSettingKey, string> = {
   STRAIGHT_FLUSH: 'Стрит-флеш (XP)',
   ROYAL_FLUSH: 'Роял-флеш (XP)',
   TOURNAMENT_WIN: '1 место — XP',
+  PLACE_31_40: '31–40 место — XP',
+  PLACE_41_50: '41–50 место — XP',
+  PLACE_51_PLUS: '51+ место — XP',
   WEEKLY_TOP_1: 'Неделя: 1 место',
   WEEKLY_TOP_2: 'Неделя: 2 место',
   WEEKLY_TOP_3: 'Неделя: 3 место',
@@ -71,6 +74,9 @@ export const XP_EVENT_SETTING_ORDER: XpSettingKey[] = [
 /** Шкала XP за места 1–30. */
 export const XP_PLACE_SETTING_ORDER: XpSettingKey[] = [...PLACE_RATING_KEYS];
 
+/** Диапазоны мест ниже топ-30. */
+export const XP_PLACE_BAND_ORDER: XpSettingKey[] = ['PLACE_31_40', 'PLACE_41_50', 'PLACE_51_PLUS'];
+
 /** Награды за неделю и финал месяца. */
 export const XP_REWARD_SETTING_ORDER: XpSettingKey[] = [...RATING_REWARD_KEYS];
 
@@ -78,6 +84,7 @@ export const XP_REWARD_SETTING_ORDER: XpSettingKey[] = [...RATING_REWARD_KEYS];
 export const XP_SETTING_ORDER: XpSettingKey[] = [
   ...XP_EVENT_SETTING_ORDER,
   ...XP_PLACE_SETTING_ORDER,
+  ...XP_PLACE_BAND_ORDER,
   ...XP_REWARD_SETTING_ORDER,
 ];
 

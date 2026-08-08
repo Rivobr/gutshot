@@ -25,6 +25,7 @@ export class AchievementTextsController {
 @ApiTags('Admin / Achievement Texts')
 @ApiBearerAuth()
 @UseGuards(AdminAuthGuard, RolesGuard)
+@Roles(AdminRole.OWNER, AdminRole.ADMIN)
 @Controller('admin/achievement-texts')
 export class AdminAchievementTextsController {
   constructor(private readonly achievementTextsService: AchievementTextsService) {}

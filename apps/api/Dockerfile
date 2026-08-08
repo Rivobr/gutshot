@@ -27,6 +27,7 @@ COPY --from=build /app/apps/api/package.json ./apps/api/package.json
 COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY --from=build /app/apps/api/prisma ./apps/api/prisma
 COPY --from=build /app/apps/api/assets ./apps/api/assets
+COPY --from=build /app/apps/api/scripts ./apps/api/scripts
 WORKDIR /app/apps/api
 EXPOSE 3000
 CMD ["node", "dist/src/main.js"]

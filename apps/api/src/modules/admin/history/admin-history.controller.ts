@@ -1,12 +1,16 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { AdminRole } from '../../../common/enums/admin-role.enum';
+import { Roles } from '../../../common/decorators/roles.decorator';
 import { AdminAuthGuard } from '../../auth/guards/admin-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
 import { PlayerEventsService } from '../../progression/player-events.service';
 import { QueryHistoryDto } from './dto/query-history.dto';
 
 @ApiTags('Admin / History')
 @ApiBearerAuth()
-@UseGuards(AdminAuthGuard)
+@UseGuards(AdminAuthGuard, RolesGuard)
+@Roles(AdminRole.OWNER, AdminRole.ADMIN)
 @Controller('admin/history')
 export class AdminHistoryController {
   constructor(private readonly playerEventsService: PlayerEventsService) {}

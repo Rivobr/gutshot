@@ -9,6 +9,7 @@ import { Button, Card, Loader } from '@gutshot/ui';
 import { useUpdateLevels, useUpdateXpSettings, useXpConfig } from '../../entities/xp-config';
 import {
   XP_EVENT_SETTING_ORDER,
+  XP_PLACE_BAND_ORDER,
   XP_REWARD_SETTING_ORDER,
   XP_SETTING_LABELS,
   XP_SETTING_ORDER,
@@ -103,8 +104,8 @@ export function XpSettingsPage(): JSX.Element {
       <div>
         <h1 className="text-2xl font-medium">XP и уровни</h1>
         <p className="text-sm text-muted-foreground">
-          Система по ТЗ клуба: XP за места 1–30, уровни 1–100, награды за неделю и финал месяца.
-          Новые значения не пересчитывают уже начисленное.
+          Модель 250 000 XP → 100 уровень: места в ежедневном турнире, уровни, неделя и финал
+          месяца. Новые значения не пересчитывают уже начисленное.
         </p>
       </div>
 
@@ -112,8 +113,8 @@ export function XpSettingsPage(): JSX.Element {
         <div>
           <h2 className="font-medium">XP за места в турнире (1–30)</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Игроки ниже 30 места получают 0 XP за место, но турнир засчитывается в достижения за
-            количество сыгранных турниров. Всего за турнир при полной таблице:{' '}
+            Места 31+ настраиваются отдельными диапазонами ниже. Минимум за участие — 100 XP. Сумма
+            топ-30 при полной таблице:{' '}
             <span className="text-foreground">{formatPoints(scale.totalPoints)}</span> XP.
           </p>
         </div>
@@ -147,6 +148,23 @@ export function XpSettingsPage(): JSX.Element {
               ))}
             </tbody>
           </table>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          {XP_PLACE_BAND_ORDER.map((key) => (
+            <label key={key} className="flex flex-col gap-1.5">
+              <span className="text-sm text-muted-foreground">{XP_SETTING_LABELS[key]}</span>
+              <input
+                type="number"
+                min={0}
+                value={values[key] ?? 0}
+                onChange={(event) =>
+                  setValues((current) => ({ ...current, [key]: Number(event.target.value) }))
+                }
+                className="rounded-md border border-border bg-secondary px-3 py-2.5 text-foreground outline-none focus:ring-2 focus:ring-primary"
+              />
+            </label>
+          ))}
         </div>
       </Card>
 

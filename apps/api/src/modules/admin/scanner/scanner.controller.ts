@@ -1,14 +1,18 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { AdminAuthGuard } from '../../auth/guards/admin-auth.guard';
+import { AdminRole } from '../../../common/enums/admin-role.enum';
+import { Roles } from '../../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { AdminJwtPayload } from '../../../common/interfaces/jwt-payload.interface';
+import { AdminAuthGuard } from '../../auth/guards/admin-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
 import { ScannerService } from './scanner.service';
 import { ScannerEventDto } from './dto/scanner.dto';
 
 @ApiTags('Admin / QR Scanner')
 @ApiBearerAuth()
-@UseGuards(AdminAuthGuard)
+@UseGuards(AdminAuthGuard, RolesGuard)
+@Roles(AdminRole.OWNER, AdminRole.ADMIN, AdminRole.DEALER, AdminRole.MANAGER)
 @Controller('admin/scanner')
 export class ScannerController {
   constructor(private readonly scannerService: ScannerService) {}

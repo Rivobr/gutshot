@@ -1,58 +1,64 @@
 import { XpSettingKey } from '@prisma/client';
 
 /**
- * XP за места в ежедневном турнире (ТЗ клуба, места 1–30).
- * Ниже 30 места XP за место не начисляется, но турнир засчитывается
- * в достижения за количество сыгранных турниров.
+ * XP за места в ежедневном турнире (модель 250k → 100 ур.).
+ * 21–25 и 26–30 — плоские диапазоны; 31+ — отдельные band-ключи.
  */
 export const DEFAULT_PLACE_RATING: Record<number, number> = {
-  1: 5000,
-  2: 3800,
-  3: 3000,
-  4: 2500,
-  5: 2100,
-  6: 1800,
-  7: 1600,
-  8: 1450,
-  9: 1300,
-  10: 1200,
-  11: 1100,
-  12: 1000,
-  13: 900,
-  14: 825,
+  1: 3500,
+  2: 2800,
+  3: 2300,
+  4: 2000,
+  5: 1800,
+  6: 1600,
+  7: 1450,
+  8: 1300,
+  9: 1200,
+  10: 1100,
+  11: 1000,
+  12: 900,
+  13: 850,
+  14: 800,
   15: 750,
   16: 700,
   17: 650,
   18: 600,
   19: 550,
   20: 500,
-  21: 450,
+  21: 400,
   22: 400,
-  23: 350,
-  24: 300,
-  25: 250,
-  26: 225,
-  27: 200,
-  28: 175,
-  29: 150,
-  30: 125,
+  23: 400,
+  24: 400,
+  25: 400,
+  26: 300,
+  27: 300,
+  28: 300,
+  29: 300,
+  30: 300,
 };
 
-/** Последнее место, за которое начисляется XP. */
+/** Диапазоны мест ниже топ-30. */
+export const DEFAULT_PLACE_BANDS = {
+  PLACE_31_40: 200,
+  PLACE_41_50: 150,
+  PLACE_51_PLUS: 100,
+} as const;
+
+/** Последнее индивидуально настраиваемое место в админке. */
 export const MAX_SCORING_PLACE = 30;
 
 /** Награда XP за место в недельном рейтинге. */
 export const DEFAULT_WEEKLY_REWARDS: Record<number, number> = {
-  1: 15000,
-  2: 10000,
-  3: 7000,
+  1: 7500,
+  2: 5000,
+  3: 3500,
 };
 
 /** Награда XP за место в финале месяца. */
 export const DEFAULT_MONTHLY_REWARDS: Record<number, number> = {
-  1: 30000,
-  2: 20000,
-  3: 12000,
+  1: 20000,
+  2: 12500,
+  3: 7500,
 };
 
 /**
@@ -97,6 +103,9 @@ export const DEFAULT_XP_SETTINGS: Record<XpSettingKey, number> = {
   PLACE_28: DEFAULT_PLACE_RATING[28],
   PLACE_29: DEFAULT_PLACE_RATING[29],
   PLACE_30: DEFAULT_PLACE_RATING[30],
+  PLACE_31_40: DEFAULT_PLACE_BANDS.PLACE_31_40,
+  PLACE_41_50: DEFAULT_PLACE_BANDS.PLACE_41_50,
+  PLACE_51_PLUS: DEFAULT_PLACE_BANDS.PLACE_51_PLUS,
   WEEKLY_TOP_1: DEFAULT_WEEKLY_REWARDS[1],
   WEEKLY_TOP_2: DEFAULT_WEEKLY_REWARDS[2],
   WEEKLY_TOP_3: DEFAULT_WEEKLY_REWARDS[3],
@@ -108,18 +117,14 @@ export const DEFAULT_XP_SETTINGS: Record<XpSettingKey, number> = {
 export const MAX_LEVEL = 100;
 
 /**
- * Стоимость перехода на следующий уровень растёт ступенями (ТЗ клуба):
- * первый переход 250 XP, далее шаг дорожает на 60/80/100/120/140 XP
- * в зависимости от диапазона уровней.
- *
- * Контрольные значения: 10 ур. — 4 410, 50 ур. — 104 410, 100 ур. — 481 910 XP.
+ * Плавная кривая до 250 000 XP на 100 уровне:
+ * XP(L) ≈ 970×(L−1) + 15.7×(L−1)²
  */
-function levelStepIncrement(transition: number): number {
-  if (transition < 10) return 60;
-  if (transition < 25) return 80;
-  if (transition < 50) return 100;
-  if (transition < 75) return 120;
-  return 140;
+export function requiredXpForLevel(level: number): number {
+  if (level <= 1) return 0;
+  if (level >= 100) return 250_000;
+  const n = level - 1;
+  return Math.round(970 * n + 15.7 * n * n);
 }
 
 /** Полная таблица уровней 1–100 с накопительным XP. */
@@ -127,14 +132,35 @@ export function buildLevelThresholds(maxLevel = MAX_LEVEL): {
   level: number;
   requiredXp: number;
 }[] {
-  const thresholds: { level: number; requiredXp: number }[] = [{ level: 1, requiredXp: 0 }];
+  const thresholds: { level: number; requiredXp: number }[] = [];
+  for (let level = 1; level <= maxLevel; level += 1) {
+    thresholds.push({ level, requiredXp: requiredXpForLevel(level) });
+  }
+  return thresholds;
+}
 
+/** Таблица уровней по умолчанию: 1–100. */
+export const DEFAULT_LEVEL_THRESHOLDS = buildLevelThresholds();
+
+/**
+ * Старая кривая (до v2) — нужна только для пересчёта XP игроков,
+ * чтобы сохранить относительный прогресс уровня.
+ */
+export function buildLegacyLevelThresholds(maxLevel = MAX_LEVEL): {
+  level: number;
+  requiredXp: number;
+}[] {
+  const thresholds: { level: number; requiredXp: number }[] = [{ level: 1, requiredXp: 0 }];
   let step = 250;
   let cumulative = 0;
 
   for (let transition = 1; transition < maxLevel; transition += 1) {
     if (transition > 1) {
-      step += levelStepIncrement(transition - 1);
+      if (transition - 1 < 10) step += 60;
+      else if (transition - 1 < 25) step += 80;
+      else if (transition - 1 < 50) step += 100;
+      else if (transition - 1 < 75) step += 120;
+      else step += 140;
     }
     cumulative += step;
     thresholds.push({ level: transition + 1, requiredXp: cumulative });
@@ -143,15 +169,15 @@ export function buildLevelThresholds(maxLevel = MAX_LEVEL): {
   return thresholds;
 }
 
-/** Таблица уровней по умолчанию: 1–100 по ТЗ клуба. */
-export const DEFAULT_LEVEL_THRESHOLDS = buildLevelThresholds();
-
-/** Ключ настройки XP для конкретного места в турнире (1–30). */
+/** Ключ настройки XP для конкретного места в турнире. */
 export function xpSettingKeyForPlace(place: number): XpSettingKey | null {
   if (place === 1) return XpSettingKey.TOURNAMENT_WIN;
   if (place >= 2 && place <= MAX_SCORING_PLACE) {
     return `PLACE_${place}` as XpSettingKey;
   }
+  if (place >= 31 && place <= 40) return XpSettingKey.PLACE_31_40;
+  if (place >= 41 && place <= 50) return XpSettingKey.PLACE_41_50;
+  if (place >= 51) return XpSettingKey.PLACE_51_PLUS;
   return null;
 }
 

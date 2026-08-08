@@ -103,7 +103,7 @@ export class AchievementEngineService {
     for (const row of results) {
       if (row.place === 1) {
         winRun += 1;
-        backToBackWins = Math.max(backToBackWins, winRun >= 2 ? 1 : 0);
+        backToBackWins = Math.max(backToBackWins, winRun);
       } else {
         winRun = 0;
       }

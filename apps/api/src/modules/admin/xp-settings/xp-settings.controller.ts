@@ -12,6 +12,7 @@ import { UpdateLevelsDto, UpdateXpSettingsDto } from './dto/xp-settings.dto';
 @ApiTags('Admin / XP Settings')
 @ApiBearerAuth()
 @UseGuards(AdminAuthGuard, RolesGuard)
+@Roles(AdminRole.OWNER, AdminRole.ADMIN)
 @Controller('admin/xp-settings')
 export class XpSettingsController {
   constructor(

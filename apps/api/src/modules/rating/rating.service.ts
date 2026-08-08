@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { XPReason } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { calculateLevelProgress } from '../../common/utils/level.util';
 import { buildPlaceRatingScale } from '../../common/constants/xp-defaults.constants';
+import { LevelsService } from '../progression/levels.service';
 import { XpSettingsService } from '../progression/xp-settings.service';
 
 /** Очки рейтинга — только места в турнирах (не XP за явку/комбо). */
@@ -13,14 +13,18 @@ export class RatingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly xpSettingsService: XpSettingsService,
+    private readonly levelsService: LevelsService,
   ) {}
 
   /** Общий прогресс уровня (XP) — не таблица рейтинга. */
   async getOverallRating() {
-    const profiles = await this.prisma.playerProfile.findMany({
-      orderBy: { xp: 'desc' },
-      include: { user: true },
-    });
+    const [profiles, thresholds] = await Promise.all([
+      this.prisma.playerProfile.findMany({
+        orderBy: { xp: 'desc' },
+        include: { user: true },
+      }),
+      this.levelsService.getThresholds(),
+    ]);
 
     return profiles.map((profile, index) => ({
       rank: index + 1,
@@ -31,7 +35,7 @@ export class RatingService {
       photoUrl: profile.user.photoUrl,
       xp: profile.xp,
       points: profile.xp,
-      level: calculateLevelProgress(profile.xp).level,
+      level: this.levelsService.computeProgress(thresholds, profile.xp).level,
     }));
   }
 

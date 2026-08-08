@@ -42,6 +42,7 @@ export class RatingController {
 @ApiTags('Admin / Rating rewards')
 @ApiBearerAuth()
 @UseGuards(AdminAuthGuard, RolesGuard)
+@Roles(AdminRole.OWNER, AdminRole.ADMIN)
 @Controller('admin/rating-rewards')
 export class AdminRatingRewardsController {
   constructor(private readonly ratingRewardsService: RatingRewardsService) {}

@@ -4,7 +4,7 @@ export type TournamentStatus =
 export type RegistrationStatus =
   'REGISTERED' | 'CHECKED_IN' | 'PLAYING' | 'FINISHED' | 'CANCELLED' | 'NO_SHOW' | 'WAITING';
 
-export type AdminRole = 'OWNER' | 'ADMIN' | 'MANAGER';
+export type AdminRole = 'OWNER' | 'ADMIN' | 'MANAGER' | 'DEALER';
 
 export interface User {
   id: string;
@@ -51,6 +51,8 @@ export interface PlayerProfileDto {
   /** Постоянный персональный QR-код игрока. */
   qrCode: string;
   consentAcceptedAt?: string | null;
+  /** Открыта «Легенда Gutshot» — титул + золотая рамка. */
+  isLegendGutshot?: boolean;
   /** Достижения, закреплённые игроком в профиле (id из каталога). */
   pinnedAchievements: string[];
   stats: {
@@ -345,6 +347,9 @@ export type XpSettingKey =
   | 'PLACE_28'
   | 'PLACE_29'
   | 'PLACE_30'
+  | 'PLACE_31_40'
+  | 'PLACE_41_50'
+  | 'PLACE_51_PLUS'
   | 'WEEKLY_TOP_1'
   | 'WEEKLY_TOP_2'
   | 'WEEKLY_TOP_3'
@@ -352,8 +357,17 @@ export type XpSettingKey =
   | 'MONTHLY_TOP_2'
   | 'MONTHLY_TOP_3';
 
-/** Последнее место, за которое начисляется XP (ТЗ клуба). */
+/** Последнее индивидуально редактируемое место в админке. */
 export const MAX_SCORING_PLACE = 30;
+
+/** Диапазоны мест ниже топ-30. */
+export const PLACE_BAND_KEYS: XpSettingKey[] = ['PLACE_31_40', 'PLACE_41_50', 'PLACE_51_PLUS'];
+
+export const PLACE_BAND_LABELS: Record<(typeof PLACE_BAND_KEYS)[number], string> = {
+  PLACE_31_40: '31–40 место',
+  PLACE_41_50: '41–50 место',
+  PLACE_51_PLUS: '51+ место',
+};
 
 /** Ключи шкалы рейтинга: место → настройка XP. */
 export const PLACE_RATING_KEY_BY_PLACE: Record<number, XpSettingKey> = {

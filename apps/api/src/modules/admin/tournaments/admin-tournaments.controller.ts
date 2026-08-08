@@ -34,6 +34,7 @@ import {
 @ApiTags('Admin / Tournaments')
 @ApiBearerAuth()
 @UseGuards(AdminAuthGuard, RolesGuard)
+@Roles(AdminRole.OWNER, AdminRole.ADMIN)
 @Controller('admin/tournaments')
 export class AdminTournamentsController {
   constructor(

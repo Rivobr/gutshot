@@ -1,12 +1,16 @@
 import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { AdminRole } from '../../../common/enums/admin-role.enum';
+import { Roles } from '../../../common/decorators/roles.decorator';
 import { AdminAuthGuard } from '../../auth/guards/admin-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
 import { CreatePlayerDto } from './dto/create-player.dto';
 import { AdminPlayersService } from './players.service';
 
 @ApiTags('Admin / Players')
 @ApiBearerAuth()
-@UseGuards(AdminAuthGuard)
+@UseGuards(AdminAuthGuard, RolesGuard)
+@Roles(AdminRole.OWNER, AdminRole.ADMIN)
 @Controller('admin/players')
 export class AdminPlayersController {
   constructor(private readonly playersService: AdminPlayersService) {}

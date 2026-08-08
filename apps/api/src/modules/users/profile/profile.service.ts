@@ -174,6 +174,7 @@ export class ProfileService {
       isVerified: user.isVerified,
       qrCode,
       consentAcceptedAt: user.consentAcceptedAt,
+      isLegendGutshot: unlockedAchievements.includes('legend_gutshot'),
       pinnedAchievements: user.pinnedAchievements,
       ...levelProgress,
       stats: {

@@ -125,6 +125,9 @@ enum XpSettingKey {
   PLACE_28
   PLACE_29
   PLACE_30
+  PLACE_31_40
+  PLACE_41_50
+  PLACE_51_PLUS
   WEEKLY_TOP_1
   WEEKLY_TOP_2
   WEEKLY_TOP_3
@@ -159,6 +162,7 @@ enum AdminRole {
   OWNER
   ADMIN
   MANAGER
+  DEALER
 }
 
 // ---------------------------------
