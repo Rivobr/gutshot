@@ -20,11 +20,11 @@ function escapeHtml(value: string): string {
 }
 
 /**
- * Печать для Xprinter XP-365B (термоэтикетка ~80 мм).
- * QR ровно 40×40 мм, прижат в левый верхний угол.
+ * Превью — клубная карточка (86×54).
+ * В печать уходит только белый квадрат QR 40×40 мм (наклейка на карту / XP-365B).
  */
 function printBadge(dataUrl: string, code: string, name: string, username?: string | null): void {
-  const win = window.open('', '_blank', 'width=480,height=360');
+  const win = window.open('', '_blank', 'width=720,height=480');
   if (!win) return;
 
   const safeName = escapeHtml(name);
@@ -34,83 +34,186 @@ function printBadge(dataUrl: string, code: string, name: string, username?: stri
   win.document.write(`<!doctype html>
 <html lang="ru"><head><meta charset="utf-8" /><title>QR ${safeCode}</title>
 <style>
-  /* XP-365B: ширина рулона до ~80 мм, печать до 76 мм */
-  @page { size: 80mm 50mm; margin: 0; }
+  * { box-sizing: border-box; }
   html, body {
     margin: 0;
     padding: 0;
-    width: 80mm;
-    height: 50mm;
     background: #fff;
-    color: #000;
+    color: #f3e2b0;
     font-family: Arial, Helvetica, sans-serif;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  .label {
-    position: relative;
-    width: 80mm;
-    height: 50mm;
-    box-sizing: border-box;
-    padding: 2mm;
-    overflow: hidden;
-  }
-  .qr {
-    position: absolute;
-    top: 2mm;
-    left: 2mm;
-    width: 40mm;
-    height: 40mm;
-    display: block;
-  }
-  .meta {
-    position: absolute;
-    top: 2mm;
-    left: 44mm;
-    right: 2mm;
-    bottom: 2mm;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    gap: 1.5mm;
-    overflow: hidden;
-  }
-  .club {
-    font-size: 7pt;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #333;
-  }
-  .name {
-    font-size: 11pt;
-    font-weight: 700;
-    line-height: 1.15;
-    word-break: break-word;
-  }
-  .username {
-    font-size: 8pt;
-    color: #444;
-  }
-  .code {
-    margin-top: auto;
-    font-size: 9pt;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-  }
+
+  /* Экран: вся карточка как на фото */
   @media screen {
-    body { background: #ddd; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-    .label { background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,.2); }
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      background: #2a2a2a;
+      padding: 20px;
+    }
+    .hint {
+      display: block;
+      max-width: 86mm;
+      color: #ddd;
+      font-size: 12px;
+      text-align: center;
+      line-height: 1.35;
+    }
+    .card {
+      position: relative;
+      width: 86mm;
+      height: 54mm;
+      overflow: hidden;
+      background:
+        radial-gradient(ellipse at 20% 30%, rgba(200,154,61,0.12), transparent 45%),
+        radial-gradient(ellipse at 80% 70%, rgba(140,90,30,0.1), transparent 40%),
+        #141210;
+      border: 0.35mm solid #c89a3d;
+      box-shadow: 0 8px 28px rgba(0,0,0,.45);
+    }
+    .frame {
+      position: absolute;
+      inset: 2.2mm;
+      border: 0.35mm solid #c89a3d;
+      border-radius: 1.2mm;
+    }
+    .brand {
+      position: absolute;
+      left: 4.5mm;
+      top: 4.5mm;
+      bottom: 4.5mm;
+      width: 34mm;
+      display: flex;
+      align-items: center;
+      gap: 2.2mm;
+    }
+    .bars {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 1.6mm;
+      height: 28mm;
+    }
+    .bars span {
+      display: block;
+      width: 7mm;
+      height: 2.4mm;
+      border-radius: 0.4mm;
+      background: linear-gradient(90deg, #8a5c1c, #c89a3d 45%, #f0d48a);
+    }
+    .bars span.ruby {
+      background: linear-gradient(90deg, #7a0b2c, #e0115f 50%, #ff4d7d);
+    }
+    .titles {
+      display: flex;
+      align-items: center;
+      gap: 1.8mm;
+      height: 100%;
+    }
+    .gutshot {
+      writing-mode: vertical-rl;
+      transform: rotate(180deg);
+      font-size: 15.5pt;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      line-height: 1;
+      color: #d7b056;
+      text-transform: uppercase;
+    }
+    .poker {
+      writing-mode: vertical-rl;
+      transform: rotate(180deg);
+      font-size: 6.2pt;
+      font-weight: 600;
+      letter-spacing: 0.22em;
+      color: #f5f0e6;
+      text-transform: uppercase;
+    }
+    .qr-slot {
+      position: absolute;
+      top: 7mm;
+      right: 4.5mm;
+      width: 40mm;
+      height: 40mm;
+      background: #fff;
+      border-radius: 2.2mm;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .qr-slot img {
+      width: 40mm;
+      height: 40mm;
+      display: block;
+    }
+    .meta {
+      position: absolute;
+      left: 4.5mm;
+      right: 46mm;
+      bottom: 3.2mm;
+      font-size: 5.5pt;
+      line-height: 1.25;
+      color: rgba(245,240,230,0.72);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  /* Печать / XP-365B: только наклейка 40×40 под белый квадрат карты */
+  @media print {
+    @page { size: 40mm 40mm; margin: 0; }
+    html, body {
+      width: 40mm;
+      height: 40mm;
+      background: #fff;
+    }
+    .hint, .frame, .brand, .meta { display: none !important; }
+    .card {
+      width: 40mm;
+      height: 40mm;
+      border: 0;
+      background: #fff;
+      overflow: hidden;
+    }
+    .qr-slot {
+      position: static;
+      width: 40mm;
+      height: 40mm;
+      border-radius: 0;
+      background: #fff;
+    }
+    .qr-slot img {
+      width: 40mm;
+      height: 40mm;
+      display: block;
+    }
   }
 </style></head>
 <body>
-  <div class="label">
-    <img class="qr" src="${dataUrl}" alt="QR" width="320" height="320" />
-    <div class="meta">
-      <div class="club">GUTSHOT</div>
-      <div class="name">${safeName}</div>
-      ${safeUser ? `<div class="username">@${safeUser}</div>` : ''}
-      <div class="code">${safeCode}</div>
+  <div class="hint">Превью карточки. В печать уйдёт только QR 40×40 мм — наклейка на белый квадрат.</div>
+  <div class="card">
+    <div class="frame"></div>
+    <div class="brand">
+      <div class="bars" aria-hidden="true">
+        <span></span><span class="ruby"></span><span></span><span></span>
+      </div>
+      <div class="titles">
+        <div class="gutshot">GUTSHOT</div>
+        <div class="poker">POKER CLUB</div>
+      </div>
     </div>
+    <div class="qr-slot">
+      <img src="${dataUrl}" alt="QR" width="320" height="320" />
+    </div>
+    <div class="meta">${safeName}${safeUser ? ` · @${safeUser}` : ''} · ${safeCode}</div>
   </div>
   <script>window.onload = function () { window.focus(); window.print(); };</script>
 </body></html>`);
@@ -133,6 +236,7 @@ export function PlayerQrModal({
     }
 
     let cancelled = false;
+    // margin: 1 — тихая зона внутри белого квадрата 40×40 на карточке
     QRCode.toDataURL(qrCode, { width: 640, margin: 1, errorCorrectionLevel: 'M' })
       .then((url) => !cancelled && setDataUrl(url))
       .catch(() => !cancelled && setDataUrl(''));
@@ -207,7 +311,7 @@ export function PlayerQrModal({
                 className="flex-1"
                 onClick={() => dataUrl && printBadge(dataUrl, qrCode, playerName, username)}
               >
-                Печать
+                Печать карточки
               </Button>
               <Button variant="secondary" className="flex-1" onClick={download}>
                 Скачать PNG
