@@ -304,8 +304,8 @@
     }
   }
 
-  /** Выбранное время уже прошло сегодня по MSK? → старт уйдёт на завтра. */
-  function planIsTomorrow() {
+  /** Выбранное время уже прошло сегодня по MSK? → старт сразу сегодня. */
+  function planIsPastToday() {
     var msk = nowMoscow();
     var startMs = mskWallToUtcMs(
       msk.year,
@@ -318,13 +318,8 @@
     return startMs <= Date.now() + 5000;
   }
 
-  function formatWaitMeta(leftSec, startAtMs) {
+  function formatWaitMeta(leftSec) {
     if (leftSec <= 0) return 'старт…';
-    var today = nowMoscow();
-    var startDay = nowPartsFromMs(startAtMs);
-    var isTomorrow =
-      startDay.year !== today.year || startDay.month !== today.month || startDay.day !== today.day;
-
     var h = Math.floor(leftSec / 3600);
     var m = Math.ceil((leftSec % 3600) / 60);
     if (m === 60) {
@@ -339,7 +334,7 @@
     } else {
       remain = 'через ' + h + ' ч ' + m + ' мин';
     }
-    return (isTomorrow ? 'завтра · ' : '') + remain + ' · MSK';
+    return remain + ' · MSK';
   }
 
   function renderMenu() {
@@ -347,8 +342,8 @@
     $('planTime').textContent = pad(state.startHour) + ':' + pad(state.startMinute);
     var dayEl = $('planDay');
     if (dayEl) {
-      dayEl.textContent = planIsTomorrow()
-        ? 'старт завтра · если время уже прошло'
+      dayEl.textContent = planIsPastToday()
+        ? 'время прошло · старт сразу сегодня'
         : 'старт сегодня';
     }
   }
@@ -357,7 +352,7 @@
     show('waiting');
     $('waitTime').textContent = pad(state.startHour) + ':' + pad(state.startMinute);
     var leftSec = Math.max(0, Math.ceil((state.startAtMs - nowMs) / 1000));
-    $('waitMeta').textContent = formatWaitMeta(leftSec, state.startAtMs);
+    $('waitMeta').textContent = formatWaitMeta(leftSec);
   }
 
   function renderPlayOrBreak(nowMs) {
@@ -475,11 +470,10 @@
       state.startMinute,
       0,
     );
-    // Если выбранное время уже прошло сегодня — на завтра.
+    // Только сегодня: если время уже прошло — старт сразу.
     if (startMs <= Date.now() + 5000) {
-      var dayMs = mskWallToUtcMs(msk.year, msk.month, msk.day, 12, 0, 0) + 24 * 3600 * 1000;
-      var t = nowPartsFromMs(dayMs);
-      startMs = mskWallToUtcMs(t.year, t.month, t.day, state.startHour, state.startMinute, 0);
+      startNow();
+      return;
     }
     state.startAtMs = startMs;
     state.mode = 'waiting';
