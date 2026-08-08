@@ -320,6 +320,42 @@ html, body {
   display: none !important;
 }
 
+.pause-badge {
+  position: fixed;
+  top: 3.5vh;
+  right: 2.5vw;
+  z-index: 20;
+  padding: 0.55em 1.1em;
+  border-radius: 999px;
+  border: 2px solid rgba(247, 217, 138, 0.7);
+  background: rgba(20, 14, 8, 0.88);
+  color: #f7d98a;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  font-size: clamp(16px, 2.4vh, 28px);
+  box-shadow: 0 0 24px rgba(199, 154, 61, 0.35);
+}
+
+.confirm-hint {
+  position: fixed;
+  left: 50%;
+  bottom: 4vh;
+  transform: translateX(-50%);
+  z-index: 20;
+  padding: 0.7em 1.4em;
+  border-radius: 999px;
+  border: 1px solid rgba(224, 122, 110, 0.55);
+  background: rgba(30, 12, 10, 0.92);
+  color: #e07a6e;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: clamp(14px, 2.2vh, 24px);
+  white-space: nowrap;
+  max-width: 92vw;
+  text-align: center;
+}
+
 .finish-title {
   font-family: Georgia, "Times New Roman", serif;
   font-weight: 700;

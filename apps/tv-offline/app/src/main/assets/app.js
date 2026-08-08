@@ -32,7 +32,7 @@
     { isBreak: false, level: 23, sb: 200000, bb: 400000, ante: 400000, minutes: 8 },
   ];
 
-  var STORAGE_KEY = 'gutshot.tv.offline.v2';
+  var STORAGE_KEY = 'gutshot.tv.offline.v3';
 
   var state = {
     mode: 'menu', // menu | waiting | running | finished
@@ -41,7 +41,12 @@
     startAtMs: null,
     idx: 0,
     segmentStartedAtMs: null,
+    paused: false,
+    pauseStartedAtMs: null,
   };
+
+  var menuConfirmUntil = 0;
+  var menuConfirmTimer = null;
 
   function $(id) {
     return document.getElementById(id);
@@ -153,9 +158,107 @@
       state.startAtMs = parsed.startAtMs || null;
       state.idx = parsed.idx || 0;
       state.segmentStartedAtMs = parsed.segmentStartedAtMs || null;
+      state.paused = !!parsed.paused;
+      state.pauseStartedAtMs = parsed.pauseStartedAtMs || null;
     } catch (e) {
       // ignore corrupt storage
     }
+  }
+
+  function clockNow() {
+    if (state.paused && state.pauseStartedAtMs != null) return state.pauseStartedAtMs;
+    return Date.now();
+  }
+
+  function setPausedUi(on) {
+    var badge = $('pauseBadge');
+    if (badge) badge.classList.toggle('hidden', !on);
+  }
+
+  function setConfirmUi(on) {
+    var hint = $('confirmHint');
+    if (hint) hint.classList.toggle('hidden', !on);
+  }
+
+  function clearMenuConfirm() {
+    menuConfirmUntil = 0;
+    if (menuConfirmTimer) {
+      clearTimeout(menuConfirmTimer);
+      menuConfirmTimer = null;
+    }
+    setConfirmUi(false);
+  }
+
+  function requestMenuConfirm() {
+    var now = Date.now();
+    if (now < menuConfirmUntil) {
+      clearMenuConfirm();
+      resetToMenu();
+      return;
+    }
+    menuConfirmUntil = now + 3000;
+    setConfirmUi(true);
+    if (menuConfirmTimer) clearTimeout(menuConfirmTimer);
+    menuConfirmTimer = setTimeout(function () {
+      clearMenuConfirm();
+    }, 3000);
+  }
+
+  function togglePause() {
+    if (state.mode !== 'running') return;
+    if (state.paused) {
+      var pauseDur = Date.now() - (state.pauseStartedAtMs || Date.now());
+      if (state.segmentStartedAtMs != null) {
+        state.segmentStartedAtMs += pauseDur;
+      }
+      state.paused = false;
+      state.pauseStartedAtMs = null;
+    } else {
+      state.paused = true;
+      state.pauseStartedAtMs = Date.now();
+    }
+    save();
+    setPausedUi(state.paused);
+    tick();
+  }
+
+  function jumpSegment(delta) {
+    if (state.mode !== 'running') return;
+    var next = state.idx + delta;
+    if (next < 0 || next >= STRUCTURE.length) {
+      if (next >= STRUCTURE.length) {
+        state.mode = 'finished';
+        state.paused = false;
+        state.pauseStartedAtMs = null;
+        state.segmentStartedAtMs = null;
+        setPausedUi(false);
+        save();
+        renderFinish();
+      }
+      return;
+    }
+    // Если на паузе — снимаем, чтобы новый уровень шёл сразу.
+    state.paused = false;
+    state.pauseStartedAtMs = null;
+    setPausedUi(false);
+    state.idx = next;
+    state.segmentStartedAtMs = Date.now();
+    save();
+    tick();
+  }
+
+  function startNow() {
+    var now = Date.now();
+    state.mode = 'running';
+    state.idx = 0;
+    state.startAtMs = now;
+    state.segmentStartedAtMs = now;
+    state.paused = false;
+    state.pauseStartedAtMs = null;
+    setPausedUi(false);
+    clearMenuConfirm();
+    save();
+    tick();
   }
 
   function show(mode) {
@@ -185,7 +288,7 @@
   }
 
   function syncSegments(nowMs) {
-    if (state.mode !== 'running' || state.segmentStartedAtMs == null) return;
+    if (state.mode !== 'running' || state.segmentStartedAtMs == null || state.paused) return;
     while (state.idx < STRUCTURE.length) {
       var seg = STRUCTURE[state.idx];
       var dur = seg.minutes * 60 * 1000;
@@ -269,16 +372,21 @@
   }
 
   function tick() {
-    var nowMs = Date.now();
+    var wallNow = Date.now();
+    var nowMs = clockNow();
 
     if (state.mode === 'waiting' && state.startAtMs != null) {
-      if (nowMs >= state.startAtMs) {
+      if (wallNow >= state.startAtMs) {
         state.mode = 'running';
         state.idx = 0;
         state.segmentStartedAtMs = state.startAtMs;
+        state.paused = false;
+        state.pauseStartedAtMs = null;
+        setPausedUi(false);
         save();
       } else {
-        renderWaiting(nowMs);
+        setPausedUi(false);
+        renderWaiting(wallNow);
         return;
       }
     }
@@ -286,18 +394,22 @@
     if (state.mode === 'running') {
       syncSegments(nowMs);
       if (state.mode === 'finished') {
+        setPausedUi(false);
         renderFinish();
         return;
       }
+      setPausedUi(!!state.paused);
       renderPlayOrBreak(nowMs);
       return;
     }
 
     if (state.mode === 'finished') {
+      setPausedUi(false);
       renderFinish();
       return;
     }
 
+    setPausedUi(false);
     renderMenu();
   }
 
@@ -330,6 +442,10 @@
     state.mode = 'waiting';
     state.idx = 0;
     state.segmentStartedAtMs = null;
+    state.paused = false;
+    state.pauseStartedAtMs = null;
+    clearMenuConfirm();
+    setPausedUi(false);
     save();
     tick();
   }
@@ -353,37 +469,75 @@
     state.startAtMs = null;
     state.idx = 0;
     state.segmentStartedAtMs = null;
+    state.paused = false;
+    state.pauseStartedAtMs = null;
+    clearMenuConfirm();
+    setPausedUi(false);
     save();
     renderMenu();
   }
 
   function onKey(e) {
     var key = e.key;
+    var isBack = key === 'Escape' || key === 'Backspace' || key === 'BrowserBack';
+    var isOk = key === 'Enter' || key === ' ' || key === 'MediaPlayPause';
+
     if (state.mode === 'menu') {
       if (key === 'ArrowUp') {
         e.preventDefault();
         adjustTime(15);
-      }
-      if (key === 'ArrowDown') {
+      } else if (key === 'ArrowDown') {
         e.preventDefault();
         adjustTime(-15);
-      }
-      if (key === 'ArrowLeft') {
+      } else if (key === 'ArrowLeft') {
         e.preventDefault();
         adjustTime(-1);
-      }
-      if (key === 'ArrowRight') {
+      } else if (key === 'ArrowRight') {
         e.preventDefault();
         adjustTime(1);
-      }
-      if (key === 'Enter') {
+      } else if (isOk) {
         e.preventDefault();
         schedule();
       }
-    } else if (state.mode === 'finished') {
-      if (key === 'Enter') {
+      return;
+    }
+
+    if (state.mode === 'finished') {
+      if (isOk || isBack) {
         e.preventDefault();
         resetToMenu();
+      }
+      return;
+    }
+
+    // waiting / running
+    if (isBack) {
+      e.preventDefault();
+      requestMenuConfirm();
+      return;
+    }
+
+    if (state.mode === 'waiting') {
+      if (isOk) {
+        e.preventDefault();
+        startNow();
+      }
+      return;
+    }
+
+    if (state.mode === 'running') {
+      if (isOk) {
+        e.preventDefault();
+        clearMenuConfirm();
+        togglePause();
+      } else if (key === 'ArrowRight') {
+        e.preventDefault();
+        clearMenuConfirm();
+        jumpSegment(1);
+      } else if (key === 'ArrowLeft') {
+        e.preventDefault();
+        clearMenuConfirm();
+        jumpSegment(-1);
       }
     }
   }

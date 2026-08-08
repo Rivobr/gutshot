@@ -51,21 +51,22 @@ class MainActivity : AppCompatActivity() {
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         // D-pad / remote: forward useful keys into the page.
-        if (keyCode == KeyEvent.KEYCODE_DPAD_UP ||
-            keyCode == KeyEvent.KEYCODE_DPAD_DOWN ||
-            keyCode == KeyEvent.KEYCODE_DPAD_CENTER ||
-            keyCode == KeyEvent.KEYCODE_ENTER ||
-            keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE ||
-            keyCode == KeyEvent.KEYCODE_DPAD_LEFT ||
-            keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
-        ) {
-            val name = when (keyCode) {
-                KeyEvent.KEYCODE_DPAD_UP -> "ArrowUp"
-                KeyEvent.KEYCODE_DPAD_DOWN -> "ArrowDown"
-                KeyEvent.KEYCODE_DPAD_LEFT -> "ArrowLeft"
-                KeyEvent.KEYCODE_DPAD_RIGHT -> "ArrowRight"
-                else -> "Enter"
-            }
+        val name = when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_UP -> "ArrowUp"
+            KeyEvent.KEYCODE_DPAD_DOWN -> "ArrowDown"
+            KeyEvent.KEYCODE_DPAD_LEFT -> "ArrowLeft"
+            KeyEvent.KEYCODE_DPAD_RIGHT -> "ArrowRight"
+            KeyEvent.KEYCODE_DPAD_CENTER,
+            KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_NUMPAD_ENTER,
+            KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
+            -> "Enter"
+            KeyEvent.KEYCODE_BACK,
+            KeyEvent.KEYCODE_ESCAPE,
+            -> "Escape"
+            else -> null
+        }
+        if (name != null) {
             webView.evaluateJavascript(
                 "window.dispatchEvent(new KeyboardEvent('keydown',{key:'$name',bubbles:true}));",
                 null,
@@ -73,6 +74,15 @@ class MainActivity : AppCompatActivity() {
             return true
         }
         return super.onKeyDown(keyCode, event)
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        // Keep app open — Back is handled in WebView as Escape (confirm → menu).
+        webView.evaluateJavascript(
+            "window.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));",
+            null,
+        )
     }
 
     override fun onResume() {
