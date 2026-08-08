@@ -1,7 +1,44 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Tournament, TournamentStatus } from '@prisma/client';
+import { RegistrationStatus, Tournament, TournamentStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { calculateLevel } from '../../common/utils/level.util';
+import { serializeTournament } from './tournament.serializer';
+
+/** Активные регистрации — отменённые места не занимают. */
+const ACTIVE_REGISTRATION_STATUSES: RegistrationStatus[] = [
+  RegistrationStatus.REGISTERED,
+  RegistrationStatus.CHECKED_IN,
+  RegistrationStatus.PLAYING,
+  RegistrationStatus.FINISHED,
+  RegistrationStatus.WAITING,
+];
+
+const activeRegistrationsCount = {
+  select: {
+    registrations: {
+      where: { status: { in: ACTIVE_REGISTRATION_STATUSES } },
+    },
+  },
+} as const;
+
+const HOME_TOURNAMENT_STATUSES: TournamentStatus[] = [
+  TournamentStatus.REGISTRATION_OPEN,
+  TournamentStatus.REGISTRATION_CLOSED,
+  TournamentStatus.IN_PROGRESS,
+];
+
+/** Границы календарного дня Europe/Moscow в UTC. */
+function moscowDayBounds(now = new Date()): { start: Date; end: Date } {
+  const day = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Moscow',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
+  const start = new Date(`${day}T00:00:00+03:00`);
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+  return { start, end };
+}
 
 @Injectable()
 export class TournamentsService {
@@ -13,7 +50,7 @@ export class TournamentsService {
     const registrations = await this.prisma.registration.findMany({
       where: {
         tournamentId: id,
-        status: { in: ['REGISTERED', 'CHECKED_IN', 'PLAYING', 'FINISHED', 'WAITING'] },
+        status: { in: ACTIVE_REGISTRATION_STATUSES },
       },
       orderBy: { registeredAt: 'asc' },
       include: {
@@ -29,8 +66,7 @@ export class TournamentsService {
     return registrations.map((reg) => {
       const results = reg.user.tournamentResults;
       const itm = results.filter((r) => r.place <= 10).length;
-      const top10Percent =
-        results.length > 0 ? Math.round((itm / results.length) * 100) : 0;
+      const top10Percent = results.length > 0 ? Math.round((itm / results.length) * 100) : 0;
 
       return {
         userId: reg.user.id,
@@ -40,14 +76,15 @@ export class TournamentsService {
         username: reg.user.username,
         photoUrl: reg.user.photoUrl,
         level: calculateLevel(reg.user.playerProfile?.xp ?? 0),
+        pinnedAchievements: reg.user.pinnedAchievements,
         top10Percent,
         status: reg.status,
       };
     });
   }
 
-  async findAll(filters: { status?: TournamentStatus; date?: string }): Promise<Tournament[]> {
-    return this.prisma.tournament.findMany({
+  async findAll(filters: { status?: TournamentStatus; date?: string }) {
+    const rows = await this.prisma.tournament.findMany({
       where: {
         status: filters.status,
         date: filters.date
@@ -58,32 +95,64 @@ export class TournamentsService {
           : undefined,
       },
       orderBy: { date: 'asc' },
-      include: { _count: { select: { registrations: true } } },
+      include: { blindLevels: true, _count: activeRegistrationsCount },
     });
+    return rows.map(serializeTournament);
   }
 
-  async findById(id: string): Promise<Tournament> {
+  async findById(id: string) {
     const tournament = await this.prisma.tournament.findUnique({
       where: { id },
-      include: { _count: { select: { registrations: true } } },
+      include: { blindLevels: true, _count: activeRegistrationsCount },
     });
 
     if (!tournament) {
       throw new NotFoundException('Турнир не найден');
     }
 
-    return tournament;
+    return serializeTournament(tournament);
   }
 
-  async findNearest(): Promise<Tournament | null> {
-    return this.prisma.tournament.findFirst({
+  /**
+   * Турнир для главной:
+   * 1) идущий сейчас;
+   * 2) самый свежий на сегодня (MSK), даже если время старта уже прошло;
+   * 3) иначе ближайший будущий.
+   */
+  async findNearest() {
+    const include = { blindLevels: true, _count: activeRegistrationsCount } as const;
+
+    const inProgress = await this.prisma.tournament.findFirst({
+      where: { status: TournamentStatus.IN_PROGRESS },
+      orderBy: { date: 'desc' },
+      include,
+    });
+    if (inProgress) {
+      return serializeTournament(inProgress);
+    }
+
+    const { start, end } = moscowDayBounds();
+    const today = await this.prisma.tournament.findFirst({
+      where: {
+        status: { in: HOME_TOURNAMENT_STATUSES },
+        date: { gte: start, lt: end },
+      },
+      orderBy: { date: 'desc' },
+      include,
+    });
+    if (today) {
+      return serializeTournament(today);
+    }
+
+    const upcoming = await this.prisma.tournament.findFirst({
       where: {
         date: { gte: new Date() },
-        status: { in: [TournamentStatus.REGISTRATION_OPEN, TournamentStatus.REGISTRATION_CLOSED] },
+        status: { in: HOME_TOURNAMENT_STATUSES },
       },
       orderBy: { date: 'asc' },
-      include: { _count: { select: { registrations: true } } },
+      include,
     });
+    return upcoming ? serializeTournament(upcoming) : null;
   }
 
   async create(data: {

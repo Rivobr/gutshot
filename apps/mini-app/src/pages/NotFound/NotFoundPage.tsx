@@ -1,9 +1,6 @@
-import { EmptyState } from '@gutshot/ui';
+import { Navigate } from 'react-router-dom';
 
+/** Неизвестный путь (в т.ч. устаревший /t.html) — сразу на главную. */
 export function NotFoundPage(): JSX.Element {
-  return (
-    <div className="flex min-h-screen items-center justify-center">
-      <EmptyState icon="🔍" title="Страница не найдена" />
-    </div>
-  );
+  return <Navigate to="/" replace />;
 }

@@ -1,8 +1,10 @@
 import {
+  AchievementDefinitionDto,
   AchievementDto,
   AchievementTextDto,
   LegalDocumentDto,
   NotificationDto,
+  PlayerBootstrapDto,
   PlayerEventDto,
   PlayerProfileDto,
   Registration,
@@ -17,6 +19,12 @@ export interface XPHistoryDto {
 }
 
 export const playerApi = {
+  /** Лёгкий boot-профиль для ConsentGate (быстрый вход). */
+  async getBootstrap(): Promise<PlayerBootstrapDto> {
+    // Свой таймаут: вход не должен зависеть от общего 12с axios.
+    const { data } = await apiClient.get('/profile/bootstrap', { timeout: 8_000 });
+    return data.data;
+  },
   async getProfile(): Promise<PlayerProfileDto> {
     const { data } = await apiClient.get('/profile');
     return data.data;
@@ -37,6 +45,10 @@ export const playerApi = {
     const { data } = await apiClient.get('/profile/achievements');
     return data.data;
   },
+  async setPinnedAchievements(achievementIds: string[]): Promise<{ pinnedAchievements: string[] }> {
+    const { data } = await apiClient.put('/profile/achievements/pinned', { achievementIds });
+    return data.data;
+  },
   async acceptConsent(): Promise<{ consentAcceptedAt: string }> {
     // Явно шлём {} — пустой POST с Content-Type JSON даёт 400 на Nest.
     const { data } = await apiClient.post('/profile/consent', {});
@@ -48,6 +60,10 @@ export const playerApi = {
   },
   async getAchievementTexts(): Promise<AchievementTextDto[]> {
     const { data } = await apiClient.get('/achievement-texts');
+    return data.data;
+  },
+  async getAchievementsCatalog(): Promise<AchievementDefinitionDto[]> {
+    const { data } = await apiClient.get('/achievements/catalog');
     return data.data;
   },
   async getXpHistory(): Promise<XPHistoryDto[]> {

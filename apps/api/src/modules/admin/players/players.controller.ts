@@ -1,6 +1,7 @@
-import { Controller, Get, Param, Patch, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AdminAuthGuard } from '../../auth/guards/admin-auth.guard';
+import { CreatePlayerDto } from './dto/create-player.dto';
 import { AdminPlayersService } from './players.service';
 
 @ApiTags('Admin / Players')
@@ -13,6 +14,12 @@ export class AdminPlayersController {
   @Get()
   findAll() {
     return this.playersService.findAll();
+  }
+
+  /** Создать (или вернуть) игрока по Telegram ID — для регистрации до первого входа в Mini App. */
+  @Post()
+  create(@Body() dto: CreatePlayerDto) {
+    return this.playersService.createByTelegramId(dto.telegramId, dto.isVerified ?? false);
   }
 
   @Get(':id')

@@ -43,15 +43,15 @@ export function LegalDocumentsPage(): JSX.Element {
     return <Loader />;
   }
 
-  const isDirty =
-    !!active && (draft.title !== active.title || draft.content !== active.content);
+  const isDirty = !!active && (draft.title !== active.title || draft.content !== active.content);
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-medium">Документы</h1>
         <p className="text-sm text-muted-foreground">
-          Тексты хранятся в базе и сразу отображаются в Mini App
+          Тексты хранятся в базе и сразу отображаются в Mini App. «Правила клуба» — страница
+          «Правила» у игроков.
         </p>
       </div>
 

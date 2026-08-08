@@ -10,6 +10,10 @@ export enum ScannerEvent {
   FOUR_OF_A_KIND = 'FOUR_OF_A_KIND',
   STRAIGHT_FLUSH = 'STRAIGHT_FLUSH',
   ROYAL_FLUSH = 'ROYAL_FLUSH',
+  /** Особые достижения по ТЗ: отмечаются вручную администратором. */
+  TUTORIAL_COMPLETED = 'TUTORIAL_COMPLETED',
+  FRIEND_REFERRED = 'FRIEND_REFERRED',
+  SHORT_STACK_WIN = 'SHORT_STACK_WIN',
 }
 
 export class ScannerEventDto {

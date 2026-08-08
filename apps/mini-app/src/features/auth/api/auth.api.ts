@@ -11,4 +11,9 @@ export const authApi = {
     const { data } = await apiClient.post('/auth/telegram', { initData });
     return data.data;
   },
+
+  async loginWithTicket(ticket: string): Promise<TelegramLoginResponse> {
+    const { data } = await apiClient.post('/auth/telegram/ticket', { ticket });
+    return data.data;
+  },
 };

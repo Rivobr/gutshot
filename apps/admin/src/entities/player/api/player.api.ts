@@ -6,6 +6,13 @@ export const adminPlayersApi = {
     const { data } = await apiClient.get('/admin/players');
     return data.data;
   },
+  async createByTelegramId(payload: {
+    telegramId: string;
+    isVerified?: boolean;
+  }): Promise<AdminPlayerListItem> {
+    const { data } = await apiClient.post('/admin/players', payload);
+    return data.data;
+  },
   async getById(id: string) {
     const { data } = await apiClient.get(`/admin/players/${id}`);
     return data.data;

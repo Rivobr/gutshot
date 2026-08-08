@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { MobileDrawer, Sidebar } from '../../widgets/Sidebar/Sidebar';
+import { MobileDrawer, MobileTabBar, Sidebar } from '../../widgets/Sidebar/Sidebar';
 
 export function Layout(): JSX.Element {
   const location = useLocation();
@@ -14,7 +14,10 @@ export function Layout(): JSX.Element {
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Mobile top bar */}
-        <header className="sticky top-0 z-40 flex items-center gap-3 border-b border-border bg-background/95 px-4 py-3 backdrop-blur md:hidden">
+        <header
+          className="sticky top-0 z-40 flex items-center gap-3 border-b border-border bg-background/95 px-4 py-3 backdrop-blur md:hidden"
+          style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
+        >
           <button
             onClick={() => setDrawerOpen(true)}
             aria-label="Меню"
@@ -25,7 +28,7 @@ export function Layout(): JSX.Element {
           <span className="font-medium text-primary">GUTSHOT CRM</span>
         </header>
 
-        <main className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 md:px-8 md:py-6">
+        <main className="flex-1 overflow-y-auto px-4 py-5 pb-24 sm:px-6 md:px-8 md:py-6 md:pb-6">
           <motion.div
             key={location.pathname}
             initial={{ opacity: 0, y: 8 }}
@@ -36,6 +39,8 @@ export function Layout(): JSX.Element {
           </motion.div>
         </main>
       </div>
+
+      <MobileTabBar />
     </div>
   );
 }

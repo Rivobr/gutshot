@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { Loader } from '@gutshot/ui';
 import { useTournament, useTournamentParticipants } from '../../entities/tournament';
 import {
@@ -8,11 +8,17 @@ import {
   useCurrentRegistration,
   useRegister,
 } from '../../entities/registration';
-import { InfoCard, goldButtonStyle } from '../../shared/ui/figma';
+import { goldButtonStyle } from '../../shared/ui/figma';
+import { BackButton } from '../../shared/ui/BackButton';
+import { PlayersFillBar } from '../../shared/ui/PlayersFillBar';
 import { PlayerAvatar } from '../../shared/ui/PlayerAvatar';
+import { AchievementMedallion } from '../../shared/ui/AchievementMedallion';
+import { groupFromAchievementId } from '../../shared/lib/achievements-catalog';
+import { showToast } from '../../shared/ui/toast';
 import { displayNameOf } from '../../shared/lib/display-name';
-import { formatDate, formatTime, seatsWord } from '../../shared/lib/format';
+import { formatDate, formatTime } from '../../shared/lib/format';
 import { club } from '../../shared/config/club';
+import { TournamentLiveBlock } from '../../widgets/TournamentLive/TournamentLiveBlock';
 
 const UPCOMING_STATUSES = ['DRAFT', 'REGISTRATION_OPEN', 'REGISTRATION_CLOSED', 'IN_PROGRESS'];
 
@@ -20,11 +26,10 @@ type Tab = 'about' | 'players';
 
 export function TournamentPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>('about');
   const { data: tournament, isLoading } = useTournament(id ?? '');
   const { data: participants } = useTournamentParticipants(id ?? '');
-  const { data: currentRegistration } = useCurrentRegistration();
+  const { data: myRegistrations = [] } = useCurrentRegistration();
   const registerMutation = useRegister();
   const cancelMutation = useCancelRegistration();
 
@@ -34,9 +39,35 @@ export function TournamentPage(): JSX.Element {
 
   const registrationsCount = tournament._count?.registrations ?? 0;
   const seats = Math.max(tournament.maxPlayers - registrationsCount, 0);
-  const pct = Math.min(Math.round((registrationsCount / tournament.maxPlayers) * 100), 100);
   const upcoming = UPCOMING_STATUSES.includes(tournament.status);
-  const isMine = currentRegistration?.tournamentId === tournament.id;
+  const myRegistration = myRegistrations.find((r) => r.tournamentId === tournament.id);
+  const isMine = Boolean(myRegistration);
+
+  const handleRegister = (): void => {
+    registerMutation.mutate(tournament.id, {
+      onSuccess: (result) => {
+        if (result.status === 'WAITING') {
+          showToast('Мест нет — вы в листе ожидания', 'info');
+          return;
+        }
+        showToast('Вы записаны на турнир');
+      },
+      onError: (error) => {
+        const message =
+          (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+          'Не удалось зарегистрироваться';
+        showToast(message, 'error');
+      },
+    });
+  };
+
+  const handleCancel = (): void => {
+    if (!myRegistration) return;
+    cancelMutation.mutate(myRegistration.id, {
+      onSuccess: () => showToast('Регистрация отменена', 'info'),
+      onError: () => showToast('Не удалось отменить регистрацию', 'error'),
+    });
+  };
 
   return (
     <motion.div
@@ -45,7 +76,6 @@ export function TournamentPage(): JSX.Element {
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
       className="flex flex-col pb-6"
     >
-      {/* Шапка с геометрической фигурой */}
       <div
         className="relative px-5 pt-5 pb-6 overflow-hidden"
         style={{
@@ -53,6 +83,18 @@ export function TournamentPage(): JSX.Element {
           borderBottom: '1px solid rgba(199,154,61,0.18)',
         }}
       >
+        {tournament.imageUrl && (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0"
+            style={{
+              backgroundImage: `url(${tournament.imageUrl})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              opacity: 0.22,
+            }}
+          />
+        )}
         <div
           aria-hidden
           className="pointer-events-none absolute"
@@ -67,34 +109,10 @@ export function TournamentPage(): JSX.Element {
             transform: 'rotate(8deg)',
           }}
         />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute"
-          style={{
-            right: 18,
-            top: 28,
-            width: 72,
-            height: 72,
-            border: '1px solid rgba(199,154,61,0.35)',
-            transform: 'rotate(28deg)',
-            borderRadius: 10,
-          }}
-        />
 
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="relative flex items-center gap-1.5 mb-4 sans"
-          style={{
-            color: 'rgba(199,154,61,0.7)',
-            fontSize: 12,
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-          }}
-        >
-          ← Назад
-        </button>
+        <div className="relative mb-4">
+          <BackButton />
+        </div>
 
         <p
           className="relative sans uppercase"
@@ -102,19 +120,77 @@ export function TournamentPage(): JSX.Element {
         >
           Турнир
         </p>
-        <h1
-          className="relative serif font-semibold mt-2 mb-2"
-          style={{ fontSize: 26, lineHeight: 1.15, color: '#F5EDD6' }}
-        >
-          {tournament.title}
-        </h1>
+        <div className="relative mt-2 mb-2 flex items-center justify-between gap-3">
+          <h1
+            className="serif font-semibold min-w-0 flex-1"
+            style={{ fontSize: 24, lineHeight: 1.15, color: '#F5EDD6' }}
+          >
+            {tournament.title}
+          </h1>
+          {isMine ? (
+            <div
+              className="shrink-0 rounded-full px-3.5 py-2.5 sans font-semibold uppercase text-center"
+              style={{
+                ...goldButtonStyle(),
+                opacity: 0.92,
+                fontSize: 11,
+                letterSpacing: '0.08em',
+                lineHeight: 1.1,
+              }}
+            >
+              {myRegistration?.status === 'WAITING' ? 'Лист ожидания' : 'Вы записаны'}
+            </div>
+          ) : (
+            <button
+              type="button"
+              disabled={tournament.status !== 'REGISTRATION_OPEN' || registerMutation.isPending}
+              onClick={handleRegister}
+              className="btn-shine shrink-0 rounded-full px-3.5 py-2.5 sans font-semibold uppercase disabled:opacity-50"
+              style={{
+                ...goldButtonStyle(),
+                fontSize: 11,
+                letterSpacing: '0.08em',
+                lineHeight: 1.1,
+                cursor:
+                  tournament.status !== 'REGISTRATION_OPEN' || registerMutation.isPending
+                    ? 'default'
+                    : 'pointer',
+              }}
+            >
+              {tournament.status === 'REGISTRATION_OPEN' ? 'Записаться' : 'Закрыта'}
+            </button>
+          )}
+        </div>
         <p className="relative sans num" style={{ fontSize: 12, color: '#8A7A62' }}>
           {formatDate(tournament.date)} · {formatTime(tournament.date)} · {registrationsCount}{' '}
           участников
+          {tournament.status === 'REGISTRATION_OPEN' && !isMine && seats === 0
+            ? ' · лист ожидания'
+            : ''}
         </p>
+        {isMine &&
+          (myRegistration?.status === 'REGISTERED' || myRegistration?.status === 'WAITING') && (
+            <button
+              type="button"
+              disabled={cancelMutation.isPending}
+              onClick={handleCancel}
+              className="relative sans mt-2 disabled:opacity-50"
+              style={{
+                background: 'transparent',
+                border: 'none',
+                padding: 0,
+                color: '#E07A6E',
+                fontSize: 12,
+                cursor: cancelMutation.isPending ? 'default' : 'pointer',
+                textDecoration: 'underline',
+                textUnderlineOffset: 3,
+              }}
+            >
+              Отменить запись
+            </button>
+          )}
       </div>
 
-      {/* Вкладки-боксы */}
       <div className="px-5 pt-4 flex gap-2">
         {(
           [
@@ -153,14 +229,15 @@ export function TournamentPage(): JSX.Element {
 
       {tab === 'about' ? (
         <>
-          <div className="px-5 pt-5 grid grid-cols-2 gap-3">
-            <InfoCard
-              label="Игроки"
-              value={`${registrationsCount} / ${tournament.maxPlayers}`}
-              icon="👥"
-            />
-            <InfoCard label="Мест осталось" value={seats.toString()} icon={seats <= 3 ? '🔴' : '🟢'} />
+          <div className="px-5 pt-5">
+            <PlayersFillBar taken={registrationsCount} max={tournament.maxPlayers} />
           </div>
+
+          {tournament.live && (
+            <div className="px-5 mt-4">
+              <TournamentLiveBlock live={tournament.live} />
+            </div>
+          )}
 
           <div className="px-5 mt-4">
             <div
@@ -179,25 +256,36 @@ export function TournamentPage(): JSX.Element {
             </div>
           </div>
 
-          {upcoming && (
-            <div className="px-5 mt-4">
-              <div
-                className="rounded-full overflow-hidden"
-                style={{ height: 3, background: 'rgba(199,154,61,0.1)' }}
-              >
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${pct}%` }}
-                  transition={{ duration: 1.2, ease: 'easeOut' }}
-                  style={{
-                    height: '100%',
-                    background: 'linear-gradient(90deg, #9C6A1F, #C89A3D, #F7D98A)',
-                    borderRadius: 99,
-                  }}
-                />
-              </div>
-            </div>
-          )}
+          <div className="px-5 mt-4 grid grid-cols-2 gap-2.5">
+            <a
+              href={club.supportUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="vip-card rounded-[16px] px-4 py-3.5 sans text-center"
+              style={{
+                fontSize: 13,
+                color: '#F5EDD6',
+                border: '1px solid rgba(199,154,61,0.22)',
+                textDecoration: 'none',
+                fontWeight: 600,
+              }}
+            >
+              Поддержка
+            </a>
+            <Link
+              to="/directions"
+              className="vip-card rounded-[16px] px-4 py-3.5 sans text-center"
+              style={{
+                fontSize: 13,
+                color: '#F5EDD6',
+                border: '1px solid rgba(199,154,61,0.22)',
+                textDecoration: 'none',
+                fontWeight: 600,
+              }}
+            >
+              Как найти
+            </Link>
+          </div>
 
           {tournament.description && (
             <div className="px-5 mt-5">
@@ -211,68 +299,20 @@ export function TournamentPage(): JSX.Element {
                 >
                   Подробнее
                 </p>
-                <p className="serif" style={{ fontSize: 15, color: '#C0B49A', lineHeight: 1.7 }}>
-                  {tournament.description}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {isMine ? (
-            <div className="px-5 mt-6 flex flex-col gap-3">
-              <div
-                className="w-full py-4 rounded-[18px] serif font-semibold tracking-widest text-center"
-                style={{ ...goldButtonStyle(), opacity: 0.92 }}
-              >
-                {currentRegistration?.status === 'WAITING' ? 'В ЛИСТЕ ОЖИДАНИЯ' : 'ВЫ ЗАПИСАНЫ'}
-              </div>
-              {(currentRegistration?.status === 'REGISTERED' ||
-                currentRegistration?.status === 'WAITING') && (
-                <button
-                  type="button"
-                  disabled={cancelMutation.isPending}
-                  onClick={() => cancelMutation.mutate(currentRegistration.id)}
-                  className="w-full py-3.5 rounded-[18px] sans font-medium disabled:opacity-50"
-                  style={{
-                    background: 'rgba(192,57,43,0.12)',
-                    border: '1px solid rgba(192,57,43,0.4)',
-                    color: '#E07A6E',
-                    fontSize: 13,
-                    cursor: 'pointer',
-                  }}
+                <div
+                  className="serif flex flex-col gap-3"
+                  style={{ fontSize: 17, color: '#D8CEBC', lineHeight: 1.7 }}
                 >
-                  Отменить регистрацию
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="px-5 mt-6">
-              <button
-                type="button"
-                disabled={tournament.status !== 'REGISTRATION_OPEN' || registerMutation.isPending}
-                onClick={() => registerMutation.mutate(tournament.id)}
-                className="btn-shine w-full py-4 rounded-[18px] serif font-semibold tracking-widest disabled:opacity-50"
-                style={goldButtonStyle()}
-              >
-                {tournament.status === 'REGISTRATION_OPEN'
-                  ? 'ЗАРЕГИСТРИРОВАТЬСЯ'
-                  : 'РЕГИСТРАЦИЯ ЗАКРЫТА'}
-              </button>
-              {tournament.status === 'REGISTRATION_OPEN' && (
-                <p className="sans text-center mt-2.5" style={{ fontSize: 10, color: '#6B614E' }}>
-                  {seats} {seatsWord(seats)} · Регистрация закрывается за 2 часа до начала
-                </p>
-              )}
-              {registerMutation.isError && (
-                <p className="sans text-center mt-2.5" style={{ fontSize: 11, color: '#C0392B' }}>
-                  Не удалось зарегистрироваться. Попробуйте снова.
-                </p>
-              )}
-              {registerMutation.isSuccess && (
-                <p className="sans text-center mt-2.5" style={{ fontSize: 11, color: '#C89A3D' }}>
-                  Вы успешно зарегистрированы!
-                </p>
-              )}
+                  {tournament.description
+                    .trim()
+                    .split(/\n{2,}/)
+                    .map((block, index) => (
+                      <p key={index} className="m-0 whitespace-pre-wrap">
+                        {block}
+                      </p>
+                    ))}
+                </div>
+              </div>
             </div>
           )}
         </>
@@ -315,11 +355,25 @@ export function TournamentPage(): JSX.Element {
                           @{p.username}
                         </span>
                       )}
-                      <span className="sans" style={{ fontSize: 10, color: 'rgba(199,154,61,0.6)' }}>
+                      <span
+                        className="sans"
+                        style={{ fontSize: 10, color: 'rgba(199,154,61,0.6)' }}
+                      >
                         Уровень {p.level}
                       </span>
                     </div>
                   </div>
+                  {p.pinnedAchievements && p.pinnedAchievements.length > 0 && (
+                    <div className="flex shrink-0 items-center gap-1">
+                      {p.pinnedAchievements.slice(0, 3).map((achievementId) => (
+                        <AchievementMedallion
+                          key={achievementId}
+                          group={groupFromAchievementId(achievementId)}
+                          size={24}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </motion.div>
               ))}
             </div>

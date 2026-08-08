@@ -25,7 +25,19 @@ export class RegistrationsService {
     private readonly playerEventsService: PlayerEventsService,
   ) {}
 
-  async register(userId: string, tournamentId: string): Promise<Registration> {
+  private static readonly ACTIVE_REGISTRATION_STATUSES: RegistrationStatus[] = [
+    RegistrationStatus.REGISTERED,
+    RegistrationStatus.WAITING,
+    RegistrationStatus.CHECKED_IN,
+    RegistrationStatus.PLAYING,
+  ];
+
+  /**
+   * Регистрация на турнир с открытой записью.
+   * Лимит мест и лист ожидания работают как раньше.
+   * Можно быть записанным на несколько турниров одновременно.
+   */
+  async register(userId: string, tournamentId: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
 
     if (!user) {
@@ -74,7 +86,10 @@ export class RegistrationsService {
       userId,
       type: PlayerEventType.TOURNAMENT_REGISTRATION,
       tournamentId,
-      metadata: { status, title: tournament.title },
+      metadata: {
+        status,
+        title: tournament.title,
+      },
     });
 
     if (status === RegistrationStatus.REGISTERED) {
@@ -98,6 +113,50 @@ export class RegistrationsService {
     return registration;
   }
 
+  /** Отмена записи + перевод следующего из листа ожидания. */
+  private async cancelRegistrationAndPromote(registrationId: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const registration = await tx.registration.findUnique({
+        where: { id: registrationId },
+      });
+
+      if (!registration) {
+        return null;
+      }
+
+      const wasActiveSlot = registration.status === RegistrationStatus.REGISTERED;
+
+      await tx.registration.update({
+        where: { id: registrationId },
+        data: { status: RegistrationStatus.CANCELLED, cancelledAt: new Date() },
+      });
+
+      if (!wasActiveSlot) {
+        return null;
+      }
+
+      const nextWaiting = await tx.registration.findFirst({
+        where: {
+          tournamentId: registration.tournamentId,
+          status: RegistrationStatus.WAITING,
+        },
+        orderBy: { registeredAt: 'asc' },
+        include: { user: true },
+      });
+
+      if (!nextWaiting) {
+        return null;
+      }
+
+      await tx.registration.update({
+        where: { id: nextWaiting.id },
+        data: { status: RegistrationStatus.REGISTERED },
+      });
+
+      return nextWaiting;
+    });
+  }
+
   async cancel(userId: string, registrationId: string): Promise<void> {
     const registration = await this.prisma.registration.findUnique({
       where: { id: registrationId },
@@ -117,35 +176,7 @@ export class RegistrationsService {
       throw new BadRequestException('Регистрацию невозможно отменить');
     }
 
-    const promoted = await this.prisma.$transaction(async (tx) => {
-      await tx.registration.update({
-        where: { id: registrationId },
-        data: { status: RegistrationStatus.CANCELLED, cancelledAt: new Date() },
-      });
-
-      const wasActiveSlot = registration.status === RegistrationStatus.REGISTERED;
-
-      if (!wasActiveSlot) {
-        return null;
-      }
-
-      const nextWaiting = await tx.registration.findFirst({
-        where: { tournamentId: registration.tournamentId, status: RegistrationStatus.WAITING },
-        orderBy: { registeredAt: 'asc' },
-        include: { user: true },
-      });
-
-      if (!nextWaiting) {
-        return null;
-      }
-
-      await tx.registration.update({
-        where: { id: nextWaiting.id },
-        data: { status: RegistrationStatus.REGISTERED },
-      });
-
-      return nextWaiting;
-    });
+    const promoted = await this.cancelRegistrationAndPromote(registrationId);
 
     if (promoted) {
       await this.notificationsService.notify({
@@ -173,17 +204,13 @@ export class RegistrationsService {
     });
   }
 
-  async getCurrent(userId: string): Promise<Registration | null> {
-    return this.prisma.registration.findFirst({
+  /** Все активные регистрации игрока (можно быть записанным на несколько турниров). */
+  async getCurrent(userId: string): Promise<Registration[]> {
+    return this.prisma.registration.findMany({
       where: {
         userId,
         status: {
-          in: [
-            RegistrationStatus.REGISTERED,
-            RegistrationStatus.CHECKED_IN,
-            RegistrationStatus.PLAYING,
-            RegistrationStatus.WAITING,
-          ],
+          in: RegistrationsService.ACTIVE_REGISTRATION_STATUSES,
         },
       },
       orderBy: { registeredAt: 'desc' },

@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpCode, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Patch,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
@@ -7,6 +17,7 @@ import { ProfileService } from './profile.service';
 import { UsersService } from '../users.service';
 import { QueryEventsDto } from './dto/query-events.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UpdatePinnedAchievementsDto } from './dto/update-pinned-achievements.dto';
 
 @ApiTags('Profile')
 @ApiBearerAuth()
@@ -17,6 +28,12 @@ export class ProfileController {
     private readonly profileService: ProfileService,
     private readonly usersService: UsersService,
   ) {}
+
+  /** Лёгкий вход Mini App: без метрик и достижений. */
+  @Get('bootstrap')
+  getBootstrap(@CurrentUser() user: JwtPayload) {
+    return this.profileService.getBootstrap(user.sub);
+  }
 
   @Get()
   getProfile(@CurrentUser() user: JwtPayload) {
@@ -51,6 +68,12 @@ export class ProfileController {
     return this.profileService.getAchievements(user.sub);
   }
 
+  /** Витрина достижений: до 3 закреплённых, видны другим игрокам. */
+  @Put('achievements/pinned')
+  setPinnedAchievements(@CurrentUser() user: JwtPayload, @Body() dto: UpdatePinnedAchievementsDto) {
+    return this.profileService.setPinnedAchievements(user.sub, dto.achievementIds);
+  }
+
   @Get('tournaments')
   getTournaments(@CurrentUser() user: JwtPayload) {
     return this.profileService.getTournamentHistory(user.sub);
@@ -62,9 +85,7 @@ export class ProfileController {
   async acceptConsent(@CurrentUser() user: JwtPayload) {
     const updated = await this.usersService.acceptConsent(user.sub);
     return {
-      consentAcceptedAt: updated.consentAcceptedAt
-        ? updated.consentAcceptedAt.toISOString()
-        : null,
+      consentAcceptedAt: updated.consentAcceptedAt ? updated.consentAcceptedAt.toISOString() : null,
     };
   }
 }

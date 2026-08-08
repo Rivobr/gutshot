@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { WELCOME_CAPTION } from './welcome-message';
@@ -11,7 +12,10 @@ export class TelegramService {
   private readonly webhookSecret: string | undefined;
   private welcomePhotoFileId: string | undefined;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly jwtService: JwtService,
+  ) {
     this.botToken = this.configService.get<string>('telegram.botToken');
     this.webhookSecret = this.configService.get<string>('telegram.webhookSecret');
   }
@@ -24,42 +28,49 @@ export class TelegramService {
     return join(process.cwd(), 'assets', 'welcome-club.png');
   }
 
-  async sendMessage(
-    telegramId: string,
-    text: string,
-    replyMarkup?: object,
-  ): Promise<boolean> {
+  async sendMessage(telegramId: string, text: string, replyMarkup?: object): Promise<boolean> {
     if (!this.botToken) {
       this.logger.warn('TELEGRAM_BOT_TOKEN не задан — сообщение не отправлено');
       return false;
     }
 
-    try {
-      const body: Record<string, unknown> = {
-        chat_id: telegramId,
-        text,
-        parse_mode: 'HTML',
-      };
-      if (replyMarkup) {
-        body.reply_markup = replyMarkup;
-      }
-
-      const response = await fetch(`https://api.telegram.org/bot${this.botToken}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      if (!response.ok) {
-        this.logger.error(`Telegram API error: ${response.status} ${await response.text()}`);
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      this.logger.error('Ошибка отправки Telegram сообщения', error as Error);
-      return false;
+    const body: Record<string, unknown> = {
+      chat_id: telegramId,
+      text,
+      parse_mode: 'HTML',
+    };
+    if (replyMarkup) {
+      body.reply_markup = replyMarkup;
     }
+
+    // Outbound к api.telegram.org с VPS иногда падает (DNS/сеть) —
+    // без ретраев /start «молчит» и игрок думает, что клуб мёртв.
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      try {
+        const response = await fetch(`https://api.telegram.org/bot${this.botToken}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+
+        if (!response.ok) {
+          this.logger.error(`Telegram API error: ${response.status} ${await response.text()}`);
+          return false;
+        }
+
+        return true;
+      } catch (error) {
+        lastError = error;
+        this.logger.warn(
+          `Telegram sendMessage attempt ${attempt}/3 failed: ${(error as Error).message}`,
+        );
+        await new Promise((r) => setTimeout(r, 400 * attempt));
+      }
+    }
+
+    this.logger.error('Ошибка отправки Telegram сообщения', lastError as Error);
+    return false;
   }
 
   async sendWelcome(chatId: string): Promise<boolean> {
@@ -70,6 +81,21 @@ export class TelegramService {
 
     // Снимаем старую reply-клавиатуру («Открыть клуб»), если она уже была у пользователя.
     const removeKeyboard = { remove_keyboard: true };
+    const miniAppUrl = (
+      this.configService.get<string>('telegram.miniAppPublicUrl')?.trim() ||
+      this.configService.get<string>('telegram.miniAppUrl')?.trim() ||
+      'https://app.gutshotapp.ru'
+    ).replace(/\/$/, '');
+    // boot.html + per-user ticket: some WebViews (CF tunnel) omit initData;
+    // ticket lets boot.html auth without Telegram.WebApp.initData.
+    const ticket = this.jwtService.sign(
+      { typ: 'miniapp_ticket', telegramId: String(chatId) },
+      { expiresIn: '7d' },
+    );
+    const entryUrl = `${miniAppUrl}/enter.html?t=${Date.now()}&v=20260808a&ticket=${encodeURIComponent(ticket)}`;
+    const openAppKeyboard = {
+      inline_keyboard: [[{ text: '♠️ Открыть GUTSHOT', web_app: { url: entryUrl } }]],
+    };
 
     try {
       const photoSent = await this.sendWelcomePhoto(chatId);
@@ -77,9 +103,19 @@ export class TelegramService {
         this.logger.warn(`Welcome photo не отправлено в chat ${chatId}, шлём только текст`);
       }
 
-      const textOk = await this.sendMessage(chatId, WELCOME_CAPTION, removeKeyboard);
-      if (!textOk) {
-        this.logger.error(`Welcome text не отправлен в chat ${chatId}`);
+      // Персональная кнопка меню с ticket: глобальная кнопка его не содержит,
+      // и на WebView без initData вход упирался в «Откройте кнопкой из бота».
+      void this.setChatMenuButton(entryUrl, 'Открыть', String(chatId)).catch(() => undefined);
+
+      // Сначала убираем старую reply-клавиатуру, затем шлём кнопку web_app.
+      await this.sendMessage(chatId, WELCOME_CAPTION, removeKeyboard);
+      const buttonOk = await this.sendMessage(
+        chatId,
+        'Нажмите кнопку, чтобы открыть приложение:',
+        openAppKeyboard,
+      );
+      if (!buttonOk) {
+        this.logger.error(`Welcome button не отправлена в chat ${chatId}`);
         return false;
       }
 
@@ -87,7 +123,7 @@ export class TelegramService {
       return true;
     } catch (error) {
       this.logger.error(`Ошибка отправки welcome в chat ${chatId}`, error as Error);
-      return this.sendMessage(chatId, WELCOME_CAPTION, removeKeyboard);
+      return this.sendMessage(chatId, WELCOME_CAPTION, openAppKeyboard);
     }
   }
 
@@ -131,7 +167,9 @@ export class TelegramService {
 
       return true;
     } catch (error) {
-      this.logger.error(`Не удалось прочитать/отправить welcome photo: ${(error as Error).message}`);
+      this.logger.error(
+        `Не удалось прочитать/отправить welcome photo: ${(error as Error).message}`,
+      );
       return false;
     }
   }
@@ -195,16 +233,73 @@ export class TelegramService {
         return undefined;
       }
 
-      return `https://api.telegram.org/file/bot${this.botToken}/${filePayload.result.file_path}`;
+      // Never return/persist bot-token file URLs — они светят TELEGRAM_BOT_TOKEN
+      // в admin/API ответах. Аватар из initData (CDN t.me) безопасен.
+      this.logger.debug(
+        `Telegram avatar file for ${telegramId} resolved but skipped (token leak guard)`,
+      );
+      return undefined;
     } catch (error) {
-      this.logger.warn(`Не удалось получить аватар Telegram ${telegramId}: ${(error as Error).message}`);
+      this.logger.warn(
+        `Не удалось получить аватар Telegram ${telegramId}: ${(error as Error).message}`,
+      );
       return undefined;
     } finally {
       clearTimeout(timer);
     }
   }
 
-  async getWebhookInfo(): Promise<{ url?: string; lastErrorMessage?: string; pendingUpdateCount?: number } | null> {
+  /**
+   * Профиль игрока через Bot API.
+   * Нужен для входов по ticket/кнопке бота, где нет initData:
+   * иначе в админке игрок остаётся без имени и @username.
+   */
+  async getChatProfile(telegramId: string): Promise<{
+    username?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+  } | null> {
+    if (!this.botToken) {
+      return null;
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2_500);
+
+    try {
+      const response = await fetch(
+        `https://api.telegram.org/bot${this.botToken}/getChat?chat_id=${encodeURIComponent(telegramId)}`,
+        { signal: controller.signal },
+      );
+      const payload = (await response.json()) as {
+        ok?: boolean;
+        result?: { username?: string; first_name?: string; last_name?: string };
+      };
+
+      if (!payload.ok || !payload.result) {
+        return null;
+      }
+
+      return {
+        username: payload.result.username ?? null,
+        firstName: payload.result.first_name ?? null,
+        lastName: payload.result.last_name ?? null,
+      };
+    } catch (error) {
+      this.logger.warn(
+        `Не удалось получить профиль Telegram ${telegramId}: ${(error as Error).message}`,
+      );
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async getWebhookInfo(): Promise<{
+    url?: string;
+    lastErrorMessage?: string;
+    pendingUpdateCount?: number;
+  } | null> {
     if (!this.botToken) {
       return null;
     }
@@ -236,7 +331,7 @@ export class TelegramService {
    * Кнопка меню слева от поля ввода. Должна открывать Mini App,
    * а не админ-панель — иначе игроки видят CRM-логин.
    */
-  async setChatMenuButton(miniAppUrl: string, text = 'Открыть'): Promise<boolean> {
+  async setChatMenuButton(miniAppUrl: string, text = 'Открыть', chatId?: string): Promise<boolean> {
     if (!this.botToken) {
       this.logger.warn('TELEGRAM_BOT_TOKEN не задан — menu button не установлен');
       return false;
@@ -253,18 +348,23 @@ export class TelegramService {
     }
 
     try {
+      const body: Record<string, unknown> = {
+        menu_button: {
+          type: 'web_app',
+          text,
+          web_app: { url },
+        },
+      };
+      if (chatId) {
+        body.chat_id = Number(chatId);
+      }
+
       const response = await fetch(
         `https://api.telegram.org/bot${this.botToken}/setChatMenuButton`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            menu_button: {
-              type: 'web_app',
-              text,
-              web_app: { url },
-            },
-          }),
+          body: JSON.stringify(body),
         },
       );
 
@@ -274,7 +374,9 @@ export class TelegramService {
         return false;
       }
 
-      this.logger.log(`Telegram menu button → Mini App: ${url}`);
+      if (!chatId) {
+        this.logger.log(`Telegram menu button → Mini App: ${url}`);
+      }
       return true;
     } catch (error) {
       this.logger.error('Ошибка setChatMenuButton', error as Error);

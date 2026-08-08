@@ -4,6 +4,8 @@ export interface CreateApiClientOptions {
   baseURL: string;
   getToken: () => string | null;
   onUnauthorized?: () => void;
+  /** Default 20s — slow mobile TLS needs headroom before retry. */
+  timeoutMs?: number;
 }
 
 /** Эндпоинты логина: 401 здесь — ошибка входа, а не «сессия истекла». */
@@ -19,8 +21,8 @@ export function createApiClient(options: CreateApiClientOptions): AxiosInstance 
   const client = axios.create({
     baseURL: options.baseURL,
     headers: { 'Content-Type': 'application/json' },
-    // Короткий таймаут — лучше ошибка с retry, чем вечный сплэш в Mini App.
-    timeout: 10_000,
+    // Slow iOS Telegram WebViews need headroom; callers also retry.
+    timeout: options.timeoutMs ?? 12_000,
   });
 
   client.interceptors.request.use((config) => {

@@ -35,4 +35,9 @@ export class CreateTournamentDto {
   @IsOptional()
   @IsDateString()
   registrationClose?: string;
+
+  @ApiPropertyOptional({ description: 'URL обложки турнира' })
+  @IsOptional()
+  @IsString()
+  imageUrl?: string;
 }

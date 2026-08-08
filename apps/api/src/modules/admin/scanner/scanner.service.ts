@@ -10,10 +10,12 @@ import {
 import { PrismaService } from '../../../prisma/prisma.service';
 import { normalizePlayerQrCode } from '../../../common/utils/player-qr.util';
 import { AttendanceService } from '../attendance/attendance.service';
+import { AdminTournamentsService } from '../tournaments/admin-tournaments.service';
 import { LevelsService } from '../../progression/levels.service';
 import { XpService } from '../../progression/xp.service';
 import { XpSettingsService } from '../../progression/xp-settings.service';
 import { AchievementsService, ACHIEVEMENT_TITLES } from '../../progression/achievements.service';
+import { AchievementEngineService } from '../../progression/achievement-engine.service';
 import { PlayerEventsService } from '../../progression/player-events.service';
 import { NotificationsService } from '../../telegram/notifications.service';
 import { ScannerEvent } from './dto/scanner.dto';
@@ -25,6 +27,8 @@ interface EventConfig {
   achievement?: AchievementCode;
   /** Событие имеет смысл только в контексте турнира. */
   requiresRegistration: boolean;
+  /** Событие само по себе не даёт XP — награда идёт от достижения. */
+  noXp?: boolean;
   label: string;
 }
 
@@ -81,6 +85,32 @@ const EVENT_CONFIG: Record<ScannerEvent, EventConfig> = {
     requiresRegistration: false,
     label: 'Роял-флеш',
   },
+  // Особые достижения из ТЗ. Собственного XP у события нет —
+  // награду выдаёт каталог достижений при первом выполнении.
+  [ScannerEvent.TUTORIAL_COMPLETED]: {
+    xpKey: XpSettingKey.RE_ENTRY,
+    xpReason: XPReason.ACHIEVEMENT,
+    eventType: PlayerEventType.TUTORIAL_COMPLETED,
+    requiresRegistration: false,
+    noXp: true,
+    label: 'Прошёл обучение',
+  },
+  [ScannerEvent.FRIEND_REFERRED]: {
+    xpKey: XpSettingKey.RE_ENTRY,
+    xpReason: XPReason.ACHIEVEMENT,
+    eventType: PlayerEventType.FRIEND_REFERRED,
+    requiresRegistration: false,
+    noXp: true,
+    label: 'Привёл друга',
+  },
+  [ScannerEvent.SHORT_STACK_WIN]: {
+    xpKey: XpSettingKey.RE_ENTRY,
+    xpReason: XPReason.ACHIEVEMENT,
+    eventType: PlayerEventType.SHORT_STACK_WIN,
+    requiresRegistration: false,
+    noXp: true,
+    label: 'Победа со стека менее 10 BB',
+  },
 };
 
 /** Статусы регистрации, при которых игрок считается активным участником. */
@@ -98,9 +128,11 @@ export class ScannerService {
     private readonly levelsService: LevelsService,
     private readonly xpService: XpService,
     private readonly achievementsService: AchievementsService,
+    private readonly achievementEngine: AchievementEngineService,
     private readonly playerEventsService: PlayerEventsService,
     private readonly attendanceService: AttendanceService,
     private readonly notificationsService: NotificationsService,
+    private readonly adminTournamentsService: AdminTournamentsService,
   ) {}
 
   /** Карточка игрока по отсканированному постоянному QR-коду. */
@@ -164,12 +196,7 @@ export class ScannerService {
    * Применяет событие к игроку: обновляет счетчики, начисляет XP,
    * выдает достижение и пишет запись в историю. Все шаги — в одной транзакции.
    */
-  async applyEvent(
-    rawQrCode: string,
-    event: ScannerEvent,
-    adminId: string,
-    tournamentId?: string,
-  ) {
+  async applyEvent(rawQrCode: string, event: ScannerEvent, adminId: string, tournamentId?: string) {
     const qrCode = normalizePlayerQrCode(rawQrCode);
     const config = EVENT_CONFIG[event];
 
@@ -187,7 +214,7 @@ export class ScannerService {
     }
 
     const registration = await this.resolveRegistration(user.id, tournamentId, config);
-    const xpValue = await this.xpSettingsService.getValue(config.xpKey);
+    const xpValue = config.noXp ? 0 : await this.xpSettingsService.getValue(config.xpKey);
 
     const result = await this.prisma.$transaction(async (tx) => {
       let xpAmount = xpValue;
@@ -195,14 +222,11 @@ export class ScannerService {
       if (event === ScannerEvent.ARRIVED) {
         xpAmount = await this.attendanceService.applyArrival(tx, registration!);
       } else if (event === ScannerEvent.ELIMINATED) {
-        await tx.registration.update({
-          where: { id: registration!.id },
-          data: { eliminatedAt: new Date() },
-        });
+        await this.adminTournamentsService.applyEliminationPlaceInTx(tx, registration!.id);
       } else if (event === ScannerEvent.RE_ENTRY) {
         await tx.registration.update({
           where: { id: registration!.id },
-          data: { reEntries: { increment: 1 }, eliminatedAt: null },
+          data: { reEntries: { increment: 1 }, eliminatedAt: null, place: null },
         });
         await tx.playerProfile.upsert({
           where: { userId: user.id },
@@ -255,7 +279,29 @@ export class ScannerService {
       return { award, achievementUnlocked };
     });
 
-    await this.notifyPlayer(user, config.label, result.award.xpAwarded, result.award.levelUp, result.award.level);
+    // Каре/стрит/роял/баунти/явка меняют метрики — пересчитываем каталог достижений.
+    const unlockedAchievements = await this.achievementEngine.syncForUser(user.id, {
+      tournamentId: registration?.tournamentId ?? tournamentId ?? null,
+      performedById: adminId,
+    });
+
+    await this.notifyPlayer(
+      user,
+      config.label,
+      result.award.xpAwarded,
+      result.award.levelUp,
+      result.award.level,
+    );
+
+    for (const achievement of unlockedAchievements) {
+      await this.notificationsService.notify({
+        userId: user.id,
+        telegramId: user.telegramId,
+        type: NotificationType.SYSTEM,
+        title: 'Новое достижение',
+        message: `🏅 ${achievement.title}\n+${achievement.xp} XP`,
+      });
+    }
 
     return {
       xpAwarded: result.award.xpAwarded,
@@ -263,6 +309,7 @@ export class ScannerService {
       level: result.award.level,
       levelUp: result.award.levelUp,
       achievementUnlocked: result.achievementUnlocked,
+      unlockedAchievements,
       eventId: result.award.eventId,
     };
   }

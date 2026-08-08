@@ -3,7 +3,11 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { LevelsService } from '../../progression/levels.service';
 import { PlayerEventsService } from '../../progression/player-events.service';
 import { AchievementsService } from '../../progression/achievements.service';
+import { AchievementEngineService } from '../../progression/achievement-engine.service';
 import { UsersService } from '../users.service';
+
+/** Сколько достижений игрок может закрепить в профиле. */
+export const MAX_PINNED_ACHIEVEMENTS = 3;
 
 @Injectable()
 export class ProfileService {
@@ -13,7 +17,66 @@ export class ProfileService {
     private readonly levelsService: LevelsService,
     private readonly playerEventsService: PlayerEventsService,
     private readonly achievementsService: AchievementsService,
+    private readonly achievementEngine: AchievementEngineService,
   ) {}
+
+  /**
+   * Лёгкий bootstrap для входа Mini App.
+   * Один SELECT (+ при необходимости создание пустого PlayerProfile).
+   * Без metrics / achievements / истории — это грузится через getProfile после Home.
+   */
+  async getBootstrap(userId: string) {
+    let user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        telegramId: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        nickname: true,
+        photoUrl: true,
+        consentAcceptedAt: true,
+        playerProfile: { select: { xp: true } },
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Профиль не найден');
+    }
+
+    if (!user.playerProfile) {
+      await this.prisma.playerProfile.create({
+        data: { userId: user.id, xp: 0 },
+      });
+      user = await this.prisma.user.findUniqueOrThrow({
+        where: { id: userId },
+        select: {
+          id: true,
+          telegramId: true,
+          username: true,
+          firstName: true,
+          lastName: true,
+          nickname: true,
+          photoUrl: true,
+          consentAcceptedAt: true,
+          playerProfile: { select: { xp: true } },
+        },
+      });
+    }
+
+    return {
+      id: user.id,
+      telegramId: user.telegramId,
+      username: user.username,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      nickname: user.nickname,
+      photoUrl: user.photoUrl,
+      xp: user.playerProfile?.xp ?? 0,
+      consentAcceptedAt: user.consentAcceptedAt ? user.consentAcceptedAt.toISOString() : null,
+    };
+  }
 
   async getProfile(userId: string) {
     let user = await this.prisma.user.findUnique({
@@ -45,26 +108,18 @@ export class ProfileService {
     const qrCode = user.qrCode ?? (await this.usersService.ensureQrCode(user.id)).qrCode;
 
     const [
-      tournamentsPlayed,
       resultsCount,
-      wins,
       itm,
-      finalTables,
       placeAvg,
       visits,
       placeHistory,
       levelProgress,
+      metrics,
+      unlockedAchievements,
     ] = await Promise.all([
-      this.prisma.registration.count({
-        where: { userId, status: 'FINISHED' },
-      }),
       this.prisma.tournamentResult.count({ where: { userId } }),
-      this.prisma.tournamentResult.count({ where: { userId, place: 1 } }),
       this.prisma.tournamentResult.count({
         where: { userId, place: { lte: 10 } },
-      }),
-      this.prisma.tournamentResult.count({
-        where: { userId, place: { lte: 9 } },
       }),
       this.prisma.tournamentResult.aggregate({
         where: { userId },
@@ -79,7 +134,13 @@ export class ProfileService {
         orderBy: { tournament: { date: 'asc' } },
       }),
       this.levelsService.getProgress(user.playerProfile.xp),
+      this.achievementEngine.collectMetrics(this.prisma, userId),
+      this.achievementEngine.listUnlocked(userId),
     ]);
+
+    const tournamentsPlayed = metrics.tournamentsPlayed;
+    const wins = metrics.wins;
+    const finalTables = metrics.finalTables;
 
     let winStreak = 0;
     let currentStreak = 0;
@@ -93,10 +154,8 @@ export class ProfileService {
     }
 
     const firstPlaces = wins;
-    const top10Percent =
-      resultsCount > 0 ? Math.round((itm / resultsCount) * 100) : 0;
-    const averagePlace =
-      placeAvg._avg.place != null ? Math.round(placeAvg._avg.place) : null;
+    const top10Percent = resultsCount > 0 ? Math.round((itm / resultsCount) * 100) : 0;
+    const averagePlace = placeAvg._avg.place != null ? Math.round(placeAvg._avg.place) : null;
     const daysInClub = Math.max(
       0,
       Math.floor((Date.now() - user.createdAt.getTime()) / 86_400_000),
@@ -115,6 +174,7 @@ export class ProfileService {
       isVerified: user.isVerified,
       qrCode,
       consentAcceptedAt: user.consentAcceptedAt,
+      pinnedAchievements: user.pinnedAchievements,
       ...levelProgress,
       stats: {
         tournamentsPlayed,
@@ -129,8 +189,37 @@ export class ProfileService {
         visits,
         finalTables,
         winStreak,
+        fourOfAKind: metrics.fourOfAKind,
+        straightFlush: metrics.straightFlush,
+        royalFlush: metrics.royalFlush,
+        activeWeeks: metrics.activeWeeks,
+        weeklyTop3: metrics.weeklyTop3,
+        weeklyWins: metrics.weeklyWins,
+        monthlyEntries: metrics.monthlyEntries,
+        monthlyPrizes: metrics.monthlyPrizes,
+        monthlyWins: metrics.monthlyWins,
+        winNoReentry: metrics.winNoReentry,
+        backToBackWins: metrics.backToBackWins,
+        finalTableStreak: metrics.finalTableStreak,
+        top10Streak: metrics.top10Streak,
+        shortStackWins: metrics.shortStackWins,
+        tutorialCompleted: metrics.tutorialCompleted,
+        friendsReferred: metrics.friendsReferred,
+        knockouts: metrics.knockouts,
       },
+      unlockedAchievements,
+      achievementProgress: this.achievementEngine.buildProgressMap(metrics),
     };
+  }
+
+  /** Витрина достижений в профиле: показывается другим игрокам. */
+  async setPinnedAchievements(userId: string, achievementIds: string[]) {
+    const unique = Array.from(new Set(achievementIds)).slice(0, MAX_PINNED_ACHIEVEMENTS);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { pinnedAchievements: unique },
+    });
+    return { pinnedAchievements: unique };
   }
 
   /** Постоянный персональный QR-код игрока. */

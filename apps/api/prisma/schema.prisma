@@ -23,6 +23,14 @@ enum TournamentStatus {
   ARCHIVED
 }
 
+/// Состояние турнирных часов (структура блайндов крутится сама).
+enum ClockStatus {
+  IDLE
+  RUNNING
+  PAUSED
+  FINISHED
+}
+
 enum RegistrationStatus {
   REGISTERED
   CHECKED_IN
@@ -45,6 +53,8 @@ enum XPReason {
   RE_ENTRY
   BOUNTY
   ACHIEVEMENT
+  WEEKLY_RATING
+  MONTHLY_FINAL
 }
 
 /// Типы событий, фиксируемых в истории активности игрока.
@@ -62,6 +72,11 @@ enum PlayerEventType {
   LEVEL_UP
   TOURNAMENT_RESULT
   ACHIEVEMENT_UNLOCKED
+  WEEKLY_RATING_REWARD
+  MONTHLY_FINAL_REWARD
+  TUTORIAL_COMPLETED
+  FRIEND_REFERRED
+  SHORT_STACK_WIN
 }
 
 /// Достижения, выдаваемые за редкие комбинации.
@@ -100,6 +115,28 @@ enum XpSettingKey {
   PLACE_18
   PLACE_19
   PLACE_20
+  PLACE_21
+  PLACE_22
+  PLACE_23
+  PLACE_24
+  PLACE_25
+  PLACE_26
+  PLACE_27
+  PLACE_28
+  PLACE_29
+  PLACE_30
+  WEEKLY_TOP_1
+  WEEKLY_TOP_2
+  WEEKLY_TOP_3
+  MONTHLY_TOP_1
+  MONTHLY_TOP_2
+  MONTHLY_TOP_3
+}
+
+/// Тип периода для наград рейтинга.
+enum RatingPeriodType {
+  WEEKLY
+  MONTHLY
 }
 
 /// Типы юридических документов клуба.
@@ -134,7 +171,8 @@ model User {
   username  String?
   firstName String?
   lastName  String?
-  /// Отображаемое имя в клубе. Игрок может менять самостоятельно.
+  /// Отображаемое имя в клубе. Уникально без учёта регистра
+  /// (индекс User_nickname_lower_key в миграции). Игрок меняет сам.
   nickname  String?
   photoUrl  String?
   isBlocked Boolean  @default(false)
@@ -149,13 +187,19 @@ model User {
   /// Принятие пользовательских соглашений при первом входе в Mini App.
   consentAcceptedAt DateTime?
 
-  playerProfile     PlayerProfile?
-  registrations     Registration[]
-  tournamentResults TournamentResult[]
-  xpHistory         XPHistory[]
-  notifications     Notification[]
-  achievements      Achievement[]
-  events            PlayerEvent[]
+  /// Витрина достижений: id из клиентского каталога, которые игрок закрепил
+  /// в профиле. Видны другим игрокам в списке участников турнира.
+  pinnedAchievements String[] @default([])
+
+  playerProfile      PlayerProfile?
+  registrations      Registration[]
+  tournamentResults  TournamentResult[]
+  xpHistory          XPHistory[]
+  notifications      Notification[]
+  achievements       Achievement[]
+  playerAchievements PlayerAchievement[]
+  ratingRewards      RatingReward[]
+  events             PlayerEvent[]
 
   @@index([telegramId])
   @@index([qrCode])
@@ -185,15 +229,56 @@ model Tournament {
   registrationOpen   DateTime?
   registrationClose  DateTime?
   reminderSentAt     DateTime?
+  /// URL обложки турнира (админка).
+  imageUrl           String?
+  /// Live-состояние стола (блайнды / перерывы).
+  liveIsRunning      Boolean          @default(false)
+  liveLevel          Int?
+  liveSmallBlind     Int?
+  liveBigBlind       Int?
+  liveAnte           Int?
+  liveNextBreakInSec Int?
+  livePlayersIn      Int?
+  liveUpdatedAt      DateTime?
+
+  /// Турнирные часы. Структура уровней задаётся заранее (BlindLevel),
+  /// дальше блайнды и перерывы переключаются сами от clockStartedAt.
+  clockStatus     ClockStatus @default(IDLE)
+  /// Момент старта текущего уровня (с учётом пауз).
+  clockStartedAt  DateTime?
+  /// Индекс текущего уровня в структуре (0-based, включая перерывы).
+  clockLevelIdx   Int         @default(0)
+  /// Когда часы поставили на паузу (null, если идут).
+  clockPausedAt   DateTime?
+
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
 
   registrations     Registration[]
   tournamentResults TournamentResult[]
   events            PlayerEvent[]
+  blindLevels       BlindLevel[]
 
   @@index([date])
   @@index([status])
+}
+
+/// Уровень структуры турнира: блайнды либо перерыв.
+model BlindLevel {
+  id           String  @id @default(cuid())
+  tournamentId String
+  /// Порядок в структуре (0-based), включая перерывы.
+  idx          Int
+  isBreak      Boolean @default(false)
+  smallBlind   Int?
+  bigBlind     Int?
+  ante         Int?
+  durationSec  Int
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  @@unique([tournamentId, idx])
+  @@index([tournamentId])
 }
 
 model Registration {
@@ -212,6 +297,8 @@ model Registration {
   arrivedAt          DateTime?
   attendanceXpGiven  Boolean   @default(false)
   eliminatedAt       DateTime?
+  /// Место в турнире (можно проставить до finish — XP начислится при завершении).
+  place              Int?
   reEntries          Int       @default(0)
   bounties           Int       @default(0)
 
@@ -340,6 +427,39 @@ model Achievement {
 
   @@unique([userId, code])
   @@index([userId])
+}
+
+/// Достижение из каталога клуба (id строкой, см. ACHIEVEMENTS_CATALOG).
+/// XP начисляется один раз — уникальность пары (игрок, достижение).
+model PlayerAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  achievementId String
+  xpAwarded     Int      @default(0)
+  unlockedAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+  @@index([achievementId])
+}
+
+/// Выплаченная награда за место в недельном рейтинге или финале месяца.
+/// periodKey: «2026-W32» для недели, «2026-08» для месяца.
+model RatingReward {
+  id         String           @id @default(cuid())
+  userId     String
+  periodType RatingPeriodType
+  periodKey  String
+  place      Int
+  xpAwarded  Int
+  createdAt  DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, periodType, periodKey])
+  @@index([periodType, periodKey])
 }
 
 /// Настраиваемые значения XP. Редактируются из админ-панели без изменения кода.

@@ -20,32 +20,68 @@ const DEFAULT_XP_SETTINGS: Record<XpSettingKey, number> = {
   FOUR_OF_A_KIND: 150,
   STRAIGHT_FLUSH: 300,
   ROYAL_FLUSH: 1000,
-  TOURNAMENT_WIN: 3600,
-  PLACE_2: 2900,
-  PLACE_3: 2705,
-  PLACE_4: 2520,
-  PLACE_5: 2335,
-  PLACE_6: 2150,
-  PLACE_7: 1975,
-  PLACE_8: 1805,
-  PLACE_9: 1635,
-  PLACE_10: 1475,
-  PLACE_11: 1320,
-  PLACE_12: 1170,
-  PLACE_13: 1025,
-  PLACE_14: 890,
-  PLACE_15: 760,
-  PLACE_16: 640,
-  PLACE_17: 530,
-  PLACE_18: 435,
-  PLACE_19: 355,
-  PLACE_20: 300,
+  TOURNAMENT_WIN: 5000,
+  PLACE_2: 3800,
+  PLACE_3: 3000,
+  PLACE_4: 2500,
+  PLACE_5: 2100,
+  PLACE_6: 1800,
+  PLACE_7: 1600,
+  PLACE_8: 1450,
+  PLACE_9: 1300,
+  PLACE_10: 1200,
+  PLACE_11: 1100,
+  PLACE_12: 1000,
+  PLACE_13: 900,
+  PLACE_14: 825,
+  PLACE_15: 750,
+  PLACE_16: 700,
+  PLACE_17: 650,
+  PLACE_18: 600,
+  PLACE_19: 550,
+  PLACE_20: 500,
+  PLACE_21: 450,
+  PLACE_22: 400,
+  PLACE_23: 350,
+  PLACE_24: 300,
+  PLACE_25: 250,
+  PLACE_26: 225,
+  PLACE_27: 200,
+  PLACE_28: 175,
+  PLACE_29: 150,
+  PLACE_30: 125,
+  WEEKLY_TOP_1: 15000,
+  WEEKLY_TOP_2: 10000,
+  WEEKLY_TOP_3: 7000,
+  MONTHLY_TOP_1: 30000,
+  MONTHLY_TOP_2: 20000,
+  MONTHLY_TOP_3: 12000,
 };
 
-const DEFAULT_LEVEL_THRESHOLDS = Array.from({ length: 30 }, (_, index) => ({
-  level: index + 1,
-  requiredXp: Math.pow(index, 2) * 100,
-}));
+function levelStepIncrement(transition: number): number {
+  if (transition < 10) return 60;
+  if (transition < 25) return 80;
+  if (transition < 50) return 100;
+  if (transition < 75) return 120;
+  return 140;
+}
+
+// Уровни 1–100 по ТЗ клуба: 10 ур. — 4 410, 50 ур. — 104 410, 100 ур. — 481 910 XP.
+const DEFAULT_LEVEL_THRESHOLDS = (() => {
+  const rows = [{ level: 1, requiredXp: 0 }];
+  let step = 250;
+  let cumulative = 0;
+
+  for (let transition = 1; transition < 100; transition += 1) {
+    if (transition > 1) {
+      step += levelStepIncrement(transition - 1);
+    }
+    cumulative += step;
+    rows.push({ level: transition + 1, requiredXp: cumulative });
+  }
+
+  return rows;
+})();
 
 const QR_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 

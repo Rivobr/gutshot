@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import {
   NotificationType,
   PlayerEventType,
+  Prisma,
   RegistrationStatus,
   TournamentStatus,
   XPReason,
@@ -14,9 +15,21 @@ import { xpSettingKeyForPlace } from '../../../common/constants/xp-defaults.cons
 import { XpService } from '../../progression/xp.service';
 import { XpSettingsService } from '../../progression/xp-settings.service';
 import { LevelsService } from '../../progression/levels.service';
+import { AchievementEngineService } from '../../progression/achievement-engine.service';
 import { CreateTournamentDto } from './dto/create-tournament.dto';
-import { UpdateTournamentDto } from './dto/update-tournament.dto';
+import { UpdateTournamentDto, UpdateTournamentLiveDto } from './dto/update-tournament.dto';
 import { TournamentResultEntryDto } from './dto/finish-tournament.dto';
+import { ClockActionDto, UpdateBlindStructureDto } from './dto/blind-structure.dto';
+import { serializeClock, serializeTournament } from '../../tournaments/tournament.serializer';
+import { resolveBlindStructureTemplate } from '../../tournaments/tournament-clock';
+
+/** Статусы регистраций, которые учитываются в итоговых местах турнира. */
+const RESULT_ELIGIBLE_STATUSES: RegistrationStatus[] = [
+  RegistrationStatus.REGISTERED,
+  RegistrationStatus.CHECKED_IN,
+  RegistrationStatus.PLAYING,
+  RegistrationStatus.FINISHED,
+];
 
 @Injectable()
 export class AdminTournamentsService {
@@ -27,53 +40,270 @@ export class AdminTournamentsService {
     private readonly xpService: XpService,
     private readonly xpSettingsService: XpSettingsService,
     private readonly levelsService: LevelsService,
+    private readonly achievementEngine: AchievementEngineService,
   ) {}
 
   async findAll() {
-    return this.prisma.tournament.findMany({
+    const rows = await this.prisma.tournament.findMany({
       orderBy: { date: 'desc' },
-      include: { _count: { select: { registrations: true } } },
+      include: { blindLevels: true, _count: { select: { registrations: true } } },
     });
+    return rows.map(serializeTournament);
   }
 
   async findById(id: string) {
     const tournament = await this.prisma.tournament.findUnique({
       where: { id },
-      include: { _count: { select: { registrations: true } } },
+      include: { blindLevels: true, _count: { select: { registrations: true } } },
     });
 
     if (!tournament) {
       throw new NotFoundException('Турнир не найден');
     }
 
-    return tournament;
+    return serializeTournament(tournament);
+  }
+
+  /** Структура блайндов и состояние часов для панели управления. */
+  async getClock(id: string) {
+    const tournament = await this.prisma.tournament.findUnique({
+      where: { id },
+      include: { blindLevels: true },
+    });
+
+    if (!tournament) {
+      throw new NotFoundException('Турнир не найден');
+    }
+
+    const levels = [...tournament.blindLevels].sort((a, b) => a.idx - b.idx);
+
+    return {
+      clock: serializeClock(tournament, levels),
+      levels: levels.map((level) => ({
+        idx: level.idx,
+        isBreak: level.isBreak,
+        smallBlind: level.smallBlind,
+        bigBlind: level.bigBlind,
+        ante: level.ante,
+        durationSec: level.durationSec,
+      })),
+    };
+  }
+
+  /** Перезаписывает структуру уровней целиком (задаётся один раз до турнира). */
+  async updateBlindStructure(id: string, dto: UpdateBlindStructureDto) {
+    await this.findById(id);
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.blindLevel.deleteMany({ where: { tournamentId: id } });
+      await tx.blindLevel.createMany({
+        data: dto.levels.map((level, idx) => ({
+          tournamentId: id,
+          idx,
+          isBreak: Boolean(level.isBreak),
+          smallBlind: level.isBreak ? null : (level.smallBlind ?? null),
+          bigBlind: level.isBreak ? null : (level.bigBlind ?? null),
+          ante: level.isBreak ? null : (level.ante ?? null),
+          durationSec: level.durationSec,
+        })),
+      });
+    });
+
+    return this.getClock(id);
+  }
+
+  /** Заполняет структуру именованным шаблоном (`classic20` | `club`). */
+  async applyDefaultStructure(id: string, template: string = 'classic20') {
+    await this.findById(id);
+    const levels = resolveBlindStructureTemplate(template);
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.blindLevel.deleteMany({ where: { tournamentId: id } });
+      await tx.blindLevel.createMany({
+        data: levels.map((level) => ({ ...level, tournamentId: id })),
+      });
+    });
+
+    return this.getClock(id);
+  }
+
+  /** Запуск часов: дальше уровни и перерывы переключаются сами. */
+  async startClock(id: string, dto: ClockActionDto = {}) {
+    const { levels } = await this.getClock(id);
+
+    if (levels.length === 0) {
+      throw new BadRequestException('Сначала задайте структуру блайндов');
+    }
+
+    await this.prisma.tournament.update({
+      where: { id },
+      data: {
+        clockStatus: 'RUNNING',
+        clockStartedAt: new Date(),
+        clockLevelIdx: dto.levelIdx ?? 0,
+        clockPausedAt: null,
+        liveIsRunning: true,
+        livePlayersIn: dto.playersIn ?? undefined,
+        liveUpdatedAt: new Date(),
+      },
+    });
+
+    return this.getClock(id);
+  }
+
+  async pauseClock(id: string) {
+    const { clock } = await this.getClock(id);
+
+    if (clock.status !== 'RUNNING') {
+      throw new BadRequestException('Часы не запущены');
+    }
+
+    await this.prisma.tournament.update({
+      where: { id },
+      // Фиксируем уровень и остаток, чтобы после снятия паузы продолжить с него.
+      data: {
+        clockStatus: 'PAUSED',
+        clockPausedAt: new Date(),
+        clockLevelIdx: clock.current?.idx ?? 0,
+        clockStartedAt: clock.levelEndsAt
+          ? new Date(
+              new Date(clock.levelEndsAt).getTime() - (clock.current?.durationSec ?? 0) * 1000,
+            )
+          : undefined,
+        liveUpdatedAt: new Date(),
+      },
+    });
+
+    return this.getClock(id);
+  }
+
+  async resumeClock(id: string) {
+    const tournament = await this.prisma.tournament.findUnique({
+      where: { id },
+      include: { blindLevels: true },
+    });
+
+    if (!tournament) {
+      throw new NotFoundException('Турнир не найден');
+    }
+
+    if (tournament.clockStatus !== 'PAUSED' || !tournament.clockPausedAt) {
+      throw new BadRequestException('Часы не на паузе');
+    }
+
+    // Сдвигаем старт уровня на длину простоя — остаток времени сохраняется.
+    const pausedMs = Date.now() - tournament.clockPausedAt.getTime();
+
+    await this.prisma.tournament.update({
+      where: { id },
+      data: {
+        clockStatus: 'RUNNING',
+        clockPausedAt: null,
+        clockStartedAt: tournament.clockStartedAt
+          ? new Date(tournament.clockStartedAt.getTime() + pausedMs)
+          : new Date(),
+        liveIsRunning: true,
+        liveUpdatedAt: new Date(),
+      },
+    });
+
+    return this.getClock(id);
+  }
+
+  /** Перейти на уровень вручную (пропустить или вернуться). */
+  async setClockLevel(id: string, levelIdx: number) {
+    const { levels } = await this.getClock(id);
+
+    if (levelIdx < 0 || levelIdx >= levels.length) {
+      throw new BadRequestException('Уровень вне структуры');
+    }
+
+    await this.prisma.tournament.update({
+      where: { id },
+      data: {
+        clockLevelIdx: levelIdx,
+        clockStartedAt: new Date(),
+        clockPausedAt: null,
+        clockStatus: 'RUNNING',
+        liveIsRunning: true,
+        liveUpdatedAt: new Date(),
+      },
+    });
+
+    return this.getClock(id);
+  }
+
+  async stopClock(id: string) {
+    await this.findById(id);
+
+    await this.prisma.tournament.update({
+      where: { id },
+      data: {
+        clockStatus: 'IDLE',
+        clockStartedAt: null,
+        clockPausedAt: null,
+        clockLevelIdx: 0,
+        liveIsRunning: false,
+        liveUpdatedAt: new Date(),
+      },
+    });
+
+    return this.getClock(id);
   }
 
   async create(dto: CreateTournamentDto) {
-    return this.prisma.tournament.create({
+    const created = await this.prisma.tournament.create({
       data: {
         title: dto.title,
         description: dto.description,
         date: new Date(dto.date),
         buyIn: dto.buyIn,
         maxPlayers: dto.maxPlayers,
+        imageUrl: dto.imageUrl || undefined,
         registrationOpen: dto.registrationOpen ? new Date(dto.registrationOpen) : undefined,
         registrationClose: dto.registrationClose ? new Date(dto.registrationClose) : undefined,
       },
+      include: { blindLevels: true, _count: { select: { registrations: true } } },
     });
+    return serializeTournament(created);
   }
 
   async update(id: string, dto: UpdateTournamentDto) {
     await this.findById(id);
-    return this.prisma.tournament.update({
+    const updated = await this.prisma.tournament.update({
       where: { id },
       data: {
-        ...dto,
+        title: dto.title,
+        description: dto.description,
+        buyIn: dto.buyIn,
+        maxPlayers: dto.maxPlayers,
+        imageUrl: dto.imageUrl === '' ? null : dto.imageUrl,
         date: dto.date ? new Date(dto.date) : undefined,
         registrationOpen: dto.registrationOpen ? new Date(dto.registrationOpen) : undefined,
         registrationClose: dto.registrationClose ? new Date(dto.registrationClose) : undefined,
       },
+      include: { blindLevels: true, _count: { select: { registrations: true } } },
     });
+    return serializeTournament(updated);
+  }
+
+  async updateLive(id: string, dto: UpdateTournamentLiveDto) {
+    await this.findById(id);
+    const updated = await this.prisma.tournament.update({
+      where: { id },
+      data: {
+        liveIsRunning: dto.isRunning ?? undefined,
+        liveLevel: dto.level ?? undefined,
+        liveSmallBlind: dto.smallBlind ?? undefined,
+        liveBigBlind: dto.bigBlind ?? undefined,
+        liveAnte: dto.ante ?? undefined,
+        liveNextBreakInSec: dto.nextBreakInSec ?? undefined,
+        livePlayersIn: dto.playersIn ?? undefined,
+        liveUpdatedAt: new Date(),
+      },
+      include: { blindLevels: true, _count: { select: { registrations: true } } },
+    });
+    return serializeTournament(updated);
   }
 
   /**
@@ -153,6 +383,8 @@ export class AdminTournamentsService {
       throw new BadRequestException('Турнир уже начат');
     }
 
+    const levels = await this.prisma.blindLevel.count({ where: { tournamentId: id } });
+
     return this.prisma.$transaction(async (tx) => {
       await tx.registration.updateMany({
         where: { tournamentId: id, status: RegistrationStatus.CHECKED_IN },
@@ -161,7 +393,20 @@ export class AdminTournamentsService {
 
       return tx.tournament.update({
         where: { id },
-        data: { status: TournamentStatus.IN_PROGRESS },
+        data: {
+          status: TournamentStatus.IN_PROGRESS,
+          // Есть структура — часы стартуют вместе с турниром, админу ничего не нажимать.
+          ...(levels > 0
+            ? {
+                clockStatus: 'RUNNING' as const,
+                clockStartedAt: new Date(),
+                clockLevelIdx: 0,
+                clockPausedAt: null,
+                liveIsRunning: true,
+                liveUpdatedAt: new Date(),
+              }
+            : {}),
+        },
       });
     });
   }
@@ -174,7 +419,7 @@ export class AdminTournamentsService {
       this.prisma.registration.findMany({
         where: { tournamentId },
         include: { user: { include: { playerProfile: true } } },
-        orderBy: { registeredAt: 'asc' },
+        orderBy: [{ place: { sort: 'asc', nulls: 'last' } }, { registeredAt: 'asc' }],
       }),
       this.levelsService.getThresholds(),
     ]);
@@ -188,6 +433,8 @@ export class AdminTournamentsService {
         registeredAt: registration.registeredAt,
         arrivedAt: registration.arrivedAt,
         attendanceXpGiven: registration.attendanceXpGiven,
+        eliminatedAt: registration.eliminatedAt,
+        place: registration.place,
         reEntries: registration.reEntries,
         bounties: registration.bounties,
         user: {
@@ -198,6 +445,7 @@ export class AdminTournamentsService {
           lastName: registration.user.lastName,
           nickname: registration.user.nickname,
           photoUrl: registration.user.photoUrl,
+          qrCode: registration.user.qrCode,
           xp,
           level: this.levelsService.computeProgress(thresholds, xp).level,
         },
@@ -205,11 +453,192 @@ export class AdminTournamentsService {
     });
   }
 
+  /**
+   * Проставить или сбросить место игрока во время турнира.
+   * XP не начисляется — только при finish.
+   */
+  async setPlace(tournamentId: string, registrationId: string, place: number | null) {
+    const tournament = await this.findById(tournamentId);
+
+    if (
+      tournament.status !== TournamentStatus.IN_PROGRESS &&
+      tournament.status !== TournamentStatus.REGISTRATION_CLOSED
+    ) {
+      throw new BadRequestException('Места можно менять только в активном турнире');
+    }
+
+    const registration = await this.prisma.registration.findUnique({
+      where: { id: registrationId },
+    });
+
+    if (!registration || registration.tournamentId !== tournamentId) {
+      throw new NotFoundException('Регистрация не найдена в этом турнире');
+    }
+
+    if (!RESULT_ELIGIBLE_STATUSES.includes(registration.status)) {
+      throw new BadRequestException('Этому игроку нельзя назначить место');
+    }
+
+    if (place !== null) {
+      const conflict = await this.prisma.registration.findFirst({
+        where: {
+          tournamentId,
+          place,
+          id: { not: registrationId },
+        },
+      });
+
+      if (conflict) {
+        throw new BadRequestException(`Место ${place} уже занято другим игроком`);
+      }
+    }
+
+    await this.prisma.registration.update({
+      where: { id: registrationId },
+      data: {
+        place,
+        eliminatedAt: place === null ? null : (registration.eliminatedAt ?? new Date()),
+      },
+    });
+
+    return this.getRegistrations(tournamentId);
+  }
+
+  /**
+   * Игрок выбыл: автоматически ставит следующее свободное место с конца
+   * (первый вылет при 30 игроках → 30 место).
+   */
+  async eliminate(tournamentId: string, registrationId: string) {
+    const tournament = await this.findById(tournamentId);
+
+    if (tournament.status !== TournamentStatus.IN_PROGRESS) {
+      throw new BadRequestException('Отметить выбытие можно только во время турнира');
+    }
+
+    const registration = await this.prisma.registration.findUnique({
+      where: { id: registrationId },
+    });
+
+    if (!registration || registration.tournamentId !== tournamentId) {
+      throw new NotFoundException('Регистрация не найдена в этом турнире');
+    }
+
+    if (!RESULT_ELIGIBLE_STATUSES.includes(registration.status)) {
+      throw new BadRequestException('Этому игроку нельзя назначить место');
+    }
+
+    if (registration.place != null) {
+      return this.getRegistrations(tournamentId);
+    }
+
+    const place = await this.computeNextEliminationPlace(tournamentId, registrationId);
+
+    await this.prisma.registration.update({
+      where: { id: registrationId },
+      data: {
+        place,
+        eliminatedAt: new Date(),
+      },
+    });
+
+    return this.getRegistrations(tournamentId);
+  }
+
+  /**
+   * Следующее место при выбытии: число участников поля без места
+   * (включая текущего). Учитываем пришедших / играющих.
+   */
+  async computeNextEliminationPlace(
+    tournamentId: string,
+    registrationId: string,
+    client: Prisma.TransactionClient | PrismaService = this.prisma,
+  ): Promise<number> {
+    const registrations = await client.registration.findMany({
+      where: {
+        tournamentId,
+        status: { in: RESULT_ELIGIBLE_STATUSES },
+      },
+      select: { id: true, place: true, arrivedAt: true, status: true },
+    });
+
+    const fieldPlayers = registrations.filter(
+      (row) =>
+        row.id === registrationId ||
+        row.place != null ||
+        row.arrivedAt != null ||
+        row.status === RegistrationStatus.PLAYING ||
+        row.status === RegistrationStatus.FINISHED,
+    );
+
+    const stillInCount = fieldPlayers.filter((row) => row.place == null).length;
+
+    if (stillInCount < 1) {
+      throw new BadRequestException('Некого отмечать выбывшим');
+    }
+
+    const place = stillInCount;
+    const taken = fieldPlayers.some((row) => row.place === place && row.id !== registrationId);
+
+    if (taken) {
+      throw new BadRequestException(
+        `Место ${place} уже занято. Проставьте места вручную или освободите конфликт.`,
+      );
+    }
+
+    return place;
+  }
+
+  /** Применить авто-место внутри чужой транзакции (сканер ELIMINATED). */
+  async applyEliminationPlaceInTx(
+    tx: Prisma.TransactionClient,
+    registrationId: string,
+  ): Promise<number | null> {
+    const registration = await tx.registration.findUnique({ where: { id: registrationId } });
+
+    if (!registration) {
+      return null;
+    }
+
+    if (registration.place != null) {
+      await tx.registration.update({
+        where: { id: registrationId },
+        data: { eliminatedAt: registration.eliminatedAt ?? new Date() },
+      });
+      return registration.place;
+    }
+
+    const place = await this.computeNextEliminationPlace(
+      registration.tournamentId,
+      registrationId,
+      tx,
+    );
+
+    await tx.registration.update({
+      where: { id: registrationId },
+      data: { place, eliminatedAt: new Date() },
+    });
+
+    return place;
+  }
+
   async finish(id: string, results: TournamentResultEntryDto[], adminId: string) {
     const tournament = await this.findById(id);
 
     if (tournament.status !== TournamentStatus.IN_PROGRESS) {
       throw new BadRequestException('Турнир не находится в процессе игры');
+    }
+
+    if (results.length === 0) {
+      throw new BadRequestException('Укажите места игроков');
+    }
+
+    const places = results.map((item) => item.place);
+    if (new Set(places).size !== places.length) {
+      throw new BadRequestException('Места игроков должны быть уникальными');
+    }
+
+    if (places.some((place) => !Number.isInteger(place) || place < 1)) {
+      throw new BadRequestException('Место должно быть целым числом от 1');
     }
 
     const xpSettings = await this.xpSettingsService.getAll();
@@ -231,11 +660,13 @@ export class AdminTournamentsService {
         });
 
         if (!registration || registration.tournamentId !== id) {
-          throw new BadRequestException(`Регистрация ${entry.registrationId} не найдена в этом турнире`);
+          throw new BadRequestException(
+            `Регистрация ${entry.registrationId} не найдена в этом турнире`,
+          );
         }
 
-        // Места 1–10 берутся из настраиваемой таблицы XP,
-        // для остальных сохраняется историческое значение.
+        // Места 1–30 берутся из настраиваемой таблицы XP.
+        // Ниже 30 места XP за место не начисляется, но турнир идёт в зачёт достижений.
         const settingKey = xpSettingKeyForPlace(entry.place);
         const xpEarned = settingKey ? xpSettings[settingKey] : getXpForPlace(entry.place);
 
@@ -252,7 +683,11 @@ export class AdminTournamentsService {
 
         await tx.registration.update({
           where: { id: registration.id },
-          data: { status: RegistrationStatus.FINISHED },
+          data: {
+            status: RegistrationStatus.FINISHED,
+            place: entry.place,
+            eliminatedAt: registration.eliminatedAt ?? new Date(),
+          },
         });
 
         const award = await this.xpService.award(tx, {
@@ -293,6 +728,22 @@ export class AdminTournamentsService {
           player.xp,
         ),
       });
+
+      // Победы, финальные столы, сыгранные турниры, серии — считаются после результата.
+      const unlocked = await this.achievementEngine.syncForUser(player.userId, {
+        tournamentId: id,
+        performedById: adminId,
+      });
+
+      for (const achievement of unlocked) {
+        await this.notificationsService.notify({
+          userId: player.userId,
+          telegramId: player.telegramId,
+          type: NotificationType.SYSTEM,
+          title: 'Новое достижение',
+          message: `🏅 ${achievement.title}\n+${achievement.xp} XP`,
+        });
+      }
     }
 
     return this.findById(id);

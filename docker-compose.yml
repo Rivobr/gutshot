@@ -1,4 +1,4 @@
-version: "3.3"
+version: '3.3'
 
 services:
   postgres:
@@ -11,8 +11,9 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+    # Only localhost — public 5432 was reachable from the internet.
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
     volumes:
       - ./docker/postgres/data:/var/lib/postgresql/data
     networks:
@@ -22,8 +23,12 @@ services:
     image: redis:7-alpine
     container_name: gutshot-redis
     restart: unless-stopped
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
+    # Not published to the public internet. App reaches redis via docker network.
+    # protected-mode must stay off without a password — docker bridge IPs are
+    # non-loopback and would otherwise break API↔redis.
+    expose:
+      - '6379'
+    command: ['redis-server', '--appendonly', 'yes', '--protected-mode', 'no', '--bind', '0.0.0.0']
     volumes:
       - ./docker/redis/data:/data
     networks:
@@ -38,8 +43,9 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    # API is published via nginx (:443). Keep 3000 local-only.
     ports:
-      - "${API_PORT:-3000}:3000"
+      - '127.0.0.1:${API_PORT:-3000}:3000'
     depends_on:
       - postgres
       - redis
@@ -52,11 +58,12 @@ services:
       dockerfile: apps/mini-app/Dockerfile
       network: host
       args:
-        VITE_API_URL: ${VITE_API_URL:-https://api.gutshotapp.ru/api/v1}
+        # Same-origin so Mini App works behind Cloudflare/alternate HTTPS fronts.
+        VITE_API_URL: ${VITE_API_URL:-/api/v1}
     container_name: gutshot-mini-app
     restart: unless-stopped
     ports:
-      - "8080:80"
+      - '127.0.0.1:8080:80'
     depends_on:
       - api
     networks:
@@ -68,11 +75,11 @@ services:
       dockerfile: apps/admin/Dockerfile
       network: host
       args:
-        VITE_ADMIN_API_URL: ${VITE_ADMIN_API_URL:-https://api.gutshotapp.ru/api/v1}
+        VITE_ADMIN_API_URL: ${VITE_ADMIN_API_URL:-/api/v1}
     container_name: gutshot-admin
     restart: unless-stopped
     ports:
-      - "8081:80"
+      - '127.0.0.1:8081:80'
     depends_on:
       - api
     networks:
@@ -83,8 +90,8 @@ services:
     container_name: gutshot-nginx
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      - '80:80'
+      - '443:443'
     volumes:
       - ./docker/nginx/conf.d:/etc/nginx/conf.d
       - ./docker/nginx/certs:/etc/letsencrypt
@@ -95,6 +102,19 @@ services:
       - admin
     networks:
       - gutshot-network
+
+  # Optional named Cloudflare Tunnel (not the temporary trycloudflare quick tunnel).
+  # Requires CLOUDFLARE_TUNNEL_TOKEN and hostnames published in Zero Trust UI.
+  # Start: docker compose --profile cloudflare up -d cloudflared
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: gutshot-cloudflared
+    restart: unless-stopped
+    profiles: ['cloudflare']
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    network_mode: host
 
 networks:
   gutshot-network:

@@ -1,19 +1,8 @@
 export type TournamentStatus =
-  | 'DRAFT'
-  | 'REGISTRATION_OPEN'
-  | 'REGISTRATION_CLOSED'
-  | 'IN_PROGRESS'
-  | 'FINISHED'
-  | 'ARCHIVED';
+  'DRAFT' | 'REGISTRATION_OPEN' | 'REGISTRATION_CLOSED' | 'IN_PROGRESS' | 'FINISHED' | 'ARCHIVED';
 
 export type RegistrationStatus =
-  | 'REGISTERED'
-  | 'CHECKED_IN'
-  | 'PLAYING'
-  | 'FINISHED'
-  | 'CANCELLED'
-  | 'NO_SHOW'
-  | 'WAITING';
+  'REGISTERED' | 'CHECKED_IN' | 'PLAYING' | 'FINISHED' | 'CANCELLED' | 'NO_SHOW' | 'WAITING';
 
 export type AdminRole = 'OWNER' | 'ADMIN' | 'MANAGER';
 
@@ -26,6 +15,22 @@ export interface User {
   nickname?: string | null;
   photoUrl?: string | null;
   isBlocked: boolean;
+}
+
+/**
+ * Лёгкий профиль для boot Mini App (ConsentGate).
+ * Без метрик/ачивок/истории — один быстрый SELECT.
+ */
+export interface PlayerBootstrapDto {
+  id: string;
+  telegramId: string;
+  username?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  nickname?: string | null;
+  photoUrl?: string | null;
+  xp: number;
+  consentAcceptedAt: string | null;
 }
 
 export interface PlayerProfileDto {
@@ -46,6 +51,8 @@ export interface PlayerProfileDto {
   /** Постоянный персональный QR-код игрока. */
   qrCode: string;
   consentAcceptedAt?: string | null;
+  /** Достижения, закреплённые игроком в профиле (id из каталога). */
+  pinnedAchievements: string[];
   stats: {
     tournamentsPlayed: number;
     wins: number;
@@ -62,7 +69,32 @@ export interface PlayerProfileDto {
     finalTables: number;
     /** Максимальная серия побед подряд (1 места). */
     winStreak: number;
+    /** Число событий «Каре» (для прогрессивных достижений). */
+    fourOfAKind: number;
+    straightFlush: number;
+    royalFlush: number;
+    /** Недели, где сыграно 3+ турнира. */
+    activeWeeks: number;
+    /** Призовые места в недельном рейтинге. */
+    weeklyTop3: number;
+    weeklyWins: number;
+    /** Финал месяца. */
+    monthlyEntries: number;
+    monthlyPrizes: number;
+    monthlyWins: number;
+    /** Особые достижения. */
+    winNoReentry: number;
+    backToBackWins: number;
+    finalTableStreak: number;
+    top10Streak: number;
+    shortStackWins: number;
+    tutorialCompleted: number;
+    friendsReferred: number;
   };
+  /** Открытые достижения каталога (id). */
+  unlockedAchievements: string[];
+  /** Прогресс по каждому достижению каталога: id → выполнено из target. */
+  achievementProgress: Record<string, number>;
 }
 
 export interface TournamentParticipant {
@@ -73,8 +105,57 @@ export interface TournamentParticipant {
   username?: string | null;
   photoUrl?: string | null;
   level: number;
+  /** Витрина достижений игрока (id из каталога). */
+  pinnedAchievements: string[];
   top10Percent: number;
   status: RegistrationStatus;
+}
+
+export interface TournamentLiveState {
+  isRunning: boolean;
+  level?: number | null;
+  smallBlind?: number | null;
+  bigBlind?: number | null;
+  ante?: number | null;
+  nextBreakInSec?: number | null;
+  playersIn?: number | null;
+  updatedAt?: string | null;
+  /** Момент смены уровня — клиент тикает локально между запросами. */
+  levelEndsAt?: string | null;
+  levelSecondsLeft?: number | null;
+  isBreak?: boolean;
+  serverTime?: string | null;
+}
+
+export type ClockStatus = 'IDLE' | 'RUNNING' | 'PAUSED' | 'FINISHED';
+
+/** Уровень структуры турнира: блайнды либо перерыв. */
+export interface BlindLevel {
+  idx: number;
+  isBreak: boolean;
+  smallBlind?: number | null;
+  bigBlind?: number | null;
+  ante?: number | null;
+  durationSec: number;
+}
+
+export interface TournamentClockLevel extends BlindLevel {
+  /** Номер игрового уровня; у перерывов null. */
+  number: number | null;
+}
+
+export interface TournamentClock {
+  status: ClockStatus;
+  isRunning: boolean;
+  current?: TournamentClockLevel | null;
+  next?: TournamentClockLevel | null;
+  secondsLeft?: number | null;
+  secondsToBreak?: number | null;
+  levelEndsAt?: string | null;
+  breakAt?: string | null;
+  playersIn?: number | null;
+  levelsTotal: number;
+  serverTime: string;
 }
 
 export interface Tournament {
@@ -87,6 +168,9 @@ export interface Tournament {
   status: TournamentStatus;
   registrationOpen?: string | null;
   registrationClose?: string | null;
+  /** Обложка турнира (URL). */
+  imageUrl?: string | null;
+  live?: TournamentLiveState | null;
   _count?: { registrations: number };
 }
 
@@ -138,8 +222,11 @@ export interface AdminPlayerListItem {
   firstName?: string | null;
   lastName?: string | null;
   photoUrl?: string | null;
+  nickname?: string | null;
   isBlocked: boolean;
   isVerified: boolean;
+  /** Постоянный персональный QR-код игрока. */
+  qrCode?: string | null;
   xp: number;
   level: number;
   visits: number;
@@ -198,7 +285,12 @@ export type PlayerEventType =
   | 'XP_CHANGE'
   | 'LEVEL_UP'
   | 'TOURNAMENT_RESULT'
-  | 'ACHIEVEMENT_UNLOCKED';
+  | 'ACHIEVEMENT_UNLOCKED'
+  | 'WEEKLY_RATING_REWARD'
+  | 'MONTHLY_FINAL_REWARD'
+  | 'TUTORIAL_COMPLETED'
+  | 'FRIEND_REFERRED'
+  | 'SHORT_STACK_WIN';
 
 /** События, которые сотрудник клуба может отметить после сканирования QR. */
 export type ScannerEventType =
@@ -208,7 +300,10 @@ export type ScannerEventType =
   | 'BOUNTY'
   | 'FOUR_OF_A_KIND'
   | 'STRAIGHT_FLUSH'
-  | 'ROYAL_FLUSH';
+  | 'ROYAL_FLUSH'
+  | 'TUTORIAL_COMPLETED'
+  | 'FRIEND_REFERRED'
+  | 'SHORT_STACK_WIN';
 
 export type AchievementCode = 'FOUR_OF_A_KIND' | 'STRAIGHT_FLUSH' | 'ROYAL_FLUSH';
 
@@ -239,7 +334,26 @@ export type XpSettingKey =
   | 'PLACE_17'
   | 'PLACE_18'
   | 'PLACE_19'
-  | 'PLACE_20';
+  | 'PLACE_20'
+  | 'PLACE_21'
+  | 'PLACE_22'
+  | 'PLACE_23'
+  | 'PLACE_24'
+  | 'PLACE_25'
+  | 'PLACE_26'
+  | 'PLACE_27'
+  | 'PLACE_28'
+  | 'PLACE_29'
+  | 'PLACE_30'
+  | 'WEEKLY_TOP_1'
+  | 'WEEKLY_TOP_2'
+  | 'WEEKLY_TOP_3'
+  | 'MONTHLY_TOP_1'
+  | 'MONTHLY_TOP_2'
+  | 'MONTHLY_TOP_3';
+
+/** Последнее место, за которое начисляется XP (ТЗ клуба). */
+export const MAX_SCORING_PLACE = 30;
 
 /** Ключи шкалы рейтинга: место → настройка XP. */
 export const PLACE_RATING_KEY_BY_PLACE: Record<number, XpSettingKey> = {
@@ -263,7 +377,27 @@ export const PLACE_RATING_KEY_BY_PLACE: Record<number, XpSettingKey> = {
   18: 'PLACE_18',
   19: 'PLACE_19',
   20: 'PLACE_20',
+  21: 'PLACE_21',
+  22: 'PLACE_22',
+  23: 'PLACE_23',
+  24: 'PLACE_24',
+  25: 'PLACE_25',
+  26: 'PLACE_26',
+  27: 'PLACE_27',
+  28: 'PLACE_28',
+  29: 'PLACE_29',
+  30: 'PLACE_30',
 };
+
+/** Награды за места в недельном рейтинге и финале месяца. */
+export const RATING_REWARD_KEYS: XpSettingKey[] = [
+  'WEEKLY_TOP_1',
+  'WEEKLY_TOP_2',
+  'WEEKLY_TOP_3',
+  'MONTHLY_TOP_1',
+  'MONTHLY_TOP_2',
+  'MONTHLY_TOP_3',
+];
 
 export const PLACE_RATING_KEYS: XpSettingKey[] = Object.values(PLACE_RATING_KEY_BY_PLACE);
 
@@ -279,13 +413,13 @@ export interface PlaceRatingScaleDto {
   totalPoints: number;
 }
 
-/** Собирает шкалу рейтинга 1–20 из карты настроек XP. */
+/** Собирает шкалу рейтинга 1–30 из карты настроек XP. */
 export function buildPlaceRatingScale(
   settings: Partial<Record<XpSettingKey, number>>,
 ): PlaceRatingScaleDto {
   const rows: PlaceRatingRow[] = [];
 
-  for (let place = 1; place <= 20; place += 1) {
+  for (let place = 1; place <= MAX_SCORING_PLACE; place += 1) {
     const key = PLACE_RATING_KEY_BY_PLACE[place];
     const points = settings[key] ?? 0;
     const previous = place === 1 ? null : (rows[place - 2]?.points ?? 0);
@@ -303,10 +437,7 @@ export function buildPlaceRatingScale(
 }
 
 export type LegalDocumentType =
-  | 'CLUB_RULES'
-  | 'USER_AGREEMENT'
-  | 'PERSONAL_DATA_CONSENT'
-  | 'MEDIA_CONSENT';
+  'CLUB_RULES' | 'USER_AGREEMENT' | 'PERSONAL_DATA_CONSENT' | 'MEDIA_CONSENT';
 
 export interface PlayerEventDto {
   id: string;
@@ -350,18 +481,8 @@ export interface LegalDocumentDto {
   updatedAt: string;
 }
 
-/** Редактируемый текст достижения (отображение в Mini App). */
-export type AchievementTextId =
-  | 'first_visit'
-  | 'visit_5'
-  | 'four_kind'
-  | 'first_knockout'
-  | 'royal_flush'
-  | 'visit_10'
-  | 'first_win'
-  | 'straight_flush'
-  | 'final_table'
-  | 'win_streak';
+/** Редактируемый текст достижения (id из ACHIEVEMENTS_CATALOG). */
+export type AchievementTextId = string;
 
 export interface AchievementTextDto {
   id: AchievementTextId;
@@ -379,6 +500,7 @@ export interface ScannedPlayerDto {
   username?: string | null;
   firstName?: string | null;
   lastName?: string | null;
+  nickname?: string | null;
   photoUrl?: string | null;
   isBlocked: boolean;
   level: number;
@@ -408,6 +530,22 @@ export interface ScannerEventResultDto {
   level: number;
   levelUp: boolean;
   achievementUnlocked: AchievementCode | null;
+  /** Достижения каталога, открытые этим событием. */
+  unlockedAchievements?: { id: string; title: string; xp: number }[];
+}
+
+/** Выплата наград за недельный рейтинг / финал месяца. */
+export interface RatingRewardPayoutDto {
+  periodType: 'WEEKLY' | 'MONTHLY';
+  periodKey: string;
+  awarded: {
+    userId: string;
+    place: number;
+    xp: number;
+    nickname?: string | null;
+    firstName?: string | null;
+  }[];
+  skipped: number;
 }
 
 export interface AdminTournamentRegistration {
@@ -416,6 +554,9 @@ export interface AdminTournamentRegistration {
   registeredAt: string;
   arrivedAt?: string | null;
   attendanceXpGiven: boolean;
+  eliminatedAt?: string | null;
+  /** Место, проставленное до или при завершении турнира. */
+  place?: number | null;
   reEntries: number;
   bounties: number;
   user: {
@@ -426,10 +567,57 @@ export interface AdminTournamentRegistration {
     lastName?: string | null;
     nickname?: string | null;
     photoUrl?: string | null;
+    /** Постоянный персональный QR — для печати из карточки турнира. */
+    qrCode?: string | null;
     xp: number;
     level: number;
   };
 }
+
+export type AchievementRarity = 'common' | 'rare' | 'epic' | 'legend';
+
+export type AchievementGroup =
+  | 'wins'
+  | 'final_tables'
+  | 'tournaments'
+  | 'active_weeks'
+  | 'weekly_rating'
+  | 'monthly_final'
+  | 'four_of_a_kind'
+  | 'straight_flush'
+  | 'royal_flush'
+  | 'special'
+  | 'knockouts'
+  | 'legend';
+
+/** Определение достижения из каталога клуба (отдаётся API). */
+export interface AchievementDefinitionDto {
+  id: string;
+  group: AchievementGroup;
+  icon: string;
+  title: string;
+  description: string;
+  howTo: string;
+  xp: number;
+  target: number;
+  rarity: AchievementRarity;
+  span2?: boolean;
+}
+
+export const ACHIEVEMENT_GROUP_LABELS: Record<AchievementGroup, string> = {
+  wins: 'Победы в турнирах',
+  final_tables: 'Финальные столы',
+  tournaments: 'Сыгранные турниры',
+  active_weeks: 'Активные недели',
+  weekly_rating: 'Недельный рейтинг',
+  monthly_final: 'Финал месяца',
+  four_of_a_kind: 'Каре',
+  straight_flush: 'Стрит-флеш',
+  royal_flush: 'Роял-флеш',
+  special: 'Особые достижения',
+  knockouts: 'Нокауты',
+  legend: 'Легенда Gutshot',
+};
 
 export interface ApiSuccessResponse<T> {
   success: true;
