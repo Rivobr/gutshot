@@ -487,20 +487,6 @@
     tick();
   }
 
-  function nowPartsFromMs(ms) {
-    var parts = new Intl.DateTimeFormat('en-GB', {
-      timeZone: 'Europe/Moscow',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).formatToParts(new Date(ms));
-    var map = {};
-    parts.forEach(function (p) {
-      if (p.type !== 'literal') map[p.type] = p.value;
-    });
-    return { year: +map.year, month: +map.month, day: +map.day };
-  }
-
   function resetToMenu() {
     state.mode = 'menu';
     state.startAtMs = null;
