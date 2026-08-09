@@ -25,6 +25,7 @@ import { CreateTournamentDto } from './dto/create-tournament.dto';
 import { UpdateTournamentDto, UpdateTournamentLiveDto } from './dto/update-tournament.dto';
 import { TournamentResultEntryDto } from './dto/finish-tournament.dto';
 import { SetPlaceDto } from './dto/set-place.dto';
+import { AddPlayerByTelegramDto } from './dto/add-player-by-telegram.dto';
 import {
   ApplyBlindStructureTemplateDto,
   ClockActionDto,
@@ -162,6 +163,13 @@ export class AdminTournamentsController {
   @Get(':id/registrations')
   getRegistrations(@Param('id') id: string) {
     return this.adminTournamentsService.getRegistrations(id);
+  }
+
+  /** Добавить игрока в турнир по Telegram ID (find-or-create). */
+  @Roles(AdminRole.OWNER, AdminRole.ADMIN)
+  @Post(':id/registrations')
+  addPlayerByTelegram(@Param('id') id: string, @Body() dto: AddPlayerByTelegramDto) {
+    return this.adminTournamentsService.addPlayerByTelegramId(id, dto.telegramId);
   }
 
   /** Отметка явки игрока на турнир. XP за посещение начисляется однократно. */

@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   NotificationType,
   PlayerEventType,
@@ -16,6 +21,8 @@ import { XpService } from '../../progression/xp.service';
 import { XpSettingsService } from '../../progression/xp-settings.service';
 import { LevelsService } from '../../progression/levels.service';
 import { AchievementEngineService } from '../../progression/achievement-engine.service';
+import { PlayerEventsService } from '../../progression/player-events.service';
+import { UsersService } from '../../users/users.service';
 import { CreateTournamentDto } from './dto/create-tournament.dto';
 import { UpdateTournamentDto, UpdateTournamentLiveDto } from './dto/update-tournament.dto';
 import { TournamentResultEntryDto } from './dto/finish-tournament.dto';
@@ -31,6 +38,14 @@ const RESULT_ELIGIBLE_STATUSES: RegistrationStatus[] = [
   RegistrationStatus.FINISHED,
 ];
 
+/** Статусы турнира, в которые админ может вручную добавить игрока. */
+const ADMIN_ADD_ALLOWED_STATUSES: TournamentStatus[] = [
+  TournamentStatus.DRAFT,
+  TournamentStatus.REGISTRATION_OPEN,
+  TournamentStatus.REGISTRATION_CLOSED,
+  TournamentStatus.IN_PROGRESS,
+];
+
 @Injectable()
 export class AdminTournamentsService {
   constructor(
@@ -41,6 +56,8 @@ export class AdminTournamentsService {
     private readonly xpSettingsService: XpSettingsService,
     private readonly levelsService: LevelsService,
     private readonly achievementEngine: AchievementEngineService,
+    private readonly usersService: UsersService,
+    private readonly playerEventsService: PlayerEventsService,
   ) {}
 
   async findAll() {
@@ -409,6 +426,87 @@ export class AdminTournamentsService {
         },
       });
     });
+  }
+
+  /**
+   * Админ добавляет игрока в турнир по Telegram ID.
+   * Создаёт пользователя при необходимости; игнорирует окно REGISTRATION_OPEN.
+   * При заполненности ставит WAITING (как обычная регистрация).
+   */
+  async addPlayerByTelegramId(tournamentId: string, telegramId: string) {
+    const id = String(telegramId).trim();
+    if (!/^\d{5,20}$/.test(id)) {
+      throw new BadRequestException('Telegram ID должен быть числом (5–20 цифр)');
+    }
+
+    const tournament = await this.prisma.tournament.findUnique({ where: { id: tournamentId } });
+    if (!tournament) {
+      throw new NotFoundException('Турнир не найден');
+    }
+
+    if (!ADMIN_ADD_ALLOWED_STATUSES.includes(tournament.status)) {
+      throw new BadRequestException('В этот турнир нельзя добавить игрока');
+    }
+
+    const user = await this.usersService.findOrCreateByTelegramId(id);
+    if (user.isBlocked) {
+      throw new BadRequestException('Игрок заблокирован');
+    }
+
+    const existing = await this.prisma.registration.findUnique({
+      where: { userId_tournamentId: { userId: user.id, tournamentId } },
+    });
+
+    if (existing && existing.status !== RegistrationStatus.CANCELLED) {
+      throw new ConflictException('Игрок уже зарегистрирован на этот турнир');
+    }
+
+    const activeCount = await this.prisma.registration.count({
+      where: {
+        tournamentId,
+        status: { in: [RegistrationStatus.REGISTERED, RegistrationStatus.CHECKED_IN] },
+      },
+    });
+
+    const hasFreeSlot = activeCount < tournament.maxPlayers;
+    const status = hasFreeSlot ? RegistrationStatus.REGISTERED : RegistrationStatus.WAITING;
+
+    await this.prisma.registration.upsert({
+      where: { userId_tournamentId: { userId: user.id, tournamentId } },
+      update: { status, cancelledAt: null, registeredAt: new Date() },
+      create: { userId: user.id, tournamentId, status },
+    });
+
+    await this.playerEventsService.record({
+      userId: user.id,
+      type: PlayerEventType.TOURNAMENT_REGISTRATION,
+      tournamentId,
+      metadata: {
+        status,
+        title: tournament.title,
+        source: 'admin',
+      },
+    });
+
+    if (status === RegistrationStatus.REGISTERED) {
+      await this.notificationsService.notify({
+        userId: user.id,
+        telegramId: user.telegramId,
+        type: NotificationType.REGISTRATION,
+        title: 'Регистрация подтверждена',
+        message: this.telegramService.templates.registrationSuccess(tournament.title),
+      });
+    } else {
+      await this.notificationsService.notify({
+        userId: user.id,
+        telegramId: user.telegramId,
+        type: NotificationType.REGISTRATION,
+        title: 'Лист ожидания',
+        message: `⏳ Свободных мест нет. Вы поставлены в лист ожидания турнира «${tournament.title}».`,
+      });
+    }
+
+    return this.getRegistrations(tournamentId);
   }
 
   /** Список зарегистрированных игроков с уровнем, XP и статусом явки. */

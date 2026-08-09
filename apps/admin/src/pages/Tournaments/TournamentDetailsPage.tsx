@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { isAxiosError } from 'axios';
 import type { AdminTournamentRegistration } from '@gutshot/types';
 import { Avatar, Badge, Button, Card, Loader } from '@gutshot/ui';
 import {
+  useAddTournamentPlayer,
   useAdminTournament,
   useEliminatePlayer,
   useMarkAttendance,
@@ -18,8 +20,6 @@ import { PlayerQrModal } from '../../widgets/PlayerQrModal/PlayerQrModal';
 import { TournamentActions } from './TournamentActions';
 import { TournamentFormModal } from './TournamentFormModal';
 import { FinishTournamentModal } from './FinishTournamentModal';
-import { TournamentLivePanel } from './TournamentLivePanel';
-import { TournamentClockPanel } from './TournamentClockPanel';
 
 function sortRegistrations(items: AdminTournamentRegistration[]): AdminTournamentRegistration[] {
   return items.slice().sort((a, b) => {
@@ -47,11 +47,15 @@ export function TournamentDetailsPage(): JSX.Element {
   const markAttendance = useMarkAttendance(id);
   const setPlace = useSetTournamentPlace(id);
   const eliminatePlayer = useEliminatePlayer(id);
+  const addPlayer = useAddTournamentPlayer(id);
 
   const [isEditOpen, setEditOpen] = useState(false);
   const [isFinishOpen, setFinishOpen] = useState(false);
   const [placeDrafts, setPlaceDrafts] = useState<Record<string, string>>({});
   const [qrPlayer, setQrPlayer] = useState<AdminTournamentRegistration['user'] | null>(null);
+  const [telegramId, setTelegramId] = useState('');
+  const [addMessage, setAddMessage] = useState<string | null>(null);
+  const [addError, setAddError] = useState(false);
 
   useEffect(() => {
     if (searchParams.get('finish') === '1') {
@@ -111,6 +115,44 @@ export function TournamentDetailsPage(): JSX.Element {
   };
 
   const placeBusy = setPlace.isPending || eliminatePlayer.isPending;
+  const canAddPlayer = !['FINISHED', 'ARCHIVED'].includes(tournament.status);
+
+  const onAddPlayer = (event: FormEvent) => {
+    event.preventDefault();
+    setAddMessage(null);
+    setAddError(false);
+    const tgId = telegramId.trim();
+    if (!/^\d{5,20}$/.test(tgId)) {
+      setAddError(true);
+      setAddMessage('Введите числовой Telegram ID (5–20 цифр)');
+      return;
+    }
+    addPlayer.mutate(tgId, {
+      onSuccess: (list) => {
+        setTelegramId('');
+        setAddError(false);
+        const added = list.find((item) => item.user.telegramId === tgId);
+        const name = added ? displayPlayerName(added.user) : `ID ${tgId}`;
+        const waiting = added?.status === 'WAITING';
+        setAddMessage(waiting ? `${name} добавлен в лист ожидания` : `${name} добавлен в турнир`);
+      },
+      onError: (error) => {
+        setAddError(true);
+        if (isAxiosError(error)) {
+          const message = error.response?.data?.message;
+          if (typeof message === 'string' && message.trim()) {
+            setAddMessage(message);
+            return;
+          }
+          if (Array.isArray(message) && typeof message[0] === 'string') {
+            setAddMessage(message[0]);
+            return;
+          }
+        }
+        setAddMessage('Не удалось добавить игрока. Проверьте ID и статус турнира.');
+      },
+    });
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -150,10 +192,6 @@ export function TournamentDetailsPage(): JSX.Element {
         </div>
       </div>
 
-      <TournamentClockPanel tournamentId={tournament.id} />
-
-      <TournamentLivePanel tournamentId={tournament.id} live={tournament.live} />
-
       <Card className="gap-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -171,6 +209,36 @@ export function TournamentDetailsPage(): JSX.Element {
             </Button>
           )}
         </div>
+
+        {canAddPlayer && (
+          <form
+            onSubmit={onAddPlayer}
+            className="flex flex-col gap-3 rounded-lg border border-border bg-secondary/40 p-3 sm:flex-row sm:items-end"
+          >
+            <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
+              <span className="text-muted-foreground">Добавить по Telegram ID</span>
+              <input
+                value={telegramId}
+                onChange={(event) => setTelegramId(event.target.value.replace(/\D/g, ''))}
+                inputMode="numeric"
+                placeholder="Например 123456789"
+                className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+              />
+            </label>
+            <Button type="submit" className="sm:w-auto" isLoading={addPlayer.isPending}>
+              Добавить в турнир
+            </Button>
+            {addMessage && (
+              <p
+                className={`w-full text-sm sm:basis-full ${
+                  addError ? 'text-destructive' : 'text-muted-foreground'
+                }`}
+              >
+                {addMessage}
+              </p>
+            )}
+          </form>
+        )}
 
         {isRegistrationsLoading ? (
           <Loader />
