@@ -1,47 +1,48 @@
 import { XpSettingKey } from '@prisma/client';
 
 /**
- * XP за места в ежедневном турнире (модель 250k → 100 ур.).
+ * XP за места в ежедневном турнире (модель 600k → 100 ур.).
+ * Темп: активный игрок за год не достигает 100 уровня.
  * 21–25 и 26–30 — плоские диапазоны; 31+ — отдельные band-ключи.
  */
 export const DEFAULT_PLACE_RATING: Record<number, number> = {
-  1: 3500,
-  2: 2800,
-  3: 2300,
-  4: 2000,
-  5: 1800,
-  6: 1600,
-  7: 1450,
-  8: 1300,
-  9: 1200,
-  10: 1100,
-  11: 1000,
-  12: 900,
-  13: 850,
-  14: 800,
-  15: 750,
-  16: 700,
-  17: 650,
-  18: 600,
-  19: 550,
-  20: 500,
-  21: 400,
-  22: 400,
-  23: 400,
-  24: 400,
-  25: 400,
-  26: 300,
-  27: 300,
-  28: 300,
-  29: 300,
-  30: 300,
+  1: 2000,
+  2: 1600,
+  3: 1300,
+  4: 1100,
+  5: 1000,
+  6: 900,
+  7: 800,
+  8: 750,
+  9: 700,
+  10: 650,
+  11: 600,
+  12: 550,
+  13: 500,
+  14: 475,
+  15: 450,
+  16: 425,
+  17: 400,
+  18: 375,
+  19: 350,
+  20: 325,
+  21: 250,
+  22: 250,
+  23: 250,
+  24: 250,
+  25: 250,
+  26: 200,
+  27: 200,
+  28: 200,
+  29: 200,
+  30: 200,
 };
 
 /** Диапазоны мест ниже топ-30. */
 export const DEFAULT_PLACE_BANDS = {
-  PLACE_31_40: 200,
-  PLACE_41_50: 150,
-  PLACE_51_PLUS: 100,
+  PLACE_31_40: 125,
+  PLACE_41_50: 100,
+  PLACE_51_PLUS: 75,
 } as const;
 
 /** Последнее индивидуально настраиваемое место в админке. */
@@ -49,16 +50,16 @@ export const MAX_SCORING_PLACE = 30;
 
 /** Награда XP за место в недельном рейтинге. */
 export const DEFAULT_WEEKLY_REWARDS: Record<number, number> = {
-  1: 7500,
-  2: 5000,
-  3: 3500,
+  1: 2000,
+  2: 1250,
+  3: 800,
 };
 
 /** Награда XP за место в финале месяца. */
 export const DEFAULT_MONTHLY_REWARDS: Record<number, number> = {
-  1: 20000,
-  2: 12500,
-  3: 7500,
+  1: 5000,
+  2: 3000,
+  3: 2000,
 };
 
 /**
@@ -69,10 +70,10 @@ export const DEFAULT_XP_SETTINGS: Record<XpSettingKey, number> = {
   ATTENDANCE: 100,
   ELIMINATION: 50,
   RE_ENTRY: 0,
-  BOUNTY: 75,
-  FOUR_OF_A_KIND: 150,
-  STRAIGHT_FLUSH: 300,
-  ROYAL_FLUSH: 1000,
+  BOUNTY: 50,
+  FOUR_OF_A_KIND: 100,
+  STRAIGHT_FLUSH: 200,
+  ROYAL_FLUSH: 500,
   TOURNAMENT_WIN: DEFAULT_PLACE_RATING[1],
   PLACE_2: DEFAULT_PLACE_RATING[2],
   PLACE_3: DEFAULT_PLACE_RATING[3],
@@ -116,15 +117,18 @@ export const DEFAULT_XP_SETTINGS: Record<XpSettingKey, number> = {
 
 export const MAX_LEVEL = 100;
 
+/** Целевой потолок XP на 100 уровне (активный игрок не достигает за год). */
+export const LEVEL_100_XP = 600_000;
+
 /**
- * Плавная кривая до 250 000 XP на 100 уровне:
- * XP(L) ≈ 970×(L−1) + 15.7×(L−1)²
+ * Плавная кривая до 600 000 XP на 100 уровне (×2.4 от модели 250k):
+ * XP(L) ≈ 2328×(L−1) + 37.68×(L−1)²
  */
 export function requiredXpForLevel(level: number): number {
   if (level <= 1) return 0;
-  if (level >= 100) return 250_000;
+  if (level >= 100) return LEVEL_100_XP;
   const n = level - 1;
-  return Math.round(970 * n + 15.7 * n * n);
+  return Math.round(2328 * n + 37.68 * n * n);
 }
 
 /** Полная таблица уровней 1–100 с накопительным XP. */
@@ -141,6 +145,27 @@ export function buildLevelThresholds(maxLevel = MAX_LEVEL): {
 
 /** Таблица уровней по умолчанию: 1–100. */
 export const DEFAULT_LEVEL_THRESHOLDS = buildLevelThresholds();
+
+/**
+ * Кривая v2 (250k@100) — для пересчёта XP при миграции на 600k.
+ */
+export function requiredXpForLevelV2(level: number): number {
+  if (level <= 1) return 0;
+  if (level >= 100) return 250_000;
+  const n = level - 1;
+  return Math.round(970 * n + 15.7 * n * n);
+}
+
+export function buildLevelThresholdsV2(maxLevel = MAX_LEVEL): {
+  level: number;
+  requiredXp: number;
+}[] {
+  const thresholds: { level: number; requiredXp: number }[] = [];
+  for (let level = 1; level <= maxLevel; level += 1) {
+    thresholds.push({ level, requiredXp: requiredXpForLevelV2(level) });
+  }
+  return thresholds;
+}
 
 /**
  * Старая кривая (до v2) — нужна только для пересчёта XP игроков,
@@ -201,7 +226,7 @@ export function buildPlaceRatingScale(settings: Partial<Record<XpSettingKey, num
     rows.push({
       place,
       points,
-      diff: previous === null ? null : points - previous,
+      diff: previous == null ? null : points - previous,
     });
   }
 
