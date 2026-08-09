@@ -6,7 +6,14 @@ import { XpService } from '../progression/xp.service';
 import { XpSettingsService } from '../progression/xp-settings.service';
 import { AchievementEngineService } from '../progression/achievement-engine.service';
 import { NotificationsService } from '../telegram/notifications.service';
-import { RatingService } from './rating.service';
+import { RatingService, type RatingRow } from './rating.service';
+import {
+  WEEKLY_FINAL_TOP,
+  getClubMonthBounds,
+  getPreviousClubWeekBounds,
+  monthKey as clubMonthKey,
+  weekKey as clubWeekKey,
+} from './rating-period';
 
 const WEEKLY_KEYS: Record<number, XpSettingKey> = {
   1: 'WEEKLY_TOP_1' as XpSettingKey,
@@ -29,7 +36,7 @@ export interface RewardedPlayer {
 }
 
 /**
- * Награды за недельный рейтинг и финал месяца (ТЗ клуба).
+ * Награды за недельный рейтинг и финал месяца + закрытие недели (топ-7 → финал).
  * Выплата идемпотентна: повторный запуск за тот же период ничего не начислит.
  */
 @Injectable()
@@ -45,47 +52,64 @@ export class RatingRewardsService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  /** Ключ ISO-недели: 2026-W32. */
+  /** Ключ ISO-недели клуба: 2026-W32. */
   static weekKey(date = new Date()): string {
-    const target = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
-    const dayNumber = (target.getUTCDay() + 6) % 7;
-    target.setUTCDate(target.getUTCDate() - dayNumber + 3);
-    const firstThursday = new Date(Date.UTC(target.getUTCFullYear(), 0, 4));
-    const firstDayNumber = (firstThursday.getUTCDay() + 6) % 7;
-    firstThursday.setUTCDate(firstThursday.getUTCDate() - firstDayNumber + 3);
-    const week = 1 + Math.round((target.getTime() - firstThursday.getTime()) / (7 * 86_400_000));
-    return `${target.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
+    return clubWeekKey(date);
   }
 
-  /** Ключ месяца: 2026-08. */
+  /** Ключ месяца клуба: 2026-08. */
   static monthKey(date = new Date()): string {
-    return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+    return clubMonthKey(date);
+  }
+
+  /**
+   * Закрыть неделю: топ-7 переносят очки в финал месяца.
+   * По умолчанию — предыдущая завершённая неделя.
+   */
+  async closeWeek(
+    options?: { weekKey?: string; target?: 'previous' | 'current' },
+    adminId?: string | null,
+  ) {
+    const result = await this.ratingService.closeWeek(options);
+
+    if (!result.alreadyClosed) {
+      for (const player of result.qualified) {
+        await this.notifyQualified(player, result.weekKey, result.monthKey);
+      }
+      this.logger.log(
+        `Неделя ${result.weekKey} закрыта админом ${adminId ?? 'system'}: ${result.qualified.length} финалистов`,
+      );
+    }
+
+    return {
+      ...result,
+      topN: WEEKLY_FINAL_TOP,
+    };
   }
 
   async payoutWeekly(adminId?: string | null) {
-    const leaderboard = await this.ratingService.getWeeklyRating();
-    return this.payout(
-      RatingPeriodType.WEEKLY,
-      RatingRewardsService.weekKey(),
-      leaderboard,
-      adminId,
-    );
+    const previous = getPreviousClubWeekBounds();
+    const frozen = await this.ratingService.listWeekQualifiers(previous.weekKey);
+    const leaderboard =
+      frozen.length > 0
+        ? frozen
+        : (await this.ratingService.getPointsLeaderboard(previous.start, previous.end)).map(
+            (row, index) => ({ ...row, rank: index + 1 }),
+          );
+
+    return this.payout(RatingPeriodType.WEEKLY, previous.weekKey, leaderboard, adminId);
   }
 
   async payoutMonthly(adminId?: string | null) {
+    const { monthKey } = getClubMonthBounds();
     const leaderboard = await this.ratingService.getMonthlyFinalRating();
-    return this.payout(
-      RatingPeriodType.MONTHLY,
-      RatingRewardsService.monthKey(),
-      leaderboard,
-      adminId,
-    );
+    return this.payout(RatingPeriodType.MONTHLY, monthKey, leaderboard, adminId);
   }
 
   private async payout(
     periodType: RatingPeriodType,
     periodKey: string,
-    leaderboard: { userId: string; nickname?: string | null; firstName?: string | null }[],
+    leaderboard: RatingRow[],
     adminId?: string | null,
   ) {
     const keys = periodType === RatingPeriodType.WEEKLY ? WEEKLY_KEYS : MONTHLY_KEYS;
@@ -141,7 +165,6 @@ export class RatingRewardsService {
       });
     }
 
-    // Достижения за топ-3 / победы в периоде.
     for (const player of awarded) {
       try {
         await this.achievementEngine.syncForUser(player.userId, { performedById: adminId ?? null });
@@ -157,6 +180,32 @@ export class RatingRewardsService {
     }
 
     return { periodType, periodKey, awarded, skipped };
+  }
+
+  private async notifyQualified(
+    player: RatingRow,
+    weekKey: string,
+    monthKey: string,
+  ): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: player.userId },
+      select: { telegramId: true },
+    });
+
+    if (!user) {
+      return;
+    }
+
+    await this.notificationsService.notify({
+      userId: player.userId,
+      telegramId: user.telegramId,
+      type: NotificationType.SYSTEM,
+      title: 'Вы в финале месяца',
+      message:
+        `🎖 ${player.weekPlace ?? player.rank} место недели ${weekKey}\n` +
+        `+${player.points} очков перенесено в финал ${monthKey}.\n` +
+        `Топ-7 недели становятся финалистами.`,
+    });
   }
 
   private async notifyWinner(player: RewardedPlayer, periodType: RatingPeriodType): Promise<void> {

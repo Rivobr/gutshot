@@ -201,9 +201,10 @@ model User {
   xpHistory          XPHistory[]
   notifications      Notification[]
   achievements       Achievement[]
-  playerAchievements PlayerAchievement[]
-  ratingRewards      RatingReward[]
-  events             PlayerEvent[]
+  playerAchievements         PlayerAchievement[]
+  ratingRewards              RatingReward[]
+  weeklyFinalQualifications  WeeklyFinalQualification[]
+  events                     PlayerEvent[]
 
   @@index([telegramId])
   @@index([qrCode])
@@ -464,6 +465,27 @@ model RatingReward {
 
   @@unique([userId, periodType, periodKey])
   @@index([periodType, periodKey])
+}
+
+/// Закрытие недели: топ-7 недельного рейтинга переносят очки в финал месяца.
+/// Повторное закрытие той же weekKey идемпотентно (уникальность weekKey+userId).
+model WeeklyFinalQualification {
+  id         String   @id @default(cuid())
+  weekKey    String
+  monthKey   String
+  userId     String
+  /// Место в топ-7 недели (1..7).
+  weekPlace  Int
+  /// Очки за эту неделю — суммируются в финале месяца.
+  weekPoints Int
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([weekKey, userId])
+  @@index([monthKey])
+  @@index([userId])
+  @@index([weekKey])
 }
 
 /// Настраиваемые значения XP. Редактируются из админ-панели без изменения кода.

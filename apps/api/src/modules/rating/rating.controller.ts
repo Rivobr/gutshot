@@ -1,5 +1,6 @@
-import { Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { IsIn, IsOptional, IsString } from 'class-validator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AdminAuthGuard } from '../auth/guards/admin-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -9,6 +10,16 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AdminJwtPayload } from '../../common/interfaces/jwt-payload.interface';
 import { RatingService } from './rating.service';
 import { RatingRewardsService } from './rating-rewards.service';
+
+class CloseWeekDto {
+  @IsOptional()
+  @IsString()
+  weekKey?: string;
+
+  @IsOptional()
+  @IsIn(['previous', 'current'])
+  target?: 'previous' | 'current';
+}
 
 @ApiTags('Ratings')
 @ApiBearerAuth()
@@ -38,7 +49,7 @@ export class RatingController {
   }
 }
 
-/** Выплата наград за неделю и финал месяца (ТЗ клуба). */
+/** Закрытие недели (топ-7 → финал) и выплата XP-наград. */
 @ApiTags('Admin / Rating rewards')
 @ApiBearerAuth()
 @UseGuards(AdminAuthGuard, RolesGuard)
@@ -46,6 +57,15 @@ export class RatingController {
 @Controller('admin/rating-rewards')
 export class AdminRatingRewardsController {
   constructor(private readonly ratingRewardsService: RatingRewardsService) {}
+
+  @Roles(AdminRole.OWNER, AdminRole.ADMIN)
+  @Post('close-week')
+  closeWeek(@Body() body: CloseWeekDto, @CurrentUser() admin: AdminJwtPayload) {
+    return this.ratingRewardsService.closeWeek(
+      { weekKey: body?.weekKey, target: body?.target },
+      admin.sub,
+    );
+  }
 
   @Roles(AdminRole.OWNER, AdminRole.ADMIN)
   @Post('weekly')

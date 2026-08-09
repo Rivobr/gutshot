@@ -15,12 +15,13 @@ import {
   XP_SETTING_ORDER,
   formatPoints,
 } from '../../shared/lib/event-labels';
-import { useRatingRewardPayout } from '../../entities/xp-config';
+import { useCloseRatingWeek, useRatingRewardPayout } from '../../entities/xp-config';
 
 export function XpSettingsPage(): JSX.Element {
   const { data, isLoading } = useXpConfig();
   const updateSettings = useUpdateXpSettings();
   const updateLevels = useUpdateLevels();
+  const closeWeek = useCloseRatingWeek();
   const payoutWeekly = useRatingRewardPayout('weekly');
   const payoutMonthly = useRatingRewardPayout('monthly');
 
@@ -170,10 +171,44 @@ export function XpSettingsPage(): JSX.Element {
 
       <Card className="gap-4">
         <div>
-          <h2 className="font-medium">Награды рейтинга</h2>
+          <h2 className="font-medium">Рейтинг: неделя → финал месяца</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            XP за призовые места в недельном рейтинге и финале месяца. Начисляется при выплате —
-            повторный запуск за тот же период ничего не задвоит.
+            За неделю идут ежедневные турниры. В конце недели нажмите «Закрыть неделю» — топ-7
+            переносят свои очки в финал месяца. Так 4 недели. В финале у игрока сумма очков всех
+            недель, где он был в топ-7.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            onClick={() => closeWeek.mutate({ target: 'previous' })}
+            isLoading={closeWeek.isPending}
+          >
+            Закрыть прошлую неделю (топ-7 → финал)
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => closeWeek.mutate({ target: 'current' })}
+            isLoading={closeWeek.isPending}
+          >
+            Закрыть текущую неделю
+          </Button>
+          {closeWeek.isSuccess && (
+            <span className="text-sm text-primary">
+              {closeWeek.data?.weekKey}: {closeWeek.data?.alreadyClosed ? 'уже закрыта' : 'закрыта'}
+              , финалистов {closeWeek.data?.qualified.length ?? 0}
+            </span>
+          )}
+          {closeWeek.isError && (
+            <span className="text-sm text-destructive">Не удалось закрыть неделю</span>
+          )}
+        </div>
+
+        <div>
+          <h3 className="font-medium">XP-награды топ-3</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Отдельно от квалификации: начисление XP за 1–3 место недели / финала. Повторный запуск
+            за тот же период ничего не задвоит.
           </p>
         </div>
 
@@ -200,14 +235,14 @@ export function XpSettingsPage(): JSX.Element {
             onClick={() => payoutWeekly.mutate()}
             isLoading={payoutWeekly.isPending}
           >
-            Выплатить за неделю
+            Выплатить XP за неделю
           </Button>
           <Button
             variant="ghost"
             onClick={() => payoutMonthly.mutate()}
             isLoading={payoutMonthly.isPending}
           >
-            Выплатить за финал месяца
+            Выплатить XP за финал месяца
           </Button>
           {payoutWeekly.isSuccess && (
             <span className="text-sm text-primary">

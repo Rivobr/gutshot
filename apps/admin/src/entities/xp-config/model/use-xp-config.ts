@@ -27,6 +27,19 @@ export function useUpdateLevels() {
   });
 }
 
+/** Закрыть неделю: топ-7 переносят очки в финал месяца. */
+export function useCloseRatingWeek() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload?: { weekKey?: string; target?: 'previous' | 'current' }) =>
+      xpConfigApi.closeWeek(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'players'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'dashboard'] });
+    },
+  });
+}
+
 /** Выплата наград за недельный рейтинг / финал месяца. */
 export function useRatingRewardPayout(period: 'weekly' | 'monthly') {
   const queryClient = useQueryClient();

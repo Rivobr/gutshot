@@ -196,9 +196,23 @@ export interface RatingEntry {
   lastName?: string | null;
   nickname?: string | null;
   photoUrl?: string | null;
+  username?: string | null;
   xp?: number;
   weeklyXp?: number;
   level?: number;
+  /** Сколько недель игрок проходил в топ-7 (для финала месяца). */
+  qualifiedWeeks?: number;
+  /** Место в топ-7 текущей/закрытой недели. */
+  weekPlace?: number;
+}
+
+/** Результат закрытия недели: топ-7 переносят очки в финал месяца. */
+export interface WeeklyCloseResultDto {
+  weekKey: string;
+  monthKey: string;
+  alreadyClosed: boolean;
+  topN: number;
+  qualified: RatingEntry[];
 }
 
 export interface NotificationDto {

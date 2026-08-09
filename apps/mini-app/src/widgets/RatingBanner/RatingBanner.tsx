@@ -33,7 +33,7 @@ export function RatingBanner({ delay = 0 }: { delay?: number }): JSX.Element {
             className="sans uppercase"
             style={{ fontSize: 8.5, color: '#6B614E', letterSpacing: '0.2em' }}
           >
-            Таблица лидеров
+            Топ-7 → финал месяца
           </p>
           <h2
             className="gold-text serif font-semibold uppercase"
@@ -54,8 +54,7 @@ export function RatingBanner({ delay = 0 }: { delay?: number }): JSX.Element {
             width: 56,
             height: 56,
             border: '1px solid rgba(199,154,61,0.45)',
-            background:
-              'linear-gradient(145deg, rgba(199,154,61,0.22), rgba(156,106,31,0.08))',
+            background: 'linear-gradient(145deg, rgba(199,154,61,0.22), rgba(156,106,31,0.08))',
             color: '#C89A3D',
             fontSize: 26,
             boxShadow: '0 0 24px rgba(199,154,61,0.18)',

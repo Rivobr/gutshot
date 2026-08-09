@@ -27,8 +27,10 @@ function formatPoints(value: number): string {
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'weekly', label: 'Недельный' },
-  { id: 'final', label: 'Финал' },
+  { id: 'final', label: 'Финал месяца' },
 ];
+
+const WEEKLY_TOP = 7;
 
 export function RatingPage(): JSX.Element {
   const [tab, setTab] = useState<Tab>('weekly');
@@ -54,48 +56,61 @@ export function RatingPage(): JSX.Element {
 
     const myPoints = me ? pointsOf(me) : 0;
     const myRank = me?.rank;
-    const third = rating[2];
+    const cut = rating[WEEKLY_TOP - 1];
     const first = rating[0];
-    const thirdPoints = third ? pointsOf(third) : 0;
+    const cutPoints = cut ? pointsOf(cut) : 0;
     const firstPoints = first ? pointsOf(first) : 0;
 
     if (!me) {
       return {
         rank: null as number | null,
         points: 0,
-        inTop3: false,
+        highlight: false,
         title: 'Вас пока нет в таблице',
         subtitle:
           tab === 'weekly'
-            ? 'Сыграйте турнир на этой неделе — и появитесь в рейтинге'
-            : 'Наберите очков в этом месяце, чтобы попасть в финал',
+            ? 'Сыграйте турнир на этой неделе — топ-7 переходит в финал месяца'
+            : 'Попадите в топ-7 недели — и ваши очки перейдут в финал',
       };
     }
 
-    if (myRank != null && myRank <= 3) {
+    if (tab === 'final') {
+      const weeks = me.qualifiedWeeks ?? 1;
+      return {
+        rank: myRank ?? null,
+        points: myPoints,
+        highlight: true,
+        title: myRank === 1 ? 'Вы лидируете в финале' : `Вы в финале · ${myRank} место`,
+        subtitle: `Сумма очков за ${weeks} ${weeks === 1 ? 'неделю' : weeks < 5 ? 'недели' : 'недель'} в топ-7`,
+      };
+    }
+
+    if (myRank != null && myRank <= WEEKLY_TOP) {
       const toFirst = Math.max(0, firstPoints - myPoints);
       return {
         rank: myRank,
         points: myPoints,
-        inTop3: true,
-        title: myRank === 1 ? 'Вы лидируете' : 'Вы в топ-3',
+        highlight: true,
+        title: myRank === 1 ? 'Вы лидируете' : `Вы в топ-${WEEKLY_TOP}`,
         subtitle:
           myRank === 1
-            ? 'Держите позицию до конца периода'
+            ? 'Ваши очки перейдут в финал месяца'
             : toFirst > 0
-              ? `До 1 места: ${formatPoints(toFirst)} очков`
-              : 'Вы делите лидерство',
+              ? `До 1 места: ${formatPoints(toFirst)} очков · квалификация в финал`
+              : 'Квалификация в финал месяца',
       };
     }
 
-    const toTop3 = Math.max(0, thirdPoints - myPoints);
+    const toTop = Math.max(0, cutPoints - myPoints + 1);
     return {
       rank: myRank ?? null,
       points: myPoints,
-      inTop3: false,
+      highlight: false,
       title: `Вы на ${myRank} месте`,
       subtitle:
-        toTop3 > 0 ? `До топ-3: ${formatPoints(toTop3)} очков` : 'Ещё немного — и вы в тройке',
+        toTop > 0
+          ? `До топ-${WEEKLY_TOP}: ${formatPoints(toTop)} очков`
+          : `Ещё немного — и вы в топ-${WEEKLY_TOP}`,
     };
   }, [me, myUserId, rating, tab]);
 
@@ -114,7 +129,7 @@ export function RatingPage(): JSX.Element {
           Рейтинг клуба
         </h2>
         <p className="sans mt-1" style={{ fontSize: 12, color: '#6B614E' }}>
-          Очки за места в турнирах · XP качает уровень отдельно
+          Топ-7 недели → финал месяца · очки недель суммируются
         </p>
 
         <div
@@ -153,7 +168,7 @@ export function RatingPage(): JSX.Element {
                 subtitle={youHere.subtitle}
                 rank={youHere.rank}
                 points={youHere.points}
-                inTop3={youHere.inTop3}
+                highlight={youHere.highlight}
               />
             </div>
           )}
@@ -217,7 +232,10 @@ export function RatingPage(): JSX.Element {
                           >
                             {isMe ? 'Вы' : displayNameOf(p)}
                           </p>
-                          <p className="gold-text-sm num sans font-semibold" style={{ fontSize: 12 }}>
+                          <p
+                            className="gold-text-sm num sans font-semibold"
+                            style={{ fontSize: 12 }}
+                          >
                             {formatPoints(pointsOf(p))}
                           </p>
                           <div
@@ -283,6 +301,17 @@ export function RatingPage(): JSX.Element {
                     <p className="serif truncate" style={{ fontSize: 14, color: '#F5EDD6' }}>
                       {isMe ? 'Вы' : displayNameOf(p)}
                     </p>
+                    {tab === 'final' && p.qualifiedWeeks != null && (
+                      <p className="sans" style={{ fontSize: 10, color: '#6B614E' }}>
+                        {p.qualifiedWeeks}{' '}
+                        {p.qualifiedWeeks === 1
+                          ? 'неделя'
+                          : p.qualifiedWeeks < 5
+                            ? 'недели'
+                            : 'недель'}{' '}
+                        в топ-7
+                      </p>
+                    )}
                   </div>
                   <div className="text-right">
                     <p className="gold-text-sm num sans font-semibold" style={{ fontSize: 13 }}>
@@ -315,13 +344,13 @@ function YouHereCard({
   subtitle,
   rank,
   points,
-  inTop3,
+  highlight,
 }: {
   title: string;
   subtitle: string;
   rank: number | null;
   points: number;
-  inTop3: boolean;
+  highlight: boolean;
 }): JSX.Element {
   return (
     <motion.div
@@ -330,12 +359,10 @@ function YouHereCard({
       transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
       className="relative overflow-hidden rounded-[18px] px-4 py-3.5"
       style={{
-        background: inTop3
+        background: highlight
           ? 'linear-gradient(135deg, rgba(199,154,61,0.22), rgba(20,18,16,0.95))'
           : 'linear-gradient(145deg, #1c1916 0%, #141210 100%)',
-        border: inTop3
-          ? '1px solid rgba(247,217,138,0.4)'
-          : '1px solid rgba(199,154,61,0.22)',
+        border: highlight ? '1px solid rgba(247,217,138,0.4)' : '1px solid rgba(199,154,61,0.22)',
       }}
     >
       <div className="absolute inset-0 deco-lines opacity-30 pointer-events-none" />
