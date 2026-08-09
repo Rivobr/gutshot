@@ -96,8 +96,8 @@ export class AdminPlayersService {
     }
 
     const username = normalized.replace(/^@+/, '').trim();
-    if (!username || !/^[A-Za-z0-9_]{3,64}$/.test(username)) {
-      throw new BadRequestException('Укажите числовой Telegram ID (5–20 цифр) или @username');
+    if (!username) {
+      throw new BadRequestException('Укажите числовой Telegram ID или @username');
     }
 
     const byUsername = await this.prisma.user.findFirst({
@@ -120,16 +120,16 @@ export class AdminPlayersService {
       );
     }
 
-    // Bot API: getChat(@username), если пользователь доступен боту.
-    const chat = await this.telegramService.getChatProfile(
-      username.startsWith('@') ? username : `@${username}`,
-    );
-    if (chat?.telegramId && /^\d{5,20}$/.test(chat.telegramId)) {
-      return this.usersService.findOrCreateByTelegramId(chat.telegramId);
+    // Bot API умеет getChat(@username) для латинских username, если человек доступен боту.
+    if (/^[A-Za-z][A-Za-z0-9_]{4,31}$/.test(username)) {
+      const chat = await this.telegramService.getChatProfile(`@${username}`);
+      if (chat?.telegramId && /^\d{5,20}$/.test(chat.telegramId)) {
+        return this.usersService.findOrCreateByTelegramId(chat.telegramId);
+      }
     }
 
     throw new NotFoundException(
-      'Игрок не найден. Укажите числовой Telegram ID или @username (человек должен был писать боту)',
+      'Игрок не найден. Укажите числовой Telegram ID, @username или точный никнейм из клуба',
     );
   }
 
