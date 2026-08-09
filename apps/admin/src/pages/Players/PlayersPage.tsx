@@ -120,11 +120,13 @@ export function PlayersPage(): JSX.Element {
         className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-end"
       >
         <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
-          <span className="text-muted-foreground">Добавить по Telegram ID или @username</span>
+          <span className="text-muted-foreground">
+            Добавить по Telegram ID, @username или никнейму
+          </span>
           <input
             value={playerQuery}
             onChange={(event) => setPlayerQuery(event.target.value)}
-            placeholder="123456789 или @username"
+            placeholder="123456789, @username или никнейм"
             autoComplete="off"
             className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
           />
