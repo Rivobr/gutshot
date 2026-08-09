@@ -235,6 +235,22 @@ export interface RatingEntry {
   weekPlace?: number;
 }
 
+/** Ответ недельного рейтинга с метаданными периода. */
+export interface WeeklyRatingResponse {
+  weekKey: string;
+  monthKey: string;
+  /** Какой период отдан клиенту. */
+  period: 'current' | 'previous';
+  /**
+   * true, если текущая неделя ещё пустая и показана прошлая
+   * (чтобы в понедельник утром таблица не «пропадала»).
+   */
+  fallbackFromEmptyCurrent: boolean;
+  start: string;
+  end: string;
+  entries: RatingEntry[];
+}
+
 /** Результат закрытия недели: топ-7 переносят очки в финал месяца. */
 export interface WeeklyCloseResultDto {
   weekKey: string;

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Loader } from '@gutshot/ui';
-import type { RatingEntry } from '@gutshot/types';
+import type { RatingEntry, WeeklyRatingResponse } from '@gutshot/types';
 import { apiClient } from '../../shared/api/client';
 import { useProfile } from '../../entities/player';
 import { SectionLabel } from '../../shared/ui/figma';
@@ -11,11 +11,37 @@ import { PlayerAvatar } from '../../shared/ui/PlayerAvatar';
 import { displayNameOf } from '../../shared/lib/display-name';
 
 type Tab = 'weekly' | 'final';
+type WeekMode = 'auto' | 'current' | 'previous';
 
-async function fetchRating(tab: Tab): Promise<RatingEntry[]> {
-  const { data } = await apiClient.get(tab === 'weekly' ? '/ratings/weekly' : '/ratings/final');
+async function fetchFinalRating(): Promise<RatingEntry[]> {
+  const { data } = await apiClient.get('/ratings/final');
   const payload = data?.data ?? data;
   return Array.isArray(payload) ? payload : [];
+}
+
+async function fetchWeeklyRating(week: WeekMode): Promise<WeeklyRatingResponse> {
+  const { data } = await apiClient.get('/ratings/weekly', { params: { week } });
+  const payload = data?.data ?? data;
+  if (Array.isArray(payload)) {
+    return {
+      weekKey: '',
+      monthKey: '',
+      period: week === 'previous' ? 'previous' : 'current',
+      fallbackFromEmptyCurrent: false,
+      start: '',
+      end: '',
+      entries: payload,
+    };
+  }
+  return {
+    weekKey: String(payload?.weekKey ?? ''),
+    monthKey: String(payload?.monthKey ?? ''),
+    period: payload?.period === 'previous' ? 'previous' : 'current',
+    fallbackFromEmptyCurrent: Boolean(payload?.fallbackFromEmptyCurrent),
+    start: String(payload?.start ?? ''),
+    end: String(payload?.end ?? ''),
+    entries: Array.isArray(payload?.entries) ? payload.entries : [],
+  };
 }
 
 function pointsOf(entry: RatingEntry): number {
@@ -24,6 +50,18 @@ function pointsOf(entry: RatingEntry): number {
 
 function formatPoints(value: number): string {
   return value.toLocaleString('ru-RU');
+}
+
+function formatWeekRange(startIso: string, endIso: string): string {
+  if (!startIso || !endIso) return '';
+  const start = new Date(startIso);
+  const end = new Date(new Date(endIso).getTime() - 1000);
+  const fmt = new Intl.DateTimeFormat('ru-RU', {
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'Europe/Moscow',
+  });
+  return `${fmt.format(start)} – ${fmt.format(end)}`;
 }
 
 const TABS: { id: Tab; label: string }[] = [
@@ -36,15 +74,32 @@ const WEEKLY_TOP = 7;
 export function RatingPage(): JSX.Element {
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>('weekly');
+  const [weekMode, setWeekMode] = useState<WeekMode>('auto');
   const { data: profile } = useProfile();
 
-  const ratingQuery = useQuery({
-    queryKey: ['ratings', tab],
-    queryFn: () => fetchRating(tab),
+  const weeklyQuery = useQuery({
+    queryKey: ['ratings', 'weekly', weekMode],
+    queryFn: () => fetchWeeklyRating(weekMode),
+    enabled: tab === 'weekly',
   });
 
-  const rating = Array.isArray(ratingQuery.data) ? ratingQuery.data : [];
+  const finalQuery = useQuery({
+    queryKey: ['ratings', 'final'],
+    queryFn: fetchFinalRating,
+    enabled: tab === 'final',
+  });
+
+  const weekly = weeklyQuery.data;
+  const rating =
+    tab === 'weekly'
+      ? (weekly?.entries ?? [])
+      : Array.isArray(finalQuery.data)
+        ? finalQuery.data
+        : [];
+  const ratingQuery = tab === 'weekly' ? weeklyQuery : finalQuery;
   const myUserId = profile?.id;
+  const weekRangeLabel = weekly ? formatWeekRange(weekly.start, weekly.end) : '';
+  const showingPrevious = weekly?.period === 'previous';
 
   const openPlayer = (userId: string) => {
     navigate(userId === myUserId ? '/profile' : `/players/${userId}`);
@@ -161,6 +216,46 @@ export function RatingPage(): JSX.Element {
             </button>
           ))}
         </div>
+
+        {tab === 'weekly' && (
+          <div className="mt-3 flex flex-col gap-2">
+            <div
+              className="flex rounded-[12px] p-1 gap-1"
+              style={{ background: '#0F0D09', border: '1px solid rgba(199,154,61,0.1)' }}
+            >
+              {(
+                [
+                  { id: 'auto' as const, label: 'Актуальная' },
+                  { id: 'previous' as const, label: 'Прошлая' },
+                  { id: 'current' as const, label: 'Эта неделя' },
+                ] as const
+              ).map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setWeekMode(option.id)}
+                  className="flex-1 py-2 rounded-[9px] sans font-medium"
+                  style={{
+                    fontSize: 11,
+                    cursor: 'pointer',
+                    border: 'none',
+                    background: weekMode === option.id ? 'rgba(199,154,61,0.18)' : 'transparent',
+                    color: weekMode === option.id ? '#F5EDD6' : '#6B614E',
+                  }}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            {(weekRangeLabel || showingPrevious) && (
+              <p className="sans" style={{ fontSize: 11, color: '#8A7E68' }}>
+                {showingPrevious ? 'Прошлая неделя' : 'Текущая неделя'}
+                {weekRangeLabel ? ` · ${weekRangeLabel}` : ''}
+                {weekly?.fallbackFromEmptyCurrent ? ' · эта неделя ещё без очков' : ''}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {ratingQuery.isLoading ? (
@@ -342,8 +437,24 @@ export function RatingPage(): JSX.Element {
               <div className="flex flex-col items-center justify-center py-16 gap-3">
                 <span style={{ fontSize: 32, opacity: 0.25 }}>♠</span>
                 <p className="serif" style={{ fontSize: 16, color: '#6B614E' }}>
-                  Рейтинг пуст
+                  {tab === 'weekly' ? 'На этой неделе пока нет очков' : 'Рейтинг пуст'}
                 </p>
+                {tab === 'weekly' && weekMode !== 'previous' && (
+                  <button
+                    type="button"
+                    onClick={() => setWeekMode('previous')}
+                    className="sans px-3 py-2 rounded-[10px]"
+                    style={{
+                      fontSize: 12,
+                      color: '#C89A3D',
+                      background: 'rgba(199,154,61,0.12)',
+                      border: '1px solid rgba(199,154,61,0.25)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Смотреть прошлую неделю
+                  </button>
+                )}
               </div>
             )}
           </div>

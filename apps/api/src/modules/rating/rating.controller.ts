@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { IsBoolean, IsIn, IsOptional, IsString } from 'class-validator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -38,8 +38,9 @@ export class RatingController {
   }
 
   @Get('weekly')
-  getWeekly() {
-    return this.ratingService.getWeeklyRating();
+  getWeekly(@Query('week') week?: string) {
+    const mode = week === 'previous' || week === 'current' || week === 'auto' ? week : 'auto';
+    return this.ratingService.getWeeklyRating(mode);
   }
 
   @Get('final')

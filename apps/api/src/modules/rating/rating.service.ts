@@ -60,15 +60,56 @@ export class RatingService {
     }));
   }
 
-  /** Живой рейтинг текущей ISO-недели клуба (пн–вс, Europe/Moscow). */
-  async getWeeklyRating(): Promise<RatingRow[]> {
-    const week = getClubWeekBounds();
-    const rows = await this.getPointsLeaderboard(week.start, week.end);
-    return rows.map((row, index) => ({
+  /**
+   * Недельный рейтинг клуба (пн–вс, Europe/Moscow).
+   * mode=auto: если текущая неделя пустая — отдаём прошлую (чтобы в пн утром таблица не пропадала).
+   */
+  async getWeeklyRating(mode: 'current' | 'previous' | 'auto' = 'auto'): Promise<{
+    weekKey: string;
+    monthKey: string;
+    period: 'current' | 'previous';
+    fallbackFromEmptyCurrent: boolean;
+    start: string;
+    end: string;
+    entries: RatingRow[];
+  }> {
+    if (mode === 'previous') {
+      return this.buildWeeklyRating(getPreviousClubWeekBounds(), 'previous', false);
+    }
+
+    const current = getClubWeekBounds();
+    const currentEntries = await this.getPointsLeaderboard(current.start, current.end);
+
+    if (mode === 'current' || currentEntries.length > 0) {
+      return this.buildWeeklyRating(current, 'current', false, currentEntries);
+    }
+
+    const previous = getPreviousClubWeekBounds();
+    return this.buildWeeklyRating(previous, 'previous', true);
+  }
+
+  private async buildWeeklyRating(
+    week: ClubPeriodBounds,
+    period: 'current' | 'previous',
+    fallbackFromEmptyCurrent: boolean,
+    preloaded?: Omit<RatingRow, 'rank'>[],
+  ) {
+    const rows = preloaded ?? (await this.getPointsLeaderboard(week.start, week.end));
+    const entries = rows.map((row, index) => ({
       ...row,
       rank: index + 1,
       weekPlace: index + 1 <= WEEKLY_FINAL_TOP ? index + 1 : undefined,
     }));
+
+    return {
+      weekKey: week.weekKey,
+      monthKey: week.monthKey,
+      period,
+      fallbackFromEmptyCurrent,
+      start: week.start.toISOString(),
+      end: week.end.toISOString(),
+      entries,
+    };
   }
 
   /**
