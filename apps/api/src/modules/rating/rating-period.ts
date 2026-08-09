@@ -1,16 +1,31 @@
 /**
  * Периоды клубного рейтинга в часовом поясе Санкт-Петербурга.
  * Москва без DST с 2014 → постоянно UTC+3.
+ *
+ * Обычный цикл: понедельник 00:00 → воскресенье (до следующего пн 00:00).
+ * Закрытие недели — после воскресенья (в понедельник).
  */
 export const CLUB_TZ_OFFSET_HOURS = 3;
 export const WEEKLY_FINAL_TOP = 7;
+
+/**
+ * Стартовая «длинная» неделя открытия клуба:
+ * с пн 03.08.2026 по вс 16.08.2026 (конец следующей недели).
+ * После неё — обычные недели пн–вс.
+ */
+export const OPENING_EXTENDED_WEEK = {
+  startYmd: [2026, 8, 3] as const,
+  endYmdExclusive: [2026, 8, 17] as const, // пн после воскресенья 16.08
+  weekKey: '2026-W32E',
+  monthKey: '2026-08',
+};
 
 export interface ClubPeriodBounds {
   /** Понедельник 00:00 клуба (UTC Date). */
   start: Date;
   /** Следующий понедельник 00:00 клуба (UTC Date, exclusive). */
   end: Date;
-  /** ISO-неделя: 2026-W32 */
+  /** ISO-неделя: 2026-W32 или 2026-W32E для стартового периода. */
   weekKey: string;
   /** Месяц понедельника недели: 2026-08 */
   monthKey: string;
@@ -54,8 +69,20 @@ export function monthKeyFromClubYmd(year: number, month: number): string {
   return `${year}-${pad2(month)}`;
 }
 
-/** Текущая (или указанная) ISO-неделя клуба: пн–вс. */
-export function getClubWeekBounds(date = new Date()): ClubPeriodBounds {
+/** Границы стартовой удлинённой недели открытия. */
+export function getOpeningExtendedWeekBounds(): ClubPeriodBounds {
+  const [sy, sm, sd] = OPENING_EXTENDED_WEEK.startYmd;
+  const [ey, em, ed] = OPENING_EXTENDED_WEEK.endYmdExclusive;
+  return {
+    start: clubLocalToUtc(sy, sm, sd, 0, 0, 0),
+    end: clubLocalToUtc(ey, em, ed, 0, 0, 0),
+    weekKey: OPENING_EXTENDED_WEEK.weekKey,
+    monthKey: OPENING_EXTENDED_WEEK.monthKey,
+  };
+}
+
+/** Обычная ISO-неделя клуба без спец. удлинения: пн–вс. */
+export function getNaturalClubWeekBounds(date = new Date()): ClubPeriodBounds {
   const [year, month, day] = clubDateString(date).split('-').map(Number);
   const utcNoon = new Date(Date.UTC(year, month - 1, day, 12));
   const dayNumber = (utcNoon.getUTCDay() + 6) % 7; // Mon=0 .. Sun=6
@@ -83,7 +110,21 @@ export function getClubWeekBounds(date = new Date()): ClubPeriodBounds {
   };
 }
 
-/** Предыдущая завершённая неделя относительно date. */
+/**
+ * Текущая (или указанная) рейтинговая неделя клуба.
+ * До 17.08.2026 00:00 МСК — удлинённая неделя открытия (03.08–16.08).
+ * Далее — обычные недели пн–вс (закрытие каждое воскресенье / в пн ночью).
+ */
+export function getClubWeekBounds(date = new Date()): ClubPeriodBounds {
+  const extended = getOpeningExtendedWeekBounds();
+  const t = date.getTime();
+  if (t >= extended.start.getTime() && t < extended.end.getTime()) {
+    return { ...extended };
+  }
+  return getNaturalClubWeekBounds(date);
+}
+
+/** Предыдущая завершённая рейтинговая неделя относительно date. */
 export function getPreviousClubWeekBounds(date = new Date()): ClubPeriodBounds {
   const current = getClubWeekBounds(date);
   return getClubWeekBounds(new Date(current.start.getTime() - 12 * 60 * 60 * 1000));

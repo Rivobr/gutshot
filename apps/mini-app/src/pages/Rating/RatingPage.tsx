@@ -190,7 +190,7 @@ export function RatingPage(): JSX.Element {
           Рейтинг клуба
         </h2>
         <p className="sans mt-1" style={{ fontSize: 12, color: '#6B614E' }}>
-          Топ-7 недели → финал месяца · очки недель суммируются
+          Топ-7 недели → финал месяца · неделя до воскресенья
         </p>
 
         <div
