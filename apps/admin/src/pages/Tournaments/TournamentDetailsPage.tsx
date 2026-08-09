@@ -123,6 +123,8 @@ export function TournamentDetailsPage(): JSX.Element {
 
   const placeBusy = setPlace.isPending || eliminatePlayer.isPending;
   const canAddPlayer = !['FINISHED', 'ARCHIVED'].includes(tournament.status);
+  const canEliminate = (status: string) =>
+    ['REGISTERED', 'CHECKED_IN', 'PLAYING', 'FINISHED'].includes(status);
 
   const onAddPlayer = (event: FormEvent) => {
     event.preventDefault();
@@ -337,30 +339,34 @@ export function TournamentDetailsPage(): JSX.Element {
                           >
                             QR
                           </Button>
-                          {isLive && registration.place == null && (
-                            <Button
-                              className="px-3 py-1.5 text-xs"
-                              disabled={placeBusy}
-                              onClick={() => eliminatePlayer.mutate(registration.id)}
-                            >
-                              Выбыл
-                            </Button>
-                          )}
-                          {isLive && registration.place != null && (
-                            <Button
-                              variant="ghost"
-                              className="px-3 py-1.5 text-xs"
-                              disabled={placeBusy}
-                              onClick={() =>
-                                setPlace.mutate({
-                                  registrationId: registration.id,
-                                  place: null,
-                                })
-                              }
-                            >
-                              Сбросить
-                            </Button>
-                          )}
+                          {isLive &&
+                            registration.place == null &&
+                            canEliminate(registration.status) && (
+                              <Button
+                                className="px-3 py-1.5 text-xs"
+                                disabled={placeBusy}
+                                onClick={() => eliminatePlayer.mutate(registration.id)}
+                              >
+                                Выбыл
+                              </Button>
+                            )}
+                          {isLive &&
+                            registration.place != null &&
+                            canEliminate(registration.status) && (
+                              <Button
+                                variant="ghost"
+                                className="px-3 py-1.5 text-xs"
+                                disabled={placeBusy}
+                                onClick={() =>
+                                  setPlace.mutate({
+                                    registrationId: registration.id,
+                                    place: null,
+                                  })
+                                }
+                              >
+                                Сбросить
+                              </Button>
+                            )}
                           <AttendanceActions
                             registration={registration}
                             isPending={markAttendance.isPending}
@@ -484,8 +490,14 @@ export function TournamentDetailsPage(): JSX.Element {
 
         {(markAttendance.isError || setPlace.isError || eliminatePlayer.isError) && (
           <p className="text-sm text-destructive">
-            Не удалось обновить игрока. Проверьте место (оно не должно повторяться) и статус
-            турнира.
+            {(() => {
+              const error = eliminatePlayer.error ?? setPlace.error ?? markAttendance.error ?? null;
+              if (isAxiosError(error)) {
+                const message = error.response?.data?.message;
+                if (typeof message === 'string' && message.trim()) return message;
+              }
+              return 'Не удалось обновить игрока. Проверьте место и статус турнира.';
+            })()}
           </p>
         )}
       </Card>
@@ -611,6 +623,14 @@ function AttendanceBadge({
     return (
       <Badge style={{ background: 'rgba(192,57,43,0.2)', color: 'var(--destructive)' }}>
         Не пришёл
+      </Badge>
+    );
+  }
+
+  if (registration.status === 'CANCELLED' || registration.status === 'WAITING') {
+    return (
+      <Badge style={{ background: 'var(--secondary)' }}>
+        {registration.status === 'WAITING' ? 'Лист ожидания' : 'Отменён'}
       </Badge>
     );
   }

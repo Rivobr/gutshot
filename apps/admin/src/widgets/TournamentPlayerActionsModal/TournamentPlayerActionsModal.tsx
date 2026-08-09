@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { isAxiosError } from 'axios';
 import type { AdminTournamentRegistration, ScannerEventType } from '@gutshot/types';
 import { Avatar, Badge, Button, Card } from '@gutshot/ui';
 import { useApplyScannerEvent } from '../../entities/scanner';
@@ -100,9 +101,13 @@ export function TournamentPlayerActionsModal({
             'success',
           );
         },
-        onError: () => {
+        onError: (error) => {
+          const apiMessage = isAxiosError(error)
+            ? (error.response?.data as { message?: string } | undefined)?.message
+            : undefined;
           showToast(
-            `Не удалось выполнить «${label}» для ${playerName}.\nПроверьте регистрацию игрока на турнир.`,
+            apiMessage?.trim() ||
+              `Не удалось выполнить «${label}» для ${playerName}.\nПроверьте регистрацию игрока на турнир.`,
             'error',
           );
         },

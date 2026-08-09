@@ -694,8 +694,9 @@ export class AdminTournamentsService {
   }
 
   /**
-   * Следующее место при выбытии: число участников поля без места
-   * (включая текущего). Учитываем пришедших / играющих.
+   * Следующее место при выбытии: свободное место с конца поля.
+   * Если часть мест уже занята вручную / после ре-энтри — пропускаем конфликты
+   * (11 игроков, заняты 7–10 → следующий вылет получит 11, затем 6…).
    */
   async computeNextEliminationPlace(
     tournamentId: string,
@@ -725,12 +726,20 @@ export class AdminTournamentsService {
       throw new BadRequestException('Некого отмечать выбывшим');
     }
 
-    const place = stillInCount;
-    const taken = fieldPlayers.some((row) => row.place === place && row.id !== registrationId);
+    const takenPlaces = new Set(
+      fieldPlayers
+        .filter((row) => row.place != null && row.id !== registrationId)
+        .map((row) => row.place as number),
+    );
 
-    if (taken) {
+    let place = Math.max(fieldPlayers.length, stillInCount, ...takenPlaces, 0);
+    while (place >= 1 && takenPlaces.has(place)) {
+      place -= 1;
+    }
+
+    if (place < 1) {
       throw new BadRequestException(
-        `Место ${place} уже занято. Проставьте места вручную или освободите конфликт.`,
+        'Нет свободного места. Проставьте места вручную или сбросьте конфликт.',
       );
     }
 
