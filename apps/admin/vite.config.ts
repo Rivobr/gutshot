@@ -8,8 +8,6 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      // Регистрация SW вручную в main.tsx (с reload на controllerchange).
-      injectRegister: null,
       includeAssets: ['gutshot-logo.png'],
       manifest: {
         name: 'GUTSHOT CRM',
