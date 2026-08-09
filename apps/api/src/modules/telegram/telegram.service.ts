@@ -253,8 +253,10 @@ export class TelegramService {
    * Профиль игрока через Bot API.
    * Нужен для входов по ticket/кнопке бота, где нет initData:
    * иначе в админке игрок остаётся без имени и @username.
+   * chatId — числовой telegram id или @username.
    */
-  async getChatProfile(telegramId: string): Promise<{
+  async getChatProfile(chatId: string): Promise<{
+    telegramId?: string | null;
     username?: string | null;
     firstName?: string | null;
     lastName?: string | null;
@@ -268,26 +270,34 @@ export class TelegramService {
 
     try {
       const response = await fetch(
-        `https://api.telegram.org/bot${this.botToken}/getChat?chat_id=${encodeURIComponent(telegramId)}`,
+        `https://api.telegram.org/bot${this.botToken}/getChat?chat_id=${encodeURIComponent(chatId)}`,
         { signal: controller.signal },
       );
       const payload = (await response.json()) as {
         ok?: boolean;
-        result?: { username?: string; first_name?: string; last_name?: string };
+        result?: {
+          id?: number | string;
+          username?: string;
+          first_name?: string;
+          last_name?: string;
+        };
       };
 
       if (!payload.ok || !payload.result) {
         return null;
       }
 
+      const telegramId = payload.result.id != null ? String(payload.result.id) : null;
+
       return {
+        telegramId,
         username: payload.result.username ?? null,
         firstName: payload.result.first_name ?? null,
         lastName: payload.result.last_name ?? null,
       };
     } catch (error) {
       this.logger.warn(
-        `Не удалось получить профиль Telegram ${telegramId}: ${(error as Error).message}`,
+        `Не удалось получить профиль Telegram ${chatId}: ${(error as Error).message}`,
       );
       return null;
     } finally {

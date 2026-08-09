@@ -53,7 +53,7 @@ export function TournamentDetailsPage(): JSX.Element {
   const [isFinishOpen, setFinishOpen] = useState(false);
   const [placeDrafts, setPlaceDrafts] = useState<Record<string, string>>({});
   const [qrPlayer, setQrPlayer] = useState<AdminTournamentRegistration['user'] | null>(null);
-  const [telegramId, setTelegramId] = useState('');
+  const [playerQuery, setPlayerQuery] = useState('');
   const [addMessage, setAddMessage] = useState<string | null>(null);
   const [addError, setAddError] = useState(false);
 
@@ -121,18 +121,29 @@ export function TournamentDetailsPage(): JSX.Element {
     event.preventDefault();
     setAddMessage(null);
     setAddError(false);
-    const tgId = telegramId.trim();
-    if (!/^\d{5,20}$/.test(tgId)) {
+    const query = playerQuery.trim();
+    if (query.length < 2) {
       setAddError(true);
-      setAddMessage('Введите числовой Telegram ID (5–20 цифр)');
+      setAddMessage('Введите Telegram ID, @username или никнейм игрока');
       return;
     }
-    addPlayer.mutate(tgId, {
+    addPlayer.mutate(query, {
       onSuccess: (list) => {
-        setTelegramId('');
+        setPlayerQuery('');
         setAddError(false);
-        const added = list.find((item) => item.user.telegramId === tgId);
-        const name = added ? displayPlayerName(added.user) : `ID ${tgId}`;
+        const normalized = query.replace(/^@+/, '').toLowerCase();
+        const added = list.find((item) => {
+          const telegramId = item.user.telegramId;
+          const username = item.user.username?.toLowerCase();
+          const nickname = item.user.nickname?.toLowerCase();
+          return (
+            telegramId === query ||
+            username === normalized ||
+            nickname === normalized ||
+            (item.user.username != null && `@${item.user.username}` === query)
+          );
+        });
+        const name = added ? displayPlayerName(added.user) : query;
         const waiting = added?.status === 'WAITING';
         setAddMessage(waiting ? `${name} добавлен в лист ожидания` : `${name} добавлен в турнир`);
       },
@@ -149,7 +160,7 @@ export function TournamentDetailsPage(): JSX.Element {
             return;
           }
         }
-        setAddMessage('Не удалось добавить игрока. Проверьте ID и статус турнира.');
+        setAddMessage('Не удалось добавить игрока. Проверьте данные и статус турнира.');
       },
     });
   };
@@ -216,12 +227,14 @@ export function TournamentDetailsPage(): JSX.Element {
             className="flex flex-col gap-3 rounded-lg border border-border bg-secondary/40 p-3 sm:flex-row sm:items-end"
           >
             <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
-              <span className="text-muted-foreground">Добавить по Telegram ID</span>
+              <span className="text-muted-foreground">
+                Добавить по Telegram ID, @username или никнейму
+              </span>
               <input
-                value={telegramId}
-                onChange={(event) => setTelegramId(event.target.value.replace(/\D/g, ''))}
-                inputMode="numeric"
-                placeholder="Например 123456789"
+                value={playerQuery}
+                onChange={(event) => setPlayerQuery(event.target.value)}
+                placeholder="123456789 или @username или ник"
+                autoComplete="off"
                 className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
               />
             </label>

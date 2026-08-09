@@ -165,11 +165,12 @@ export class AdminTournamentsController {
     return this.adminTournamentsService.getRegistrations(id);
   }
 
-  /** Добавить игрока в турнир по Telegram ID (find-or-create). */
+  /** Добавить игрока в турнир по Telegram ID, @username или никнейму. */
   @Roles(AdminRole.OWNER, AdminRole.ADMIN)
   @Post(':id/registrations')
   addPlayerByTelegram(@Param('id') id: string, @Body() dto: AddPlayerByTelegramDto) {
-    return this.adminTournamentsService.addPlayerByTelegramId(id, dto.telegramId);
+    const query = (dto.query ?? dto.telegramId ?? '').trim();
+    return this.adminTournamentsService.addPlayerByQuery(id, query);
   }
 
   /** Отметка явки игрока на турнир. XP за посещение начисляется однократно. */

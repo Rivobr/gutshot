@@ -429,14 +429,14 @@ export class AdminTournamentsService {
   }
 
   /**
-   * Админ добавляет игрока в турнир по Telegram ID.
-   * Создаёт пользователя при необходимости; игнорирует окно REGISTRATION_OPEN.
-   * При заполненности ставит WAITING (как обычная регистрация).
+   * Админ добавляет игрока в турнир по Telegram ID / @username / никнейму.
+   * Числовой ID — find-or-create; username/ник — поиск среди игроков клуба
+   * (+ resolve @username через Bot API, если человек писал боту).
    */
-  async addPlayerByTelegramId(tournamentId: string, telegramId: string) {
-    const id = String(telegramId).trim();
-    if (!/^\d{5,20}$/.test(id)) {
-      throw new BadRequestException('Telegram ID должен быть числом (5–20 цифр)');
+  async addPlayerByQuery(tournamentId: string, rawQuery: string) {
+    const query = String(rawQuery ?? '').trim();
+    if (!query) {
+      throw new BadRequestException('Укажите Telegram ID, @username или никнейм');
     }
 
     const tournament = await this.prisma.tournament.findUnique({ where: { id: tournamentId } });
@@ -448,7 +448,7 @@ export class AdminTournamentsService {
       throw new BadRequestException('В этот турнир нельзя добавить игрока');
     }
 
-    const user = await this.usersService.findOrCreateByTelegramId(id);
+    const user = await this.resolvePlayerForAdminAdd(query);
     if (user.isBlocked) {
       throw new BadRequestException('Игрок заблокирован');
     }
@@ -485,6 +485,7 @@ export class AdminTournamentsService {
         status,
         title: tournament.title,
         source: 'admin',
+        query,
       },
     });
 
@@ -507,6 +508,56 @@ export class AdminTournamentsService {
     }
 
     return this.getRegistrations(tournamentId);
+  }
+
+  /** @deprecated используйте addPlayerByQuery */
+  async addPlayerByTelegramId(tournamentId: string, telegramId: string) {
+    return this.addPlayerByQuery(tournamentId, telegramId);
+  }
+
+  private async resolvePlayerForAdminAdd(query: string) {
+    const normalized = query.trim();
+
+    if (/^\d{5,20}$/.test(normalized)) {
+      return this.usersService.findOrCreateByTelegramId(normalized);
+    }
+
+    const username = normalized.replace(/^@+/, '').trim();
+    if (!username) {
+      throw new BadRequestException('Укажите Telegram ID, @username или никнейм');
+    }
+
+    const byUsername = await this.prisma.user.findFirst({
+      where: { username: { equals: username, mode: 'insensitive' } },
+    });
+    if (byUsername) {
+      return byUsername;
+    }
+
+    const byNickname = await this.prisma.user.findMany({
+      where: { nickname: { equals: username, mode: 'insensitive' } },
+      take: 5,
+    });
+    if (byNickname.length === 1) {
+      return byNickname[0];
+    }
+    if (byNickname.length > 1) {
+      throw new ConflictException(
+        'Найдено несколько игроков с таким никнеймом. Укажите числовой Telegram ID или @username',
+      );
+    }
+
+    // Bot API умеет getChat(@username), если пользователь доступен боту.
+    const chat = await this.telegramService.getChatProfile(
+      username.startsWith('@') ? username : `@${username}`,
+    );
+    if (chat?.telegramId && /^\d{5,20}$/.test(chat.telegramId)) {
+      return this.usersService.findOrCreateByTelegramId(chat.telegramId);
+    }
+
+    throw new NotFoundException(
+      'Игрок не найден. Укажите числовой Telegram ID, @username или точный никнейм из клуба',
+    );
   }
 
   /** Список зарегистрированных игроков с уровнем, XP и статусом явки. */

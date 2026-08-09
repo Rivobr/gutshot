@@ -58,12 +58,9 @@ export const adminTournamentsApi = {
     const { data } = await apiClient.get(`/admin/tournaments/${id}/registrations`);
     return data.data;
   },
-  async addPlayerByTelegramId(
-    id: string,
-    telegramId: string,
-  ): Promise<AdminTournamentRegistration[]> {
+  async addPlayerByQuery(id: string, query: string): Promise<AdminTournamentRegistration[]> {
     const { data } = await apiClient.post(`/admin/tournaments/${id}/registrations`, {
-      telegramId,
+      query,
     });
     return data.data;
   },

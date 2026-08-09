@@ -100,13 +100,12 @@ export function useUpdateTournament() {
   });
 }
 
-/** Добавить игрока в турнир по Telegram ID. */
+/** Добавить игрока в турнир по Telegram ID / @username / никнейму. */
 export function useAddTournamentPlayer(tournamentId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (telegramId: string) =>
-      adminTournamentsApi.addPlayerByTelegramId(tournamentId, telegramId),
+    mutationFn: (query: string) => adminTournamentsApi.addPlayerByQuery(tournamentId, query),
     onSuccess: (registrations) => {
       queryClient.setQueryData(
         ['admin', 'tournaments', tournamentId, 'registrations'],

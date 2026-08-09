@@ -1,12 +1,27 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsNotEmpty, IsString, Matches } from 'class-validator';
+import { IsOptional, IsString, MaxLength } from 'class-validator';
 
+/**
+ * Добавление игрока в турнир.
+ * Принимает числовой Telegram ID, @username или никнейм клуба.
+ * Поле telegramId оставлено для совместимости со старым клиентом.
+ */
 export class AddPlayerByTelegramDto {
-  @ApiProperty({ description: 'Telegram user id (числовой)' })
-  @Transform(({ value }) => String(value ?? '').trim())
+  @ApiPropertyOptional({
+    description: 'Telegram ID, @username или никнейм',
+    example: '@username',
+  })
+  @Transform(({ value }) => (value == null ? undefined : String(value).trim()))
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  @Matches(/^\d{5,20}$/, { message: 'Telegram ID должен быть числом (5–20 цифр)' })
-  telegramId!: string;
+  @MaxLength(64)
+  query?: string;
+
+  @ApiPropertyOptional({ description: 'Устаревшее поле: Telegram ID / query' })
+  @Transform(({ value }) => (value == null ? undefined : String(value).trim()))
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  telegramId?: string;
 }
