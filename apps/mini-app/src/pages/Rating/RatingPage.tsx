@@ -11,7 +11,7 @@ import { PlayerAvatar } from '../../shared/ui/PlayerAvatar';
 import { displayNameOf } from '../../shared/lib/display-name';
 
 type Tab = 'weekly' | 'final';
-type WeekMode = 'auto' | 'current' | 'previous';
+type WeekMode = 'auto' | 'previous';
 
 async function fetchFinalRating(): Promise<RatingEntry[]> {
   const { data } = await apiClient.get('/ratings/final');
@@ -227,7 +227,6 @@ export function RatingPage(): JSX.Element {
                 [
                   { id: 'auto' as const, label: 'Актуальная' },
                   { id: 'previous' as const, label: 'Прошлая' },
-                  { id: 'current' as const, label: 'Эта неделя' },
                 ] as const
               ).map((option) => (
                 <button
@@ -439,7 +438,7 @@ export function RatingPage(): JSX.Element {
                 <p className="serif" style={{ fontSize: 16, color: '#6B614E' }}>
                   {tab === 'weekly' ? 'На этой неделе пока нет очков' : 'Рейтинг пуст'}
                 </p>
-                {tab === 'weekly' && weekMode !== 'previous' && (
+                {tab === 'weekly' && weekMode === 'auto' && (
                   <button
                     type="button"
                     onClick={() => setWeekMode('previous')}
