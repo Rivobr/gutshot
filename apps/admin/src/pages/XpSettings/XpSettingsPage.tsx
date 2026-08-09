@@ -186,13 +186,6 @@ export function XpSettingsPage(): JSX.Element {
           >
             Закрыть прошлую неделю (топ-7 → финал)
           </Button>
-          <Button
-            variant="ghost"
-            onClick={() => closeWeek.mutate({ target: 'current' })}
-            isLoading={closeWeek.isPending}
-          >
-            Закрыть текущую неделю
-          </Button>
           {closeWeek.isSuccess && (
             <span className="text-sm text-primary">
               {closeWeek.data?.weekKey}: {closeWeek.data?.alreadyClosed ? 'уже закрыта' : 'закрыта'}
@@ -200,7 +193,9 @@ export function XpSettingsPage(): JSX.Element {
             </span>
           )}
           {closeWeek.isError && (
-            <span className="text-sm text-destructive">Не удалось закрыть неделю</span>
+            <span className="text-sm text-destructive">
+              Не удалось закрыть неделю — дождитесь окончания недели
+            </span>
           )}
         </div>
 
