@@ -435,7 +435,7 @@ export function TournamentDetailsPage(): JSX.Element {
                     >
                       QR · печать
                     </Button>
-                    {isLive && (
+                    {isLive && canEliminate(registration.status) && (
                       <>
                         <PlaceInput
                           value={placeDrafts[registration.id] ?? ''}
