@@ -7,6 +7,7 @@ import {
   PlayerBootstrapDto,
   PlayerEventDto,
   PlayerProfileDto,
+  PublicPlayerProfileDto,
   Registration,
 } from '@gutshot/types';
 import { apiClient } from '../../../shared/api/client';
@@ -27,6 +28,11 @@ export const playerApi = {
   },
   async getProfile(): Promise<PlayerProfileDto> {
     const { data } = await apiClient.get('/profile');
+    return data.data;
+  },
+  /** Публичный профиль другого игрока. */
+  async getPublicProfile(userId: string): Promise<PublicPlayerProfileDto> {
+    const { data } = await apiClient.get(`/players/${encodeURIComponent(userId)}`);
     return data.data;
   },
   async updateNickname(nickname: string): Promise<PlayerProfileDto> {

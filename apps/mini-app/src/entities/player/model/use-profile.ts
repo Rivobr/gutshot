@@ -33,6 +33,17 @@ export function useProfile() {
   });
 }
 
+/** Публичный профиль другого игрока. */
+export function usePublicProfile(userId: string) {
+  return useQuery({
+    queryKey: ['players', userId],
+    queryFn: () => playerApi.getPublicProfile(userId),
+    enabled: Boolean(userId),
+    retry: 1,
+    staleTime: 60_000,
+  });
+}
+
 /** Постоянный персональный QR-код игрока. Не меняется, поэтому кешируется надолго. */
 export function usePlayerQrCode() {
   return useQuery({

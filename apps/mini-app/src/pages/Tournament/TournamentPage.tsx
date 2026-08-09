@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Loader } from '@gutshot/ui';
 import { useTournament, useTournamentParticipants } from '../../entities/tournament';
 import {
@@ -25,6 +25,7 @@ const UPCOMING_STATUSES = ['DRAFT', 'REGISTRATION_OPEN', 'REGISTRATION_CLOSED', 
 type Tab = 'about' | 'players';
 
 export function TournamentPage(): JSX.Element {
+  const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [tab, setTab] = useState<Tab>('about');
   const { data: tournament, isLoading } = useTournament(id ?? '');
@@ -328,12 +329,16 @@ export function TournamentPage(): JSX.Element {
           ) : (
             <div className="flex flex-col gap-2">
               {participants.map((p, i) => (
-                <motion.div
+                <motion.button
+                  type="button"
                   key={p.userId}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.35, delay: i * 0.04 }}
-                  className="vip-card rounded-[16px] p-3 flex items-center gap-3"
+                  whileTap={{ scale: 0.985 }}
+                  onClick={() => navigate(`/players/${p.userId}`)}
+                  className="vip-card rounded-[16px] p-3 flex items-center gap-3 w-full text-left"
+                  style={{ cursor: 'pointer' }}
                 >
                   <PlayerAvatar
                     photoUrl={p.photoUrl}
@@ -374,7 +379,7 @@ export function TournamentPage(): JSX.Element {
                       ))}
                     </div>
                   )}
-                </motion.div>
+                </motion.button>
               ))}
             </div>
           )}

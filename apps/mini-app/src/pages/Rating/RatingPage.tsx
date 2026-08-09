@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { Loader } from '@gutshot/ui';
 import type { RatingEntry } from '@gutshot/types';
 import { apiClient } from '../../shared/api/client';
@@ -33,6 +34,7 @@ const TABS: { id: Tab; label: string }[] = [
 const WEEKLY_TOP = 7;
 
 export function RatingPage(): JSX.Element {
+  const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>('weekly');
   const { data: profile } = useProfile();
 
@@ -43,6 +45,10 @@ export function RatingPage(): JSX.Element {
 
   const rating = Array.isArray(ratingQuery.data) ? ratingQuery.data : [];
   const myUserId = profile?.id;
+
+  const openPlayer = (userId: string) => {
+    navigate(userId === myUserId ? '/profile' : `/players/${userId}`);
+  };
 
   const me = useMemo(
     () => (myUserId ? rating.find((entry) => entry.userId === myUserId) : undefined),
@@ -184,12 +190,16 @@ export function RatingPage(): JSX.Element {
                       const p = top3[idx];
                       const isMe = p.userId === myUserId;
                       return (
-                        <motion.div
+                        <motion.button
+                          type="button"
                           key={p.userId}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ duration: 0.6, delay: idx * 0.1, ease: [0.22, 1, 0.36, 1] }}
+                          whileTap={{ scale: 0.97 }}
+                          onClick={() => openPlayer(p.userId)}
                           className="flex flex-col items-center flex-1"
+                          style={{ cursor: 'pointer', background: 'transparent', border: 'none' }}
                         >
                           <div
                             className="mb-2 relative"
@@ -254,7 +264,7 @@ export function RatingPage(): JSX.Element {
                               {p.rank}
                             </span>
                           </div>
-                        </motion.div>
+                        </motion.button>
                       );
                     })}
                 </div>
@@ -269,13 +279,17 @@ export function RatingPage(): JSX.Element {
             {rest.map((p, i) => {
               const isMe = p.userId === myUserId;
               return (
-                <motion.div
+                <motion.button
+                  type="button"
                   key={p.userId}
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.4, delay: i * 0.05 }}
-                  className="flex items-center gap-3 p-4 rounded-[16px]"
+                  whileTap={{ scale: 0.985 }}
+                  onClick={() => openPlayer(p.userId)}
+                  className="flex items-center gap-3 p-4 rounded-[16px] w-full text-left"
                   style={{
+                    cursor: 'pointer',
                     background: isMe
                       ? 'linear-gradient(135deg, rgba(199,154,61,0.16), rgba(20,18,16,0.95))'
                       : 'rgba(20,18,16,0.85)',
@@ -321,7 +335,7 @@ export function RatingPage(): JSX.Element {
                       очков
                     </p>
                   </div>
-                </motion.div>
+                </motion.button>
               );
             })}
             {rest.length === 0 && top3.length === 0 && (

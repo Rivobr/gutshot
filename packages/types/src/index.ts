@@ -113,6 +113,35 @@ export interface TournamentParticipant {
   status: RegistrationStatus;
 }
 
+/** Публичный профиль другого игрока (без telegramId / QR / личной истории). */
+export interface PublicPlayerProfileDto {
+  id: string;
+  username?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  nickname?: string | null;
+  photoUrl?: string | null;
+  level: number;
+  xp: number;
+  currentLevelXp: number;
+  nextLevelXp: number;
+  progress: number;
+  memberSince: string;
+  isVerified: boolean;
+  isLegendGutshot: boolean;
+  pinnedAchievements: string[];
+  stats: {
+    tournamentsPlayed: number;
+    wins: number;
+    firstPlaces: number;
+    itm: number;
+    top10Percent: number;
+    averagePlace: number | null;
+    daysInClub: number;
+    finalTables: number;
+  };
+}
+
 export interface TournamentLiveState {
   isRunning: boolean;
   level?: number | null;
