@@ -22,10 +22,29 @@ function statusLabel(status: string): string {
 }
 
 export function DashboardPage(): JSX.Element {
-  const { data, isLoading } = useDashboard();
+  const { data, isLoading, isError, refetch, isFetching } = useDashboard();
 
-  if (isLoading || !data) {
+  if (isLoading) {
     return <Loader />;
+  }
+
+  if (isError || !data) {
+    return (
+      <div className="flex flex-col items-start gap-4">
+        <h1 className="text-xl font-medium sm:text-2xl">Обзор клуба</h1>
+        <p className="rounded-lg border border-border bg-card px-4 py-6 text-sm text-destructive">
+          Не удалось загрузить дашборд. Проверьте интернет и обновите страницу.
+        </p>
+        <button
+          type="button"
+          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+          onClick={() => void refetch()}
+          disabled={isFetching}
+        >
+          {isFetching ? 'Загрузка…' : 'Повторить'}
+        </button>
+      </div>
+    );
   }
 
   return (

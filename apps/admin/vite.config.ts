@@ -8,6 +8,8 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Регистрация SW вручную в main.tsx (с reload на controllerchange).
+      injectRegister: null,
       includeAssets: ['gutshot-logo.png'],
       manifest: {
         name: 'GUTSHOT CRM',
@@ -35,6 +37,9 @@ export default defineConfig({
         // API всегда из сети: в CRM неприемлемы устаревшие данные из кеша.
         navigateFallbackDenylist: [/^\/api\//],
         globPatterns: ['**/*.{js,css,html,png,svg,woff2}'],
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
       },
     }),
   ],

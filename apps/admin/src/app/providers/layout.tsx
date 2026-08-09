@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { MobileDrawer, MobileTabBar, Sidebar } from '../../widgets/Sidebar/Sidebar';
+import { adminSession } from '../../shared/lib/admin-session';
 import { ToastHost } from '../../shared/ui/toast';
 
 export function Layout(): JSX.Element {
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const title = adminSession.isDealer() ? 'GUTSHOT · Дилер' : 'GUTSHOT CRM';
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -26,7 +28,7 @@ export function Layout(): JSX.Element {
           >
             ☰
           </button>
-          <span className="font-medium text-primary">GUTSHOT CRM</span>
+          <span className="font-medium text-primary">{title}</span>
         </header>
 
         <main className="flex-1 overflow-y-auto px-4 py-5 pb-24 sm:px-6 md:px-8 md:py-6 md:pb-6">

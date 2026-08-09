@@ -139,6 +139,13 @@ export function ScannerPage(): JSX.Element {
           <QrScanner active={scanning} onScan={handleScan} elementId="gutshot-scanner-page" />
         )}
 
+        {!player && !scanning && !scanPlayer.isPending && (
+          <div className="rounded-md border border-dashed border-border bg-secondary/40 px-4 py-6 text-sm text-muted-foreground">
+            Введите код игрока или нажмите «Сканировать», чтобы открыть камеру. Это рабочий экран
+            дилера, а не ошибка загрузки.
+          </div>
+        )}
+
         {scanPlayer.isError && (
           <p className="text-sm text-destructive">Игрок с таким QR-кодом не найден</p>
         )}
