@@ -307,12 +307,28 @@ export interface AdminTopTournament {
   registrations: number;
 }
 
+/** Одна запись ре-энтри (ребая) из истории сканера. */
+export interface AdminRebuyEntry {
+  id: string;
+  createdAt: string;
+  userId: string;
+  playerName: string;
+  username?: string | null;
+  telegramId: string;
+  tournamentId?: string | null;
+  tournamentTitle?: string | null;
+}
+
 export interface AdminStatistics {
   playersCount: number;
   tournamentsCount: number;
   totalVisits: number;
   totalWins: number;
   averageAttendance: number;
+  /** Всего ребаев (событий RE_ENTRY). */
+  totalRebuys: number;
+  /** Последние ребаи: кто и когда. */
+  recentRebuys: AdminRebuyEntry[];
   topPlayers: AdminTopPlayer[];
   topTournaments: AdminTopTournament[];
 }
