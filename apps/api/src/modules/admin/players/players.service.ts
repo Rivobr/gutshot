@@ -1,7 +1,13 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { LevelsService } from '../../progression/levels.service';
 import { PlayerEventsService } from '../../progression/player-events.service';
+import { TelegramService } from '../../telegram/telegram.service';
 import { UsersService } from '../../users/users.service';
 
 /** Прячет URL вида api.telegram.org/file/bot<TOKEN>/… из ответов админки. */
@@ -18,6 +24,7 @@ export class AdminPlayersService {
     private readonly levelsService: LevelsService,
     private readonly playerEventsService: PlayerEventsService,
     private readonly usersService: UsersService,
+    private readonly telegramService: TelegramService,
   ) {}
 
   async findAll() {
@@ -58,21 +65,72 @@ export class AdminPlayersService {
   }
 
   /**
-   * Создаёт игрока по Telegram ID (или возвращает существующего).
+   * Создаёт игрока по Telegram ID / @username (или возвращает существующего).
+   * Числовой ID — find-or-create; @username — поиск в клубе + resolve через Bot API.
    * QR/XP выдаются как при первом входе через бота; профиль догрузится из Bot API.
    */
-  async createByTelegramId(telegramId: string, isVerified = false) {
-    const id = String(telegramId).trim();
-    if (!/^\d{5,20}$/.test(id)) {
-      throw new BadRequestException('Telegram ID должен быть числом (5–20 цифр)');
+  async createByQuery(rawQuery: string, isVerified = false) {
+    const query = String(rawQuery ?? '').trim();
+    if (!query) {
+      throw new BadRequestException('Укажите Telegram ID или @username');
     }
 
-    const user = await this.usersService.findOrCreateByTelegramId(id);
+    const user = await this.resolvePlayerForCreate(query);
     if (isVerified && !user.isVerified) {
       await this.setVerified(user.id, true);
     }
 
     return this.findListItemById(user.id);
+  }
+
+  /** @deprecated используйте createByQuery */
+  async createByTelegramId(telegramId: string, isVerified = false) {
+    return this.createByQuery(telegramId, isVerified);
+  }
+
+  private async resolvePlayerForCreate(query: string) {
+    const normalized = query.trim();
+
+    if (/^\d{5,20}$/.test(normalized)) {
+      return this.usersService.findOrCreateByTelegramId(normalized);
+    }
+
+    const username = normalized.replace(/^@+/, '').trim();
+    if (!username || !/^[A-Za-z0-9_]{3,64}$/.test(username)) {
+      throw new BadRequestException('Укажите числовой Telegram ID (5–20 цифр) или @username');
+    }
+
+    const byUsername = await this.prisma.user.findFirst({
+      where: { username: { equals: username, mode: 'insensitive' } },
+    });
+    if (byUsername) {
+      return byUsername;
+    }
+
+    const byNickname = await this.prisma.user.findMany({
+      where: { nickname: { equals: username, mode: 'insensitive' } },
+      take: 5,
+    });
+    if (byNickname.length === 1) {
+      return byNickname[0];
+    }
+    if (byNickname.length > 1) {
+      throw new ConflictException(
+        'Найдено несколько игроков с таким никнеймом. Укажите числовой Telegram ID или @username',
+      );
+    }
+
+    // Bot API: getChat(@username), если пользователь доступен боту.
+    const chat = await this.telegramService.getChatProfile(
+      username.startsWith('@') ? username : `@${username}`,
+    );
+    if (chat?.telegramId && /^\d{5,20}$/.test(chat.telegramId)) {
+      return this.usersService.findOrCreateByTelegramId(chat.telegramId);
+    }
+
+    throw new NotFoundException(
+      'Игрок не найден. Укажите числовой Telegram ID или @username (человек должен был писать боту)',
+    );
   }
 
   private async findListItemById(id: string) {

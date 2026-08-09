@@ -8,8 +8,8 @@ export function usePlayers() {
 export function useCreatePlayer() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: { telegramId: string; isVerified?: boolean }) =>
-      adminPlayersApi.createByTelegramId(payload),
+    mutationFn: (payload: { query: string; isVerified?: boolean }) =>
+      adminPlayersApi.createByQuery(payload),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'players'] }),
   });
 }

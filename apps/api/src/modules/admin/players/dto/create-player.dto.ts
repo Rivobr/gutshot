@@ -1,14 +1,29 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsNotEmpty, IsOptional, IsString, Matches } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, MaxLength } from 'class-validator';
 
+/**
+ * Создание игрока в БД.
+ * Принимает числовой Telegram ID или @username (через Bot API).
+ * Поле telegramId оставлено для совместимости со старым клиентом.
+ */
 export class CreatePlayerDto {
-  @ApiProperty({ description: 'Telegram user id (числовой)' })
-  @Transform(({ value }) => String(value ?? '').trim())
+  @ApiPropertyOptional({
+    description: 'Telegram ID или @username',
+    example: '@username',
+  })
+  @Transform(({ value }) => (value == null ? undefined : String(value).trim()))
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  @Matches(/^\d{5,20}$/, { message: 'Telegram ID должен быть числом (5–20 цифр)' })
-  telegramId!: string;
+  @MaxLength(64)
+  query?: string;
+
+  @ApiPropertyOptional({ description: 'Устаревшее поле: Telegram ID / query' })
+  @Transform(({ value }) => (value == null ? undefined : String(value).trim()))
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  telegramId?: string;
 
   @ApiPropertyOptional({ description: 'Сразу подтвердить KYC' })
   @IsOptional()

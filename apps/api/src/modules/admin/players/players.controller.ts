@@ -20,10 +20,11 @@ export class AdminPlayersController {
     return this.playersService.findAll();
   }
 
-  /** Создать (или вернуть) игрока по Telegram ID — для регистрации до первого входа в Mini App. */
+  /** Создать (или вернуть) игрока по Telegram ID / @username — до первого входа в Mini App. */
   @Post()
   create(@Body() dto: CreatePlayerDto) {
-    return this.playersService.createByTelegramId(dto.telegramId, dto.isVerified ?? false);
+    const query = (dto.query ?? dto.telegramId ?? '').trim();
+    return this.playersService.createByQuery(query, dto.isVerified ?? false);
   }
 
   @Get(':id')

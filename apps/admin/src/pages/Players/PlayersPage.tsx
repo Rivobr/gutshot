@@ -1,4 +1,5 @@
 import { useMemo, useState, type CSSProperties, type FormEvent } from 'react';
+import { isAxiosError } from 'axios';
 import type { AdminPlayerListItem } from '@gutshot/types';
 import { Avatar, Badge, Button, Loader } from '@gutshot/ui';
 import {
@@ -29,7 +30,7 @@ export function PlayersPage(): JSX.Element {
   const createPlayer = useCreatePlayer();
   const [search, setSearch] = useState('');
   const [qrPlayer, setQrPlayer] = useState<AdminPlayerListItem | null>(null);
-  const [telegramId, setTelegramId] = useState('');
+  const [playerQuery, setPlayerQuery] = useState('');
   const [createMessage, setCreateMessage] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
@@ -53,23 +54,29 @@ export function PlayersPage(): JSX.Element {
   const onCreate = (event: FormEvent) => {
     event.preventDefault();
     setCreateMessage(null);
-    const id = telegramId.trim();
-    if (!/^\d{5,20}$/.test(id)) {
-      setCreateMessage('Введите числовой Telegram ID (5–20 цифр)');
+    const query = playerQuery.trim();
+    if (!query) {
+      setCreateMessage('Введите Telegram ID или @username');
       return;
     }
     createPlayer.mutate(
-      { telegramId: id },
+      { query },
       {
         onSuccess: (player) => {
-          setTelegramId('');
+          setPlayerQuery('');
           setCreateMessage(
             `Игрок добавлен: ${displayPlayerName(player)} · ${player.qrCode ?? 'QR позже'}`,
           );
           setQrPlayer(player);
         },
-        onError: () => {
-          setCreateMessage('Не удалось добавить игрока. Проверьте ID и соединение.');
+        onError: (error: unknown) => {
+          const apiMessage = isAxiosError(error)
+            ? (error.response?.data as { message?: string } | undefined)?.message
+            : undefined;
+          setCreateMessage(
+            apiMessage ??
+              'Не удалось добавить игрока. Проверьте Telegram ID / @username и соединение.',
+          );
         },
       },
     );
@@ -113,12 +120,12 @@ export function PlayersPage(): JSX.Element {
         className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-end"
       >
         <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
-          <span className="text-muted-foreground">Добавить по Telegram ID</span>
+          <span className="text-muted-foreground">Добавить по Telegram ID или @username</span>
           <input
-            value={telegramId}
-            onChange={(event) => setTelegramId(event.target.value.replace(/\D/g, ''))}
-            inputMode="numeric"
-            placeholder="Например 123456789"
+            value={playerQuery}
+            onChange={(event) => setPlayerQuery(event.target.value)}
+            placeholder="123456789 или @username"
+            autoComplete="off"
             className="rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
           />
         </label>
