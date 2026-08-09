@@ -17,6 +17,7 @@ import { displayPlayerName } from '../../shared/lib/display-name';
 import { PLAYER_EVENT_LABELS, formatDateTime } from '../../shared/lib/event-labels';
 import { tournamentStatusLabel } from '../../shared/lib/tournament-status';
 import { PlayerQrModal } from '../../widgets/PlayerQrModal/PlayerQrModal';
+import { TournamentPlayerActionsModal } from '../../widgets/TournamentPlayerActionsModal/TournamentPlayerActionsModal';
 import { TournamentActions } from './TournamentActions';
 import { TournamentFormModal } from './TournamentFormModal';
 import { FinishTournamentModal } from './FinishTournamentModal';
@@ -53,6 +54,7 @@ export function TournamentDetailsPage(): JSX.Element {
   const [isFinishOpen, setFinishOpen] = useState(false);
   const [placeDrafts, setPlaceDrafts] = useState<Record<string, string>>({});
   const [qrPlayer, setQrPlayer] = useState<AdminTournamentRegistration['user'] | null>(null);
+  const [actionRegistrationId, setActionRegistrationId] = useState<string | null>(null);
   const [playerQuery, setPlayerQuery] = useState('');
   const [addMessage, setAddMessage] = useState<string | null>(null);
   const [addError, setAddError] = useState(false);
@@ -79,6 +81,11 @@ export function TournamentDetailsPage(): JSX.Element {
   const sortedRegistrations = useMemo(
     () => sortRegistrations(registrations ?? []),
     [registrations],
+  );
+
+  const actionRegistration = useMemo(
+    () => registrations?.find((item) => item.id === actionRegistrationId) ?? null,
+    [registrations, actionRegistrationId],
   );
 
   if (isLoading || !tournament) {
@@ -293,14 +300,20 @@ export function TournamentDetailsPage(): JSX.Element {
                         )}
                       </td>
                       <td className="py-2.5 pr-3">
-                        <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          className="flex items-center gap-2 rounded-md text-left hover:text-primary"
+                          onClick={() => setActionRegistrationId(registration.id)}
+                        >
                           <Avatar
                             src={registration.user.photoUrl ?? undefined}
                             fallback={displayPlayerName(registration.user)}
                             size={32}
                           />
-                          <span>{displayPlayerName(registration.user)}</span>
-                        </div>
+                          <span className="underline-offset-2 hover:underline">
+                            {displayPlayerName(registration.user)}
+                          </span>
+                        </button>
                       </td>
                       <td className="py-2.5 pr-3">
                         {registration.user.level} · {registration.user.xp.toLocaleString('ru-RU')}{' '}
@@ -311,6 +324,12 @@ export function TournamentDetailsPage(): JSX.Element {
                       </td>
                       <td className="py-2.5">
                         <div className="flex flex-wrap gap-2">
+                          <Button
+                            className="px-3 py-1.5 text-xs"
+                            onClick={() => setActionRegistrationId(registration.id)}
+                          >
+                            Профиль
+                          </Button>
                           <Button
                             variant="secondary"
                             className="px-3 py-1.5 text-xs"
@@ -366,17 +385,23 @@ export function TournamentDetailsPage(): JSX.Element {
                   key={registration.id}
                   className="flex flex-col gap-3 rounded-md border border-border p-3"
                 >
-                  <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    className="flex items-center gap-3 rounded-md text-left"
+                    onClick={() => setActionRegistrationId(registration.id)}
+                  >
                     <Avatar
                       src={registration.user.photoUrl ?? undefined}
                       fallback={displayPlayerName(registration.user)}
                       size={40}
                     />
                     <div className="flex min-w-0 flex-1 flex-col">
-                      <span className="font-medium">{displayPlayerName(registration.user)}</span>
+                      <span className="font-medium text-primary underline-offset-2 hover:underline">
+                        {displayPlayerName(registration.user)}
+                      </span>
                       <span className="text-xs text-muted-foreground">
                         Ур. {registration.user.level} ·{' '}
-                        {registration.user.xp.toLocaleString('ru-RU')} XP
+                        {registration.user.xp.toLocaleString('ru-RU')} XP · нажмите для действий
                       </span>
                     </div>
                     {registration.place != null && (
@@ -386,11 +411,17 @@ export function TournamentDetailsPage(): JSX.Element {
                         {registration.place} место
                       </Badge>
                     )}
-                  </div>
+                  </button>
 
                   <AttendanceBadge registration={registration} />
 
                   <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      className="px-3 py-1.5 text-xs"
+                      onClick={() => setActionRegistrationId(registration.id)}
+                    >
+                      Профиль · вылет / ребай
+                    </Button>
                     <Button
                       variant="secondary"
                       className="px-3 py-1.5 text-xs"
@@ -510,6 +541,13 @@ export function TournamentDetailsPage(): JSX.Element {
         playerName={qrPlayer ? displayPlayerName(qrPlayer) : ''}
         username={qrPlayer?.username}
         onClose={() => setQrPlayer(null)}
+      />
+
+      <TournamentPlayerActionsModal
+        open={actionRegistration !== null}
+        tournamentId={id}
+        registration={actionRegistration}
+        onClose={() => setActionRegistrationId(null)}
       />
     </div>
   );
