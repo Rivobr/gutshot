@@ -167,14 +167,27 @@ export class RatingService {
   /**
    * Закрыть неделю: топ-7 переносят свои недельные очки в финал месяца.
    * По умолчанию — предыдущая завершённая неделя. Идемпотентно.
+   * Текущую (ещё идущую) неделю без force закрыть нельзя.
    */
-  async closeWeek(options?: { weekKey?: string; target?: 'previous' | 'current' }): Promise<{
+  async closeWeek(options?: {
+    weekKey?: string;
+    target?: 'previous' | 'current';
+    force?: boolean;
+  }): Promise<{
     weekKey: string;
     monthKey: string;
     alreadyClosed: boolean;
     qualified: RatingRow[];
   }> {
     const week = this.resolveWeekBounds(options);
+    const current = getClubWeekBounds();
+
+    if (week.weekKey === current.weekKey && !options?.force) {
+      throw new BadRequestException(
+        `Неделя ${week.weekKey} ещё идёт. Закрывать можно только после её окончания.`,
+      );
+    }
+
     const existing = await this.prisma.weeklyFinalQualification.count({
       where: { weekKey: week.weekKey },
     });

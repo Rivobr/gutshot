@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { IsIn, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsIn, IsOptional, IsString } from 'class-validator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AdminAuthGuard } from '../auth/guards/admin-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -19,6 +19,10 @@ class CloseWeekDto {
   @IsOptional()
   @IsIn(['previous', 'current'])
   target?: 'previous' | 'current';
+
+  @IsOptional()
+  @IsBoolean()
+  force?: boolean;
 }
 
 @ApiTags('Ratings')
@@ -62,7 +66,7 @@ export class AdminRatingRewardsController {
   @Post('close-week')
   closeWeek(@Body() body: CloseWeekDto, @CurrentUser() admin: AdminJwtPayload) {
     return this.ratingRewardsService.closeWeek(
-      { weekKey: body?.weekKey, target: body?.target },
+      { weekKey: body?.weekKey, target: body?.target, force: body?.force },
       admin.sub,
     );
   }

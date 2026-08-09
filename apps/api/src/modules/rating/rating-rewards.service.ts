@@ -67,7 +67,7 @@ export class RatingRewardsService {
    * По умолчанию — предыдущая завершённая неделя.
    */
   async closeWeek(
-    options?: { weekKey?: string; target?: 'previous' | 'current' },
+    options?: { weekKey?: string; target?: 'previous' | 'current'; force?: boolean },
     adminId?: string | null,
   ) {
     const result = await this.ratingService.closeWeek(options);
