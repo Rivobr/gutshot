@@ -3,7 +3,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { PlayerBootstrapDto, PlayerProfileDto } from '@gutshot/types';
 import { playerApi } from '../api/player.api';
 import { getTelegramInitData } from '../../../shared/lib/telegram';
-import { loginWithTelegramInitData } from '../../../processes/startup/use-startup';
+import { loginWithTicket, loginWithTelegramInitData } from '../../../processes/startup/use-startup';
+
+function readTicketFromUrl(): string {
+  try {
+    return new URLSearchParams(window.location.search).get('ticket') || '';
+  } catch {
+    return '';
+  }
+}
 
 export const BOOTSTRAP_QUERY_KEY = ['profile', 'bootstrap'] as const;
 
@@ -108,14 +116,19 @@ async function acceptConsentWithRetry(): Promise<{ consentAcceptedAt: string }> 
       return await playerApi.acceptConsent();
     } catch (error) {
       lastError = error;
-      // Протухший JWT на экране согласия — перелогин и повтор.
+      // Протухший JWT на экране согласия — перелогин (initData или ticket) и повтор.
       if (isAxiosError(error) && error.response?.status === 401) {
         const initData = getTelegramInitData();
-        if (!initData) {
-          throw error;
+        if (initData) {
+          await loginWithTelegramInitData(initData);
+          return playerApi.acceptConsent();
         }
-        await loginWithTelegramInitData(initData);
-        return playerApi.acceptConsent();
+        const ticket = readTicketFromUrl();
+        if (ticket) {
+          await loginWithTicket(ticket);
+          return playerApi.acceptConsent();
+        }
+        throw error;
       }
       // Сетевой обрыв (часто iOS WebView + SSL keepalive) — короткая пауза и повтор.
       const isNetwork = isAxiosError(error) && !error.response;

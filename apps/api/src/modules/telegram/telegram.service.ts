@@ -362,41 +362,54 @@ export class TelegramService {
       return false;
     }
 
-    try {
-      const body: Record<string, unknown> = {
-        menu_button: {
-          type: 'web_app',
-          text,
-          web_app: { url },
-        },
-      };
-      if (chatId) {
-        body.chat_id = Number(chatId);
-      }
-
-      const response = await fetch(
-        `https://api.telegram.org/bot${this.botToken}/setChatMenuButton`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        },
-      );
-
-      const result = (await response.json()) as { ok?: boolean; description?: string };
-      if (!response.ok || !result.ok) {
-        this.logger.error(`setChatMenuButton failed: ${result.description ?? response.status}`);
-        return false;
-      }
-
-      if (!chatId) {
-        this.logger.log(`Telegram menu button → Mini App: ${url}`);
-      }
-      return true;
-    } catch (error) {
-      this.logger.error('Ошибка setChatMenuButton', error as Error);
-      return false;
+    const body: Record<string, unknown> = {
+      menu_button: {
+        type: 'web_app',
+        text,
+        web_app: { url },
+      },
+    };
+    if (chatId) {
+      body.chat_id = Number(chatId);
     }
+
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= 4; attempt += 1) {
+      try {
+        const response = await fetch(
+          `https://api.telegram.org/bot${this.botToken}/setChatMenuButton`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+            signal: AbortSignal.timeout(8_000),
+          },
+        );
+
+        const result = (await response.json()) as { ok?: boolean; description?: string };
+        if (!response.ok || !result.ok) {
+          this.logger.error(`setChatMenuButton failed: ${result.description ?? response.status}`);
+          if (response.status < 500 && response.status !== 429) {
+            return false;
+          }
+          throw new Error(`http ${response.status}`);
+        }
+
+        if (!chatId) {
+          this.logger.log(`Telegram menu button → Mini App: ${url}`);
+        }
+        return true;
+      } catch (error) {
+        lastError = error;
+        this.logger.warn(
+          `setChatMenuButton attempt ${attempt}/4 failed: ${(error as Error).message}`,
+        );
+        await new Promise((r) => setTimeout(r, 500 * attempt));
+      }
+    }
+
+    this.logger.error('Ошибка setChatMenuButton', lastError as Error);
+    return false;
   }
 
   async setWebhook(webhookUrl: string): Promise<boolean> {
