@@ -344,7 +344,7 @@ export function RatingPage(): JSX.Element {
                           )}
                           {p.showcaseAchievements && p.showcaseAchievements.length > 0 && (
                             <div className="mt-1 flex justify-center">
-                              <PlayerShowcaseMedals items={p.showcaseAchievements} size={18} />
+                              <PlayerShowcaseMedals items={p.showcaseAchievements} size={24} />
                             </div>
                           )}
                           <p
@@ -434,12 +434,10 @@ export function RatingPage(): JSX.Element {
                         в топ-7
                       </p>
                     )}
-                    {p.showcaseAchievements && p.showcaseAchievements.length > 0 && (
-                      <div className="mt-1">
-                        <PlayerShowcaseMedals items={p.showcaseAchievements} size={20} />
-                      </div>
-                    )}
                   </div>
+                  {p.showcaseAchievements && p.showcaseAchievements.length > 0 && (
+                    <PlayerShowcaseMedals items={p.showcaseAchievements} size={32} />
+                  )}
                   <div className="text-right">
                     <p className="gold-text-sm num sans font-semibold" style={{ fontSize: 13 }}>
                       {formatPoints(pointsOf(p))}

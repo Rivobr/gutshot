@@ -33,27 +33,36 @@ export function PlayerLevelBadge({
   );
 }
 
-/** Ряд витринных ачивок со свечением редкости. */
+const RARITY_ORDER: Record<string, number> = {
+  common: 1,
+  rare: 2,
+  epic: 3,
+  legend: 4,
+};
+
+/** Одно витринное достижение — самое редкое из выбранных игроком. */
 export function PlayerShowcaseMedals({
   items,
-  size = 22,
+  size = 32,
 }: {
   items?: ShowcaseAchievement[] | null;
   size?: number;
 }): JSX.Element | null {
   if (!items?.length) return null;
 
+  const rarest = [...items].sort(
+    (a, b) => (RARITY_ORDER[b.rarity] ?? 0) - (RARITY_ORDER[a.rarity] ?? 0),
+  )[0];
+
   return (
-    <div className="flex shrink-0 items-center gap-1">
-      {items.slice(0, 3).map((item) => (
-        <AchievementMedallion
-          key={item.id}
-          group={item.group}
-          rarity={item.rarity}
-          title={item.title}
-          size={size}
-        />
-      ))}
+    <div className="flex shrink-0 items-center">
+      <AchievementMedallion
+        key={rarest.id}
+        group={rarest.group}
+        rarity={rarest.rarity}
+        title={rarest.title}
+        size={size}
+      />
     </div>
   );
 }
