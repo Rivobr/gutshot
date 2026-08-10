@@ -46,26 +46,31 @@ export class TelegramService {
     // Outbound к api.telegram.org с VPS иногда падает (DNS/сеть) —
     // без ретраев /start «молчит» и игрок думает, что клуб мёртв.
     let lastError: unknown;
-    for (let attempt = 1; attempt <= 3; attempt += 1) {
+    for (let attempt = 1; attempt <= 4; attempt += 1) {
       try {
         const response = await fetch(`https://api.telegram.org/bot${this.botToken}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
+          signal: AbortSignal.timeout(8_000),
         });
 
         if (!response.ok) {
           this.logger.error(`Telegram API error: ${response.status} ${await response.text()}`);
-          return false;
+          // 429/5xx — имеет смысл повторить; 400 (чат не найден) — нет.
+          if (response.status < 500 && response.status !== 429) {
+            return false;
+          }
+          throw new Error(`http ${response.status}`);
         }
 
         return true;
       } catch (error) {
         lastError = error;
         this.logger.warn(
-          `Telegram sendMessage attempt ${attempt}/3 failed: ${(error as Error).message}`,
+          `Telegram sendMessage attempt ${attempt}/4 failed: ${(error as Error).message}`,
         );
-        await new Promise((r) => setTimeout(r, 400 * attempt));
+        await new Promise((r) => setTimeout(r, 500 * attempt));
       }
     }
 
@@ -92,7 +97,7 @@ export class TelegramService {
       { typ: 'miniapp_ticket', telegramId: String(chatId) },
       { expiresIn: '7d' },
     );
-    const entryUrl = `${miniAppUrl}/enter.html?t=${Date.now()}&v=20260808a&ticket=${encodeURIComponent(ticket)}`;
+    const entryUrl = `${miniAppUrl}/enter.html?t=${Date.now()}&v=20260810b&ticket=${encodeURIComponent(ticket)}`;
     const openAppKeyboard = {
       inline_keyboard: [[{ text: '♠️ Открыть GUTSHOT', web_app: { url: entryUrl } }]],
     };

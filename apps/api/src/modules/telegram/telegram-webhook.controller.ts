@@ -43,8 +43,9 @@ export class TelegramWebhookController {
     const text = update.message?.text?.trim() ?? '';
     const chatId = update.message?.chat?.id;
 
-    if (chatId && /^\/start(?:@\w+)?(?:\s|$)/i.test(text)) {
-      this.logger.log(`Получен /start от chat ${chatId}`);
+    // /start и запасные команды — после ребута VPS люди пишут «открыть» / жмут старые кнопки.
+    if (chatId && this.shouldSendWelcome(text)) {
+      this.logger.log(`Получен вход-команда от chat ${chatId}: ${text.slice(0, 40)}`);
       // Отвечаем Telegram сразу, welcome шлём асинхронно (чтобы не ловить 15s timeout).
       void this.telegramService.sendWelcome(String(chatId)).then((ok) => {
         if (!ok) {
@@ -54,5 +55,16 @@ export class TelegramWebhookController {
     }
 
     return { ok: true };
+  }
+
+  private shouldSendWelcome(text: string): boolean {
+    if (!text) {
+      return false;
+    }
+    if (/^\/(?:start|open|app|club|gutshot)(?:@\w+)?(?:\s|$)/i.test(text)) {
+      return true;
+    }
+    // Простые фразы, когда игрок пишет «не открывается» после даунтайма.
+    return /^(?:открыть|клуб|войти|вход|мини.?апп|mini.?app|app|open)\s*[!.]?$/i.test(text);
   }
 }

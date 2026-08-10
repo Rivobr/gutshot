@@ -131,7 +131,7 @@
         }
 
         function appUrl() {
-          var q = '/?from=enter&t=' + Date.now() + '&v=20260808a';
+          var q = '/?from=enter&t=' + Date.now() + '&v=20260810b';
           if (ticket) q += '&ticket=' + encodeURIComponent(ticket);
           return q + (location.hash || '');
         }
@@ -309,6 +309,12 @@
                 });
                 return;
               }
+              try {
+                if (localStorage.getItem(TOKEN_KEY)) {
+                  validateCachedToken();
+                  return;
+                }
+              } catch (e) {}
               fail('Откройте приложение кнопкой из бота.');
             }
           }, 50);
@@ -347,6 +353,18 @@
               }
               waitInitDataOrFail();
             });
+            return;
+          }
+
+          // В меню Telegram initData часто приходит через 100–500мс.
+          // Старый JWT из localStorage нельзя брать сразу — иначе bootstrap 401
+          // и «не могу зайти» после ребута/смены сессии.
+          var inTelegram = false;
+          try {
+            inTelegram = !!(window.Telegram && Telegram.WebApp);
+          } catch (e) {}
+          if (inTelegram) {
+            waitInitDataOrFail();
             return;
           }
 
