@@ -104,6 +104,9 @@
       (function () {
         var TOKEN_KEY = 'gutshot_access_token';
         var FETCH_MS = 8000;
+        // Прямой API (без Cloudflare): app.* всё ещё через CF/HTTP2 и на iOS
+        // второй запрос после статики часто умирает. api.* смотрит на VPS напрямую.
+        var API_BASE = 'https://api.gutshotapp.ru/api/v1';
         var params = new URLSearchParams(location.search);
         var ticket = params.get('ticket') || '';
         var m = document.getElementById('m');
@@ -131,7 +134,7 @@
         }
 
         function appUrl() {
-          var q = '/?from=enter&t=' + Date.now() + '&v=20260810b';
+          var q = '/?from=enter&t=' + Date.now() + '&v=20260810c';
           if (ticket) q += '&ticket=' + encodeURIComponent(ticket);
           return q + (location.hash || '');
         }
@@ -226,7 +229,7 @@
               }, FETCH_MS)
             : null;
 
-          return fetch(path, {
+          return fetch(API_BASE + path, {
             method: 'POST',
             cache: 'no-store',
             credentials: 'omit',
@@ -268,11 +271,11 @@
         }
 
         function loginWithInitData(initData) {
-          return fetchJson('/api/v1/auth/telegram', { initData: initData });
+          return fetchJson('/auth/telegram', { initData: initData });
         }
 
         function loginWithTicket(value) {
-          return fetchJson('/api/v1/auth/telegram/ticket', { ticket: value });
+          return fetchJson('/auth/telegram/ticket', { ticket: value });
         }
 
         function validateCachedToken() {
