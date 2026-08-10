@@ -19,6 +19,7 @@ import { displayNameOf } from '../../shared/lib/display-name';
 import { formatDate } from '../../shared/lib/format';
 import { PLAYER_EVENT_LABELS, formatEventDate } from '../../shared/lib/event-labels';
 import {
+  RARITY_STYLE,
   buildAchievementViews,
   sortAchievementsByAvailability,
 } from '../../shared/lib/achievements-catalog';
@@ -134,16 +135,15 @@ export function ProfilePage(): JSX.Element {
   })();
 
   const stats: StatItem[] = [
-    { icon: '🏆', value: `${s.wins}`, label: 'Побед' },
-    { icon: '🃏', value: `${s.tournamentsPlayed}`, label: 'Турниров сыграно' },
-    { icon: '🎖', value: `${s.itm} ITM / ${s.top10Percent}% ТОП-10`, label: 'В призах' },
-    { icon: '👑', value: `${s.firstPlaces}`, label: 'Первых мест' },
+    { icon: '🎖', value: `${s.top10Percent}%`, label: 'ТОП-10' },
     {
       icon: '📈',
       value: s.averagePlace !== null ? `${s.averagePlace}` : '—',
       label: 'Среднее место',
     },
     { icon: '📅', value: `${s.daysInClub}`, label: 'Дней в клубе' },
+    { icon: '🏆', value: `${s.wins}`, label: 'Побед' },
+    { icon: '🃏', value: `${s.tournamentsPlayed}`, label: 'Турниров сыграно' },
   ];
 
   const pinnedIds = profile.pinnedAchievements ?? [];
@@ -157,6 +157,7 @@ export function ProfilePage(): JSX.Element {
     .map((item) => ({
       id: item.id,
       group: item.group,
+      rarity: item.rarity,
       icon: item.icon,
       title: item.title,
       unlocked: item.unlocked,
@@ -432,27 +433,42 @@ export function ProfilePage(): JSX.Element {
                 }}
                 whileTap={{ scale: 0.96 }}
                 className="relative shrink-0 flex flex-col items-center gap-2 p-3 rounded-[16px]"
-                style={{
-                  width: 100,
-                  cursor: 'pointer',
-                  background: a.pinned ? 'rgba(199,154,61,0.10)' : 'rgba(9,9,9,0.45)',
-                  border: a.pinned
-                    ? '1px solid rgba(247,217,138,0.5)'
-                    : a.unlocked
-                      ? '1px solid rgba(199,154,61,0.32)'
-                      : '1px solid rgba(199,154,61,0.12)',
-                }}
+                style={(() => {
+                  const rarityStyle = a.unlocked ? RARITY_STYLE[a.rarity] : null;
+                  return {
+                    width: 100,
+                    cursor: 'pointer' as const,
+                    background: a.pinned
+                      ? (rarityStyle?.fill ?? 'rgba(199,154,61,0.10)')
+                      : 'rgba(9,9,9,0.45)',
+                    border: a.pinned
+                      ? `1px solid ${rarityStyle?.border ?? 'rgba(247,217,138,0.5)'}`
+                      : a.unlocked
+                        ? '1px solid rgba(199,154,61,0.32)'
+                        : '1px solid rgba(199,154,61,0.12)',
+                    boxShadow: a.pinned && rarityStyle ? rarityStyle.glow : 'none',
+                  };
+                })()}
               >
                 {a.pinned && (
                   <span
                     className="sans absolute top-1.5 right-2"
-                    style={{ fontSize: 10, color: '#F7D98A' }}
+                    style={{
+                      fontSize: 10,
+                      color: a.unlocked ? RARITY_STYLE[a.rarity].accent : '#F7D98A',
+                    }}
                     aria-label="В витрине профиля"
                   >
                     ★
                   </span>
                 )}
-                <AchievementMedallion group={a.group} locked={!a.unlocked} size={42} />
+                <AchievementMedallion
+                  group={a.group}
+                  rarity={a.unlocked ? a.rarity : undefined}
+                  locked={!a.unlocked}
+                  size={42}
+                  title={a.title}
+                />
                 <span
                   className="sans text-center"
                   style={{ fontSize: 10, color: '#D8CEBC', lineHeight: 1.25 }}

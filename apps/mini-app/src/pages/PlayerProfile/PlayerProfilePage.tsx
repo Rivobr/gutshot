@@ -12,6 +12,7 @@ import { SectionLabel } from '../../shared/ui/figma';
 import { PlayerAvatar } from '../../shared/ui/PlayerAvatar';
 import { displayNameOf } from '../../shared/lib/display-name';
 import { buildAchievementViews } from '../../shared/lib/achievements-catalog';
+import { RARITY_STYLE } from '../../shared/lib/achievements-catalog';
 import { AchievementMedallion } from '../../shared/ui/AchievementMedallion';
 
 function LevelBadge({ level, current = false }: { level: number; current?: boolean }): JSX.Element {
@@ -106,16 +107,15 @@ export function PlayerProfilePage(): JSX.Element {
   const xpPct = Math.round(profile.progress * 100);
   const s = profile.stats;
   const stats = [
-    { icon: '🏆', value: `${s.wins}`, label: 'Побед' },
-    { icon: '🃏', value: `${s.tournamentsPlayed}`, label: 'Турниров сыграно' },
-    { icon: '🎖', value: `${s.itm} ITM / ${s.top10Percent}% ТОП-10`, label: 'В призах' },
-    { icon: '👑', value: `${s.firstPlaces}`, label: 'Первых мест' },
+    { icon: '🎖', value: `${s.top10Percent}%`, label: 'ТОП-10' },
     {
       icon: '📈',
       value: s.averagePlace !== null ? `${s.averagePlace}` : '—',
       label: 'Среднее место',
     },
     { icon: '📅', value: `${s.daysInClub}`, label: 'Дней в клубе' },
+    { icon: '🏆', value: `${s.wins}`, label: 'Побед' },
+    { icon: '🃏', value: `${s.tournamentsPlayed}`, label: 'Турниров сыграно' },
   ];
 
   return (
@@ -257,7 +257,12 @@ export function PlayerProfilePage(): JSX.Element {
                   border: '1px solid rgba(199,154,61,0.12)',
                 }}
               >
-                <AchievementMedallion group={item.group} size={40} />
+                <AchievementMedallion
+                  group={item.group}
+                  rarity={item.rarity}
+                  size={40}
+                  title={item.title}
+                />
                 <div className="min-w-0">
                   <p className="serif truncate" style={{ fontSize: 14, color: '#F5EDD6' }}>
                     {item.title}

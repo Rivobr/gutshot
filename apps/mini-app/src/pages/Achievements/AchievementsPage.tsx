@@ -250,7 +250,13 @@ function AchievementCard({
         </span>
       )}
 
-      <AchievementMedallion group={item.group} locked={!done} size={span2 ? 64 : 72} />
+      <AchievementMedallion
+        group={item.group}
+        rarity={done ? item.rarity : undefined}
+        locked={!done}
+        size={span2 ? 64 : 72}
+        title={item.title}
+      />
 
       <div
         className={`flex flex-col ${span2 ? 'items-start text-left flex-1 min-w-0' : 'items-center w-full'}`}
@@ -387,7 +393,13 @@ function AchievementHowToModal({
         }}
       >
         <div className="flex flex-col items-center text-center">
-          <AchievementMedallion group={item.group} locked={!done} size={88} />
+          <AchievementMedallion
+            group={item.group}
+            rarity={done ? item.rarity : undefined}
+            locked={!done}
+            size={88}
+            title={item.title}
+          />
           <p
             className="sans uppercase mt-3"
             style={{ fontSize: 10, color: rarity.accent, letterSpacing: '0.14em' }}
