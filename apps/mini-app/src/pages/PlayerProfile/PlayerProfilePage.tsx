@@ -11,8 +11,10 @@ import {
 import { SectionLabel } from '../../shared/ui/figma';
 import { PlayerAvatar } from '../../shared/ui/PlayerAvatar';
 import { displayNameOf } from '../../shared/lib/display-name';
-import { buildAchievementViews } from '../../shared/lib/achievements-catalog';
-import { RARITY_STYLE } from '../../shared/lib/achievements-catalog';
+import {
+  RARITY_STYLE,
+  buildAchievementViews,
+} from '../../shared/lib/achievements-catalog';
 import { AchievementMedallion } from '../../shared/ui/AchievementMedallion';
 
 function LevelBadge({ level, current = false }: { level: number; current?: boolean }): JSX.Element {
@@ -248,31 +250,38 @@ export function PlayerProfilePage(): JSX.Element {
           </p>
         ) : (
           <div className="mt-3 flex flex-col gap-2">
-            {pinnedViews.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center gap-3 rounded-[16px] p-3"
-                style={{
-                  background: 'rgba(20,18,16,0.85)',
-                  border: '1px solid rgba(199,154,61,0.12)',
-                }}
-              >
-                <AchievementMedallion
-                  group={item.group}
-                  rarity={item.rarity}
-                  size={40}
-                  title={item.title}
-                />
-                <div className="min-w-0">
-                  <p className="serif truncate" style={{ fontSize: 14, color: '#F5EDD6' }}>
-                    {item.title}
-                  </p>
-                  <p className="sans truncate" style={{ fontSize: 11, color: '#6B614E' }}>
-                    {item.description}
-                  </p>
+            {pinnedViews.map((item) => {
+              const rarity = RARITY_STYLE[item.rarity];
+              return (
+                <div
+                  key={item.id}
+                  className="flex items-center gap-3 rounded-[16px] p-3"
+                  style={{
+                    background: rarity.fill,
+                    border: `1px solid ${rarity.border}`,
+                    boxShadow: rarity.glow,
+                  }}
+                >
+                  <AchievementMedallion
+                    group={item.group}
+                    rarity={item.rarity}
+                    size={40}
+                    title={item.title}
+                  />
+                  <div className="min-w-0">
+                    <p className="serif truncate" style={{ fontSize: 14, color: '#F5EDD6' }}>
+                      {item.title}
+                    </p>
+                    <p
+                      className="sans uppercase truncate"
+                      style={{ fontSize: 10, color: rarity.accent, letterSpacing: '0.12em' }}
+                    >
+                      {rarity.label}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
