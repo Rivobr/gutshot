@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { RegistrationStatus, Tournament, TournamentStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { calculateLevel } from '../../common/utils/level.util';
+import { buildShowcaseAchievements } from '../../common/utils/showcase-achievements.util';
 import { serializeTournament } from './tournament.serializer';
 
 /** Активные регистрации — отменённые места не занимают. */
@@ -63,10 +64,31 @@ export class TournamentsService {
       },
     });
 
+    const userIds = registrations.map((reg) => reg.user.id);
+    const unlocked = userIds.length
+      ? await this.prisma.playerAchievement.findMany({
+          where: { userId: { in: userIds } },
+          select: { userId: true, achievementId: true },
+        })
+      : [];
+    const unlockedByUser = new Map<string, string[]>();
+    for (const row of unlocked) {
+      const list = unlockedByUser.get(row.userId);
+      if (list) {
+        list.push(row.achievementId);
+      } else {
+        unlockedByUser.set(row.userId, [row.achievementId]);
+      }
+    }
+
     return registrations.map((reg) => {
       const results = reg.user.tournamentResults;
       const itm = results.filter((r) => r.place <= 10).length;
       const top10Percent = results.length > 0 ? Math.round((itm / results.length) * 100) : 0;
+      const showcaseAchievements = buildShowcaseAchievements(
+        reg.user.pinnedAchievements,
+        unlockedByUser.get(reg.user.id) ?? [],
+      );
 
       return {
         userId: reg.user.id,
@@ -77,6 +99,7 @@ export class TournamentsService {
         photoUrl: reg.user.photoUrl,
         level: calculateLevel(reg.user.playerProfile?.xp ?? 0),
         pinnedAchievements: reg.user.pinnedAchievements,
+        showcaseAchievements,
         top10Percent,
         status: reg.status,
       };

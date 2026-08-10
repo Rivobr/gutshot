@@ -109,6 +109,8 @@ export interface TournamentParticipant {
   level: number;
   /** Витрина достижений игрока (id из каталога). */
   pinnedAchievements: string[];
+  /** До 3 витринных достижений с редкостью (для свечения в списках). */
+  showcaseAchievements?: ShowcaseAchievement[];
   top10Percent: number;
   status: RegistrationStatus;
 }
@@ -216,6 +218,15 @@ export interface Registration {
   tournament?: Tournament;
 }
 
+/** Закреплённое / витринное достижение рядом с игроком в списках. */
+export interface ShowcaseAchievement {
+  id: string;
+  group: AchievementGroup;
+  rarity: AchievementRarity;
+  title?: string;
+  icon?: string;
+}
+
 export interface RatingEntry {
   /** Очки рейтинга (места в турнирах). */
   points?: number;
@@ -229,6 +240,8 @@ export interface RatingEntry {
   xp?: number;
   weeklyXp?: number;
   level?: number;
+  /** До 3 витринных достижений (закреплённые или топ по редкости). */
+  showcaseAchievements?: ShowcaseAchievement[];
   /** Сколько недель игрок проходил в топ-7 (для финала месяца). */
   qualifiedWeeks?: number;
   /** Место в топ-7 текущей/закрытой недели. */

@@ -12,8 +12,7 @@ import { goldButtonStyle } from '../../shared/ui/figma';
 import { BackButton } from '../../shared/ui/BackButton';
 import { PlayersFillBar } from '../../shared/ui/PlayersFillBar';
 import { PlayerAvatar } from '../../shared/ui/PlayerAvatar';
-import { AchievementMedallion } from '../../shared/ui/AchievementMedallion';
-import { groupFromAchievementId } from '../../shared/lib/achievements-catalog';
+import { PlayerLevelBadge, PlayerShowcaseMedals } from '../../shared/ui/PlayerShowcase';
 import { showToast } from '../../shared/ui/toast';
 import { displayNameOf } from '../../shared/lib/display-name';
 import { formatDate, formatTime } from '../../shared/lib/format';
@@ -348,37 +347,25 @@ export function TournamentPage(): JSX.Element {
                     size={44}
                   />
                   <div className="flex-1 min-w-0">
-                    <p
-                      className="serif font-semibold truncate"
-                      style={{ fontSize: 15, color: '#F5EDD6' }}
-                    >
-                      {displayNameOf(p)}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      {p.username && (
-                        <span className="sans truncate" style={{ fontSize: 11, color: '#6B614E' }}>
-                          @{p.username}
-                        </span>
-                      )}
-                      <span
-                        className="sans"
-                        style={{ fontSize: 10, color: 'rgba(199,154,61,0.6)' }}
+                    <div className="flex items-center gap-2 min-w-0">
+                      <p
+                        className="serif font-semibold truncate"
+                        style={{ fontSize: 15, color: '#F5EDD6' }}
                       >
-                        Уровень {p.level}
+                        {displayNameOf(p)}
+                      </p>
+                      <PlayerLevelBadge level={p.level} size="xs" />
+                    </div>
+                    {p.username && (
+                      <span className="sans truncate" style={{ fontSize: 11, color: '#6B614E' }}>
+                        @{p.username}
                       </span>
-                    </div>
+                    )}
                   </div>
-                  {p.pinnedAchievements && p.pinnedAchievements.length > 0 && (
-                    <div className="flex shrink-0 items-center gap-1">
-                      {p.pinnedAchievements.slice(0, 3).map((achievementId) => (
-                        <AchievementMedallion
-                          key={achievementId}
-                          group={groupFromAchievementId(achievementId)}
-                          size={24}
-                        />
-                      ))}
-                    </div>
-                  )}
+                  <PlayerShowcaseMedals
+                    items={p.showcaseAchievements?.length ? p.showcaseAchievements : undefined}
+                    size={24}
+                  />
                 </motion.button>
               ))}
             </div>

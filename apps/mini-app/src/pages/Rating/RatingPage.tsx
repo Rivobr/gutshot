@@ -8,6 +8,7 @@ import { apiClient } from '../../shared/api/client';
 import { useProfile } from '../../entities/player';
 import { SectionLabel } from '../../shared/ui/figma';
 import { PlayerAvatar } from '../../shared/ui/PlayerAvatar';
+import { PlayerLevelBadge, PlayerShowcaseMedals } from '../../shared/ui/PlayerShowcase';
 import { displayNameOf } from '../../shared/lib/display-name';
 
 type Tab = 'weekly' | 'final';
@@ -336,6 +337,16 @@ export function RatingPage(): JSX.Element {
                           >
                             {isMe ? 'Вы' : displayNameOf(p)}
                           </p>
+                          {p.level != null && (
+                            <div className="mt-0.5 flex justify-center">
+                              <PlayerLevelBadge level={p.level} size="xs" />
+                            </div>
+                          )}
+                          {p.showcaseAchievements && p.showcaseAchievements.length > 0 && (
+                            <div className="mt-1 flex justify-center">
+                              <PlayerShowcaseMedals items={p.showcaseAchievements} size={18} />
+                            </div>
+                          )}
                           <p
                             className="gold-text-sm num sans font-semibold"
                             style={{ fontSize: 12 }}
@@ -406,9 +417,12 @@ export function RatingPage(): JSX.Element {
                     size={40}
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="serif truncate" style={{ fontSize: 14, color: '#F5EDD6' }}>
-                      {isMe ? 'Вы' : displayNameOf(p)}
-                    </p>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <p className="serif truncate" style={{ fontSize: 14, color: '#F5EDD6' }}>
+                        {isMe ? 'Вы' : displayNameOf(p)}
+                      </p>
+                      <PlayerLevelBadge level={p.level} size="xs" />
+                    </div>
                     {tab === 'final' && p.qualifiedWeeks != null && (
                       <p className="sans" style={{ fontSize: 10, color: '#6B614E' }}>
                         {p.qualifiedWeeks}{' '}
@@ -419,6 +433,11 @@ export function RatingPage(): JSX.Element {
                             : 'недель'}{' '}
                         в топ-7
                       </p>
+                    )}
+                    {p.showcaseAchievements && p.showcaseAchievements.length > 0 && (
+                      <div className="mt-1">
+                        <PlayerShowcaseMedals items={p.showcaseAchievements} size={20} />
+                      </div>
                     )}
                   </div>
                   <div className="text-right">

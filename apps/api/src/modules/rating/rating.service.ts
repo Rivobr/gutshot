@@ -2,6 +2,10 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { XPReason } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { buildPlaceRatingScale } from '../../common/constants/xp-defaults.constants';
+import {
+  buildShowcaseAchievements,
+  type ShowcaseAchievementDto,
+} from '../../common/utils/showcase-achievements.util';
 import { LevelsService } from '../progression/levels.service';
 import { XpSettingsService } from '../progression/xp-settings.service';
 import {
@@ -25,6 +29,8 @@ export interface RatingRow {
   username?: string | null;
   points: number;
   weeklyXp?: number;
+  level?: number;
+  showcaseAchievements?: ShowcaseAchievementDto[];
   qualifiedWeeks?: number;
   weekPlace?: number;
 }
@@ -47,7 +53,7 @@ export class RatingService {
       this.levelsService.getThresholds(),
     ]);
 
-    return profiles.map((profile, index) => ({
+    const base = profiles.map((profile, index) => ({
       rank: index + 1,
       userId: profile.userId,
       firstName: profile.user.firstName,
@@ -58,6 +64,8 @@ export class RatingService {
       points: profile.xp,
       level: this.levelsService.computeProgress(thresholds, profile.xp).level,
     }));
+
+    return this.attachShowcase(base);
   }
 
   /**
@@ -95,11 +103,12 @@ export class RatingService {
     preloaded?: Omit<RatingRow, 'rank'>[],
   ) {
     const rows = preloaded ?? (await this.getPointsLeaderboard(week.start, week.end));
-    const entries = rows.map((row, index) => ({
+    const ranked = rows.map((row, index) => ({
       ...row,
       rank: index + 1,
       weekPlace: index + 1 <= WEEKLY_FINAL_TOP ? index + 1 : undefined,
     }));
+    const entries = await this.attachLevelAndShowcase(ranked);
 
     return {
       weekKey: week.weekKey,
@@ -156,7 +165,7 @@ export class RatingService {
       }
     }
 
-    return Array.from(byUser.values())
+    const ranked = Array.from(byUser.values())
       .sort((a, b) => b.points - a.points || a.userId.localeCompare(b.userId))
       .map((entry, index) => ({
         rank: index + 1,
@@ -170,6 +179,8 @@ export class RatingService {
         weeklyXp: entry.points,
         qualifiedWeeks: entry.qualifiedWeeks,
       }));
+
+    return this.attachLevelAndShowcase(ranked);
   }
 
   /** Лидерборд очков за места в заданном интервале [start, end). */
@@ -328,5 +339,96 @@ export class RatingService {
   async getPlaceScale() {
     const settings = await this.xpSettingsService.getAll();
     return buildPlaceRatingScale(settings);
+  }
+
+  /**
+   * Добавляет уровень (по профильному XP) и витрину достижений
+   * (закреплённые или топ открытых по редкости).
+   */
+  private async attachLevelAndShowcase(entries: RatingRow[]): Promise<RatingRow[]> {
+    if (entries.length === 0) {
+      return entries;
+    }
+
+    const userIds = entries.map((entry) => entry.userId);
+    const [profiles, unlocked, thresholds] = await Promise.all([
+      this.prisma.user.findMany({
+        where: { id: { in: userIds } },
+        select: {
+          id: true,
+          pinnedAchievements: true,
+          playerProfile: { select: { xp: true } },
+        },
+      }),
+      this.prisma.playerAchievement.findMany({
+        where: { userId: { in: userIds } },
+        select: { userId: true, achievementId: true },
+      }),
+      this.levelsService.getThresholds(),
+    ]);
+
+    const profileMap = new Map(profiles.map((user) => [user.id, user]));
+    const unlockedByUser = new Map<string, string[]>();
+    for (const row of unlocked) {
+      const list = unlockedByUser.get(row.userId);
+      if (list) {
+        list.push(row.achievementId);
+      } else {
+        unlockedByUser.set(row.userId, [row.achievementId]);
+      }
+    }
+
+    return entries.map((entry) => {
+      const user = profileMap.get(entry.userId);
+      const xp = user?.playerProfile?.xp ?? 0;
+      return {
+        ...entry,
+        level: this.levelsService.computeProgress(thresholds, xp).level,
+        showcaseAchievements: buildShowcaseAchievements(
+          user?.pinnedAchievements,
+          unlockedByUser.get(entry.userId) ?? [],
+        ),
+      };
+    });
+  }
+
+  /** Только витрина (когда уровень уже посчитан, напр. overall). */
+  private async attachShowcase<
+    T extends { userId: string; showcaseAchievements?: ShowcaseAchievementDto[] },
+  >(entries: T[]): Promise<T[]> {
+    if (entries.length === 0) {
+      return entries;
+    }
+
+    const userIds = entries.map((entry) => entry.userId);
+    const [users, unlocked] = await Promise.all([
+      this.prisma.user.findMany({
+        where: { id: { in: userIds } },
+        select: { id: true, pinnedAchievements: true },
+      }),
+      this.prisma.playerAchievement.findMany({
+        where: { userId: { in: userIds } },
+        select: { userId: true, achievementId: true },
+      }),
+    ]);
+
+    const pinnedMap = new Map(users.map((user) => [user.id, user.pinnedAchievements]));
+    const unlockedByUser = new Map<string, string[]>();
+    for (const row of unlocked) {
+      const list = unlockedByUser.get(row.userId);
+      if (list) {
+        list.push(row.achievementId);
+      } else {
+        unlockedByUser.set(row.userId, [row.achievementId]);
+      }
+    }
+
+    return entries.map((entry) => ({
+      ...entry,
+      showcaseAchievements: buildShowcaseAchievements(
+        pinnedMap.get(entry.userId),
+        unlockedByUser.get(entry.userId) ?? [],
+      ),
+    }));
   }
 }
