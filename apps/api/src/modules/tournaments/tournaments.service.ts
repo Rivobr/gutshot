@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { RegistrationStatus, Tournament, TournamentStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { calculateLevel } from '../../common/utils/level.util';
 import { buildShowcaseAchievements } from '../../common/utils/showcase-achievements.util';
+import { LevelsService } from '../progression/levels.service';
 import { serializeTournament } from './tournament.serializer';
 
 /** Активные регистрации — отменённые места не занимают. */
@@ -43,26 +43,32 @@ function moscowDayBounds(now = new Date()): { start: Date; end: Date } {
 
 @Injectable()
 export class TournamentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly levelsService: LevelsService,
+  ) {}
 
   async getParticipants(id: string) {
     await this.findById(id);
 
-    const registrations = await this.prisma.registration.findMany({
-      where: {
-        tournamentId: id,
-        status: { in: ACTIVE_REGISTRATION_STATUSES },
-      },
-      orderBy: { registeredAt: 'asc' },
-      include: {
-        user: {
-          include: {
-            playerProfile: true,
-            tournamentResults: { select: { place: true } },
+    const [registrations, thresholds] = await Promise.all([
+      this.prisma.registration.findMany({
+        where: {
+          tournamentId: id,
+          status: { in: ACTIVE_REGISTRATION_STATUSES },
+        },
+        orderBy: { registeredAt: 'asc' },
+        include: {
+          user: {
+            include: {
+              playerProfile: true,
+              tournamentResults: { select: { place: true } },
+            },
           },
         },
-      },
-    });
+      }),
+      this.levelsService.getThresholds(),
+    ]);
 
     const userIds = registrations.map((reg) => reg.user.id);
     const unlocked = userIds.length
@@ -89,6 +95,7 @@ export class TournamentsService {
         reg.user.pinnedAchievements,
         unlockedByUser.get(reg.user.id) ?? [],
       );
+      const xp = reg.user.playerProfile?.xp ?? 0;
 
       return {
         userId: reg.user.id,
@@ -97,7 +104,7 @@ export class TournamentsService {
         nickname: reg.user.nickname,
         username: reg.user.username,
         photoUrl: reg.user.photoUrl,
-        level: calculateLevel(reg.user.playerProfile?.xp ?? 0),
+        level: this.levelsService.computeProgress(thresholds, xp).level,
         pinnedAchievements: reg.user.pinnedAchievements,
         showcaseAchievements,
         top10Percent,
