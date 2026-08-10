@@ -104,9 +104,10 @@
       (function () {
         var TOKEN_KEY = 'gutshot_access_token';
         var FETCH_MS = 8000;
-        // Прямой API (без Cloudflare): app.* всё ещё через CF/HTTP2 и на iOS
-        // второй запрос после статики часто умирает. api.* смотрит на VPS напрямую.
-        var API_BASE = 'https://api.gutshotapp.ru/api/v1';
+        // Same-origin API: тот же хост, что и страница (через Cloudflare).
+        // Прямой api.* недоступен из части сетей (РФ и ряд VPN-выходов),
+        // а same-origin путь работает везде, где загрузилась сама страница.
+        var API_BASE = '/api/v1';
         var params = new URLSearchParams(location.search);
         var ticket = params.get('ticket') || '';
         var m = document.getElementById('m');
