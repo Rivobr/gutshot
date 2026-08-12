@@ -8,6 +8,7 @@ const ALL_ITEMS = [
   { to: '/', label: 'Dashboard', icon: '📊' },
   { to: '/scanner', label: 'QR Scanner', icon: '🔍' },
   { to: '/tournaments', label: 'Турниры', icon: '🏆' },
+  { to: '/broadcasts', label: 'Рассылки', icon: '📣' },
   { to: '/players', label: 'Игроки', icon: '👥' },
   { to: '/history', label: 'История', icon: '🕘' },
   { to: '/xp-settings', label: 'Очки и XP', icon: '⭐' },

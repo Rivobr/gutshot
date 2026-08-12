@@ -165,6 +165,32 @@ enum AdminRole {
   DEALER
 }
 
+enum BroadcastStatus {
+  DRAFT
+  SENDING
+  SENT
+  FAILED
+}
+
+enum BroadcastSegment {
+  ALL_ACTIVE
+  TOURNAMENT_REGISTERED
+  TOURNAMENT_RSVP_PENDING
+}
+
+enum BroadcastButtons {
+  NONE
+  OPEN_APP
+  RSVP
+}
+
+enum BroadcastDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
 // ---------------------------------
 // MODELS
 // ---------------------------------
@@ -205,6 +231,7 @@ model User {
   ratingRewards              RatingReward[]
   weeklyFinalQualifications  WeeklyFinalQualification[]
   events                     PlayerEvent[]
+  broadcastDeliveries        BroadcastDelivery[]
 
   @@index([telegramId])
   @@index([qrCode])
@@ -263,6 +290,7 @@ model Tournament {
   tournamentResults TournamentResult[]
   events            PlayerEvent[]
   blindLevels       BlindLevel[]
+  broadcastCampaigns BroadcastCampaign[]
 
   @@index([date])
   @@index([status])
@@ -391,6 +419,7 @@ model AdminUser {
   performedEvents       PlayerEvent[]
   updatedDocuments      LegalDocument[]
   updatedAchievements   AchievementText[]
+  broadcastCampaigns    BroadcastCampaign[]
 
   @@index([email])
 }
@@ -532,4 +561,50 @@ model AchievementText {
   createdAt   DateTime @default(now())
 
   updatedBy AdminUser? @relation(fields: [updatedById], references: [id])
+}
+
+/// Рассылка из админки (анонс / RSVP / сегмент).
+model BroadcastCampaign {
+  id             String           @id @default(cuid())
+  title          String
+  bodyHtml       String
+  segment        BroadcastSegment
+  tournamentId   String?
+  buttons        BroadcastButtons @default(NONE)
+  status         BroadcastStatus  @default(DRAFT)
+  createdById    String?
+  recipientCount Int              @default(0)
+  sentCount      Int              @default(0)
+  failedCount    Int              @default(0)
+  sentAt         DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  tournament Tournament?         @relation(fields: [tournamentId], references: [id], onDelete: SetNull)
+  createdBy  AdminUser?          @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  deliveries BroadcastDelivery[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([tournamentId])
+}
+
+model BroadcastDelivery {
+  id                String                  @id @default(cuid())
+  campaignId        String
+  userId            String
+  telegramId        String
+  status            BroadcastDeliveryStatus @default(PENDING)
+  telegramMessageId Int?
+  chatId            String?
+  error             String?
+  sentAt            DateTime?
+  createdAt         DateTime                @default(now())
+
+  campaign BroadcastCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([userId])
+  @@index([status])
 }

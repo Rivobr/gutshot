@@ -29,13 +29,70 @@ export class TelegramService {
   }
 
   async sendMessage(telegramId: string, text: string, replyMarkup?: object): Promise<boolean> {
+    const result = await this.sendMessageDetailed(telegramId, text, replyMarkup);
+    return result != null;
+  }
+
+  /** sendMessage с message_id — для логов рассылок. */
+  async sendMessageDetailed(
+    telegramId: string,
+    text: string,
+    replyMarkup?: object,
+  ): Promise<{ messageId: number; chatId: number } | null> {
     const result = await this.callTelegramApi('sendMessage', {
       chat_id: telegramId,
       text,
       parse_mode: 'HTML',
+      disable_web_page_preview: true,
       ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
     });
+    if (!result) {
+      return null;
+    }
+    const messageId = Number(result.message_id);
+    const chatId = Number((result.chat as { id?: number } | undefined)?.id ?? telegramId);
+    if (!Number.isFinite(messageId)) {
+      return null;
+    }
+    return { messageId, chatId };
+  }
+
+  /** Удалить сообщение бота (по сохранённому message_id рассылки). */
+  async deleteMessage(chatId: string | number, messageId: number): Promise<boolean> {
+    const result = await this.callTelegramApi('deleteMessage', {
+      chat_id: chatId,
+      message_id: messageId,
+    });
     return result != null;
+  }
+
+  /** Inline-кнопка «Открыть клуб» с персональным ticket. */
+  buildOpenAppKeyboard(telegramId: string): object {
+    const miniAppUrl = (
+      this.configService.get<string>('telegram.miniAppPublicUrl')?.trim() ||
+      this.configService.get<string>('telegram.miniAppUrl')?.trim() ||
+      'https://app.gutshotapp.ru'
+    ).replace(/\/$/, '');
+    const ticket = this.jwtService.sign(
+      { typ: 'miniapp_ticket', telegramId: String(telegramId) },
+      { expiresIn: '7d' },
+    );
+    const entryUrl = `${miniAppUrl}/enter.html?t=${Date.now()}&v=20260810c&ticket=${encodeURIComponent(ticket)}`;
+    return {
+      inline_keyboard: [[{ text: '♠️ Открыть клуб', web_app: { url: entryUrl } }]],
+    };
+  }
+
+  /** Inline-кнопки RSVP явки на турнир. */
+  buildRsvpKeyboard(tournamentId: string): object {
+    return {
+      inline_keyboard: [
+        [
+          { text: '✅ Буду', callback_data: `rsvp:y:${tournamentId}` },
+          { text: '❌ Не смогу', callback_data: `rsvp:n:${tournamentId}` },
+        ],
+      ],
+    };
   }
 
   /** Ответ на нажатие inline-кнопки (обязателен, иначе у игрока крутится лоадер). */

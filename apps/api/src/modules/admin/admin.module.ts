@@ -16,6 +16,8 @@ import { ScannerService } from './scanner/scanner.service';
 import { AttendanceService } from './attendance/attendance.service';
 import { XpSettingsController } from './xp-settings/xp-settings.controller';
 import { AdminHistoryController } from './history/admin-history.controller';
+import { AdminBroadcastController } from './broadcast/broadcast.controller';
+import { AdminBroadcastService } from './broadcast/broadcast.service';
 
 @Module({
   imports: [TelegramModule, RegistrationsModule, ProgressionModule, UsersModule],
@@ -27,6 +29,7 @@ import { AdminHistoryController } from './history/admin-history.controller';
     ScannerController,
     XpSettingsController,
     AdminHistoryController,
+    AdminBroadcastController,
   ],
   providers: [
     DashboardService,
@@ -35,6 +38,7 @@ import { AdminHistoryController } from './history/admin-history.controller';
     StatisticsService,
     ScannerService,
     AttendanceService,
+    AdminBroadcastService,
   ],
 })
 export class AdminModule {}

@@ -732,3 +732,51 @@ export interface ApiErrorResponse {
   success: false;
   message: string;
 }
+
+export type BroadcastStatus = 'DRAFT' | 'SENDING' | 'SENT' | 'FAILED';
+export type BroadcastSegment =
+  | 'ALL_ACTIVE'
+  | 'TOURNAMENT_REGISTERED'
+  | 'TOURNAMENT_RSVP_PENDING';
+export type BroadcastButtons = 'NONE' | 'OPEN_APP' | 'RSVP';
+export type BroadcastDeliveryStatus = 'PENDING' | 'SENT' | 'FAILED' | 'SKIPPED';
+
+export interface BroadcastCampaignDto {
+  id: string;
+  title: string;
+  bodyHtml: string;
+  segment: BroadcastSegment;
+  tournamentId: string | null;
+  buttons: BroadcastButtons;
+  status: BroadcastStatus;
+  recipientCount: number;
+  sentCount: number;
+  failedCount: number;
+  sentAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  tournament: { id: string; title: string; date: string } | null;
+}
+
+export interface BroadcastDeliveryDto {
+  id: string;
+  userId: string;
+  telegramId: string;
+  status: BroadcastDeliveryStatus;
+  telegramMessageId: number | null;
+  chatId: string | null;
+  error: string | null;
+  sentAt: string | null;
+  name: string;
+}
+
+export interface BroadcastCampaignDetailsDto extends BroadcastCampaignDto {
+  deliveries: BroadcastDeliveryDto[];
+}
+
+export interface BroadcastSegmentPreviewDto {
+  segment: BroadcastSegment;
+  tournamentId: string | null;
+  count: number;
+  sample: Array<{ userId: string; telegramId: string; name: string }>;
+}
