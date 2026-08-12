@@ -24,13 +24,15 @@ PG_DB = ENV.get('POSTGRES_DB', 'gutshot')
 
 TOURNAMENT_ID = 'cmsfedi6x00056ups9ymzznoz'
 OUT_DIR = '/opt/gutshot/data'
-OUT_FILE = os.path.join(OUT_DIR, 'rsvp-wed-freeroll-2026-08-12-messages.json')
+STAMP = datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')
+OUT_FILE = os.path.join(OUT_DIR, f'rsvp-wed-freeroll-2026-08-12-messages-{STAMP}.json')
+LATEST_FILE = os.path.join(OUT_DIR, 'rsvp-wed-freeroll-2026-08-12-messages-latest.json')
 
 TEXT = (
     '♠️ <b>Wednesday Freeroll — сегодня</b>\n'
     '\n'
     'Подтверди, пожалуйста, участие.\n'
-    '📅 Сегодня, 12 августа · 16:00\n'
+    '📅 Сегодня, 12 августа · 19:00\n'
     '🎟 Вход — 0₽\n'
     '\n'
     'Если не сможешь — нажми «Не смогу», чтобы освободить место.'
@@ -158,17 +160,21 @@ def main():
     payload = {
         'tournamentId': TOURNAMENT_ID,
         'tournamentTitle': 'Wednesday Freeroll',
+        'startsAtNote': '19:00',
         'createdAt': datetime.now(timezone.utc).isoformat(),
+        'text': TEXT,
         'sentCount': len(sent),
         'failedCount': len(failed),
         'messages': sent,
         'failures': failed,
     }
-    with open(OUT_FILE, 'w', encoding='utf-8') as f:
-        json.dump(payload, f, ensure_ascii=False, indent=2)
+    for path in (OUT_FILE, LATEST_FILE):
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
 
     print(f'DONE sent={len(sent)} failed={len(failed)}')
     print(f'message ids saved: {OUT_FILE}')
+    print(f'latest: {LATEST_FILE}')
     for row in sent:
         print(f"  msg={row['messageId']}\tchat={row['chatId']}\t{row['name']}\t{row['telegramId']}")
     for row in failed:

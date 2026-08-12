@@ -136,7 +136,7 @@ export class TelegramRsvpService {
     await this.telegramService.editMessageText(
       chatId,
       messageId,
-      `${originalText}\n\n✅ <b>Участие подтверждено</b>. Ждём вас за столом!`,
+      `${originalText}\n\n✅ Участие подтверждено. Ждём вас за столом!`,
     );
     this.logger.log(
       `RSVP yes user=${userId} tournament=${registration.tournamentId} messageId=${messageId}`,
@@ -241,7 +241,7 @@ export class TelegramRsvpService {
     await this.telegramService.editMessageText(
       chatId,
       messageId,
-      `${originalText}\n\n❌ <b>Вы сняты с турнира</b>. Место освобождено.`,
+      `${originalText}\n\n❌ Вы сняты с турнира. Место освобождено.`,
     );
 
     if (promoted) {
