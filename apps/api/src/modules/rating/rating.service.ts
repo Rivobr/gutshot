@@ -1,6 +1,7 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { XPReason } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { isRatingExcludedUsername } from '../../common/constants/rating-exclusions';
 import { buildPlaceRatingScale } from '../../common/constants/xp-defaults.constants';
 import {
   buildShowcaseAchievements,
@@ -36,34 +37,51 @@ export interface RatingRow {
 }
 
 @Injectable()
-export class RatingService {
+export class RatingService implements OnModuleInit {
+  private readonly logger = new Logger(RatingService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly xpSettingsService: XpSettingsService,
     private readonly levelsService: LevelsService,
   ) {}
 
+  async onModuleInit() {
+    try {
+      await this.repairQualificationsExcludingHidden();
+    } catch (error) {
+      this.logger.warn(
+        `Не удалось починить финалистов после исключения из рейтинга: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+  }
+
   /** Общий прогресс уровня (XP) — не таблица рейтинга. */
   async getOverallRating() {
     const [profiles, thresholds] = await Promise.all([
       this.prisma.playerProfile.findMany({
+        where: { user: { hiddenFromRating: false } },
         orderBy: { xp: 'desc' },
         include: { user: true },
       }),
       this.levelsService.getThresholds(),
     ]);
 
-    const base = profiles.map((profile, index) => ({
-      rank: index + 1,
-      userId: profile.userId,
-      firstName: profile.user.firstName,
-      lastName: profile.user.lastName,
-      nickname: profile.user.nickname,
-      photoUrl: profile.user.photoUrl,
-      xp: profile.xp,
-      points: profile.xp,
-      level: this.levelsService.computeProgress(thresholds, profile.xp).level,
-    }));
+    const base = profiles
+      .filter((profile) => !this.isHiddenFromRating(profile.user))
+      .map((profile, index) => ({
+        rank: index + 1,
+        userId: profile.userId,
+        firstName: profile.user.firstName,
+        lastName: profile.user.lastName,
+        nickname: profile.user.nickname,
+        photoUrl: profile.user.photoUrl,
+        xp: profile.xp,
+        points: profile.xp,
+        level: this.levelsService.computeProgress(thresholds, profile.xp).level,
+      }));
 
     return this.attachShowcase(base);
   }
@@ -128,7 +146,7 @@ export class RatingService {
   async getMonthlyFinalRating(): Promise<RatingRow[]> {
     const { monthKey } = getClubMonthBounds();
     const qualifications = await this.prisma.weeklyFinalQualification.findMany({
-      where: { monthKey },
+      where: { monthKey, user: { hiddenFromRating: false } },
       include: { user: true },
     });
 
@@ -147,6 +165,9 @@ export class RatingService {
     >();
 
     for (const row of qualifications) {
+      if (this.isHiddenFromRating(row.user)) {
+        continue;
+      }
       const current = byUser.get(row.userId);
       if (current) {
         current.points += row.weekPoints;
@@ -190,6 +211,7 @@ export class RatingService {
       where: {
         createdAt: { gte: start, lt: end },
         reason: { in: RATING_POINT_REASONS },
+        user: { hiddenFromRating: false },
       },
       _sum: { amount: true },
       orderBy: { _sum: { amount: 'desc' } },
@@ -200,20 +222,25 @@ export class RatingService {
     });
     const userMap = new Map(users.map((user) => [user.id, user]));
 
-    return grouped.map((entry) => {
-      const user = userMap.get(entry.userId);
-      const points = entry._sum.amount ?? 0;
-      return {
-        userId: entry.userId,
-        firstName: user?.firstName,
-        lastName: user?.lastName,
-        nickname: user?.nickname,
-        photoUrl: user?.photoUrl,
-        username: user?.username,
-        points,
-        weeklyXp: points,
-      };
-    });
+    return grouped
+      .filter((entry) => {
+        const user = userMap.get(entry.userId);
+        return user ? !this.isHiddenFromRating(user) : false;
+      })
+      .map((entry) => {
+        const user = userMap.get(entry.userId);
+        const points = entry._sum.amount ?? 0;
+        return {
+          userId: entry.userId,
+          firstName: user?.firstName,
+          lastName: user?.lastName,
+          nickname: user?.nickname,
+          photoUrl: user?.photoUrl,
+          username: user?.username,
+          points,
+          weeklyXp: points,
+        };
+      });
   }
 
   /**
@@ -284,24 +311,71 @@ export class RatingService {
 
   async listWeekQualifiers(weekKey: string): Promise<RatingRow[]> {
     const rows = await this.prisma.weeklyFinalQualification.findMany({
-      where: { weekKey },
+      where: { weekKey, user: { hiddenFromRating: false } },
       include: { user: true },
       orderBy: { weekPlace: 'asc' },
     });
 
-    return rows.map((row) => ({
-      rank: row.weekPlace,
-      userId: row.userId,
-      firstName: row.user.firstName,
-      lastName: row.user.lastName,
-      nickname: row.user.nickname,
-      photoUrl: row.user.photoUrl,
-      username: row.user.username,
-      points: row.weekPoints,
-      weeklyXp: row.weekPoints,
-      weekPlace: row.weekPlace,
-      qualifiedWeeks: 1,
-    }));
+    return rows
+      .filter((row) => !this.isHiddenFromRating(row.user))
+      .map((row, index) => ({
+        rank: index + 1,
+        userId: row.userId,
+        firstName: row.user.firstName,
+        lastName: row.user.lastName,
+        nickname: row.user.nickname,
+        photoUrl: row.user.photoUrl,
+        username: row.user.username,
+        points: row.weekPoints,
+        weeklyXp: row.weekPoints,
+        weekPlace: index + 1,
+        qualifiedWeeks: 1,
+      }));
+  }
+
+  /**
+   * После исключения владельцев: пересобрать топ-7 закрытых недель,
+   * чтобы их слоты заняли следующие игроки.
+   */
+  async repairQualificationsExcludingHidden(): Promise<void> {
+    const weeks = await this.prisma.weeklyFinalQualification.findMany({
+      distinct: ['weekKey'],
+      select: { weekKey: true },
+    });
+    if (weeks.length === 0) {
+      return;
+    }
+
+    for (const { weekKey } of weeks) {
+      const bounds = this.resolveWeekBounds({ weekKey });
+      const leaderboard = await this.getPointsLeaderboard(bounds.start, bounds.end);
+      const top = leaderboard.slice(0, WEEKLY_FINAL_TOP).filter((row) => row.points > 0);
+
+      await this.prisma.$transaction(async (tx) => {
+        await tx.weeklyFinalQualification.deleteMany({ where: { weekKey } });
+        if (top.length === 0) {
+          return;
+        }
+        await tx.weeklyFinalQualification.createMany({
+          data: top.map((row, index) => ({
+            weekKey,
+            monthKey: bounds.monthKey,
+            userId: row.userId,
+            weekPlace: index + 1,
+            weekPoints: row.points,
+          })),
+        });
+      });
+    }
+
+    this.logger.log(`Пересобраны финалисты ${weeks.length} закрытых недель без владельцев клуба`);
+  }
+
+  private isHiddenFromRating(user: {
+    hiddenFromRating?: boolean;
+    username?: string | null;
+  }): boolean {
+    return Boolean(user.hiddenFromRating) || isRatingExcludedUsername(user.username);
   }
 
   private resolveWeekBounds(options?: {

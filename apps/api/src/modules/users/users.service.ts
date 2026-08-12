@@ -8,6 +8,7 @@ import { Prisma, User } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TelegramInitDataUser } from '../../common/utils/telegram-init-data.util';
 import { generatePlayerQrCode } from '../../common/utils/player-qr.util';
+import { isRatingExcludedUsername } from '../../common/constants/rating-exclusions';
 import { TelegramService } from '../telegram/telegram.service';
 
 function defaultNickname(telegramUser: TelegramInitDataUser): string | null {
@@ -106,6 +107,9 @@ export class UsersService {
           firstName: current.firstName ?? profile.firstName,
           lastName: current.lastName ?? profile.lastName,
           nickname,
+          hiddenFromRating:
+            current.hiddenFromRating ||
+            isRatingExcludedUsername(current.username ?? profile.username),
         },
       });
     } catch {
@@ -139,6 +143,9 @@ export class UsersService {
           lastName: telegramUser.last_name ?? existing.lastName,
           photoUrl: photoFromInit ?? existing.photoUrl,
           nickname,
+          hiddenFromRating:
+            existing.hiddenFromRating ||
+            isRatingExcludedUsername(telegramUser.username ?? existing.username),
         },
       });
 
@@ -158,6 +165,7 @@ export class UsersService {
         nickname,
         photoUrl: photoFromInit,
         qrCode: generatePlayerQrCode(),
+        hiddenFromRating: isRatingExcludedUsername(telegramUser.username),
         playerProfile: { create: { xp: 0 } },
       },
     });

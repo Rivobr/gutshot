@@ -209,6 +209,8 @@ model User {
   photoUrl  String?
   isBlocked Boolean  @default(false)
   isVerified Boolean @default(false)
+  /// Владельцы клуба и служебные аккаунты: XP копится, в рейтинге не показываются.
+  hiddenFromRating Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

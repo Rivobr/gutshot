@@ -1,0 +1,15 @@
+import { isRatingExcludedUsername } from './rating-exclusions';
+
+describe('isRatingExcludedUsername', () => {
+  it('matches club owners regardless of case and @', () => {
+    expect(isRatingExcludedUsername('ingra_admin')).toBe(true);
+    expect(isRatingExcludedUsername('@GARGONA52')).toBe(true);
+    expect(isRatingExcludedUsername('Ingra_Admin')).toBe(true);
+  });
+
+  it('does not match other players', () => {
+    expect(isRatingExcludedUsername('prophet')).toBe(false);
+    expect(isRatingExcludedUsername(null)).toBe(false);
+    expect(isRatingExcludedUsername('')).toBe(false);
+  });
+});
