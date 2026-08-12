@@ -4,6 +4,8 @@ RUN apk add --no-cache openssl libc6-compat \
   && corepack enable && corepack prepare pnpm@9.0.0 --activate
 
 FROM base AS deps
+# bcrypt fallback needs a compiler if the prebuilt musl binary can't be downloaded
+RUN apk add --no-cache python3 make g++
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY apps/api/package.json ./apps/api/package.json
 COPY packages ./packages
