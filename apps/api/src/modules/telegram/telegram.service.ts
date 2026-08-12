@@ -29,26 +29,57 @@ export class TelegramService {
   }
 
   async sendMessage(telegramId: string, text: string, replyMarkup?: object): Promise<boolean> {
-    if (!this.botToken) {
-      this.logger.warn('TELEGRAM_BOT_TOKEN не задан — сообщение не отправлено');
-      return false;
-    }
-
-    const body: Record<string, unknown> = {
+    const result = await this.callTelegramApi('sendMessage', {
       chat_id: telegramId,
       text,
       parse_mode: 'HTML',
-    };
-    if (replyMarkup) {
-      body.reply_markup = replyMarkup;
+      ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
+    });
+    return result != null;
+  }
+
+  /** Ответ на нажатие inline-кнопки (обязателен, иначе у игрока крутится лоадер). */
+  async answerCallbackQuery(callbackQueryId: string, text?: string): Promise<boolean> {
+    const result = await this.callTelegramApi('answerCallbackQuery', {
+      callback_query_id: callbackQueryId,
+      ...(text ? { text } : {}),
+    });
+    return result != null;
+  }
+
+  /** Правит текст сообщения и снимает кнопки (после RSVP). */
+  async editMessageText(
+    chatId: string | number,
+    messageId: number,
+    text: string,
+  ): Promise<boolean> {
+    const result = await this.callTelegramApi('editMessageText', {
+      chat_id: chatId,
+      message_id: messageId,
+      text,
+      parse_mode: 'HTML',
+      reply_markup: { inline_keyboard: [] },
+    });
+    return result != null;
+  }
+
+  /**
+   * Вызов Telegram Bot API с ретраями.
+   * Outbound с VPS иногда падает (DNS/сеть) — без ретраев кнопки «молчат».
+   */
+  private async callTelegramApi(
+    method: string,
+    body: Record<string, unknown>,
+  ): Promise<Record<string, unknown> | null> {
+    if (!this.botToken) {
+      this.logger.warn(`TELEGRAM_BOT_TOKEN не задан — ${method} не выполнен`);
+      return null;
     }
 
-    // Outbound к api.telegram.org с VPS иногда падает (DNS/сеть) —
-    // без ретраев /start «молчит» и игрок думает, что клуб мёртв.
     let lastError: unknown;
     for (let attempt = 1; attempt <= 4; attempt += 1) {
       try {
-        const response = await fetch(`https://api.telegram.org/bot${this.botToken}/sendMessage`, {
+        const response = await fetch(`https://api.telegram.org/bot${this.botToken}/${method}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
@@ -56,26 +87,27 @@ export class TelegramService {
         });
 
         if (!response.ok) {
-          this.logger.error(`Telegram API error: ${response.status} ${await response.text()}`);
-          // 429/5xx — имеет смысл повторить; 400 (чат не найден) — нет.
+          const raw = await response.text();
+          this.logger.error(`Telegram ${method} error: ${response.status} ${raw}`);
           if (response.status < 500 && response.status !== 429) {
-            return false;
+            return null;
           }
           throw new Error(`http ${response.status}`);
         }
 
-        return true;
+        const payload = (await response.json()) as { ok?: boolean; result?: Record<string, unknown> };
+        return payload.result ?? {};
       } catch (error) {
         lastError = error;
         this.logger.warn(
-          `Telegram sendMessage attempt ${attempt}/4 failed: ${(error as Error).message}`,
+          `Telegram ${method} attempt ${attempt}/4 failed: ${(error as Error).message}`,
         );
         await new Promise((r) => setTimeout(r, 500 * attempt));
       }
     }
 
-    this.logger.error('Ошибка отправки Telegram сообщения', lastError as Error);
-    return false;
+    this.logger.error(`Ошибка Telegram ${method}`, lastError as Error);
+    return null;
   }
 
   async sendWelcome(chatId: string): Promise<boolean> {

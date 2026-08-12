@@ -5,6 +5,7 @@ import { TelegramService } from './telegram.service';
 import { NotificationsService } from './notifications.service';
 import { TelegramWebhookController } from './telegram-webhook.controller';
 import { TelegramBotBootstrap } from './telegram-bot.bootstrap';
+import { TelegramRsvpService } from './telegram-rsvp.service';
 
 @Module({
   imports: [
@@ -18,7 +19,7 @@ import { TelegramBotBootstrap } from './telegram-bot.bootstrap';
     }),
   ],
   controllers: [TelegramWebhookController],
-  providers: [TelegramService, NotificationsService, TelegramBotBootstrap],
+  providers: [TelegramService, NotificationsService, TelegramBotBootstrap, TelegramRsvpService],
   exports: [TelegramService, NotificationsService],
 })
 export class TelegramModule {}
