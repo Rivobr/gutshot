@@ -23,13 +23,18 @@ export function useBroadcast(id: string) {
   });
 }
 
-export function useBroadcastPreview(segment: BroadcastSegment, tournamentId?: string) {
+export function useBroadcastPreview(
+  segment: BroadcastSegment,
+  tournamentId?: string,
+  targetUserId?: string,
+) {
   const needsTournament =
     segment === 'TOURNAMENT_REGISTERED' || segment === 'TOURNAMENT_RSVP_PENDING';
+  const needsPlayer = segment === 'SINGLE_PLAYER';
   return useQuery({
-    queryKey: [...KEY, 'preview', segment, tournamentId ?? ''],
-    queryFn: () => adminBroadcastApi.preview(segment, tournamentId),
-    enabled: !needsTournament || Boolean(tournamentId),
+    queryKey: [...KEY, 'preview', segment, tournamentId ?? '', targetUserId ?? ''],
+    queryFn: () => adminBroadcastApi.preview(segment, tournamentId, targetUserId),
+    enabled: (!needsTournament || Boolean(tournamentId)) && (!needsPlayer || Boolean(targetUserId)),
   });
 }
 

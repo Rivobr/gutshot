@@ -57,6 +57,31 @@ export class TelegramService {
     return { messageId, chatId };
   }
 
+  /** Фото по URL + caption (HTML) + кнопки. Telegram сам скачает картинку. */
+  async sendPhotoDetailed(
+    telegramId: string,
+    photoUrl: string,
+    caption: string,
+    replyMarkup?: object,
+  ): Promise<{ messageId: number; chatId: number } | null> {
+    const result = await this.callTelegramApi('sendPhoto', {
+      chat_id: telegramId,
+      photo: photoUrl,
+      caption: caption.slice(0, 1024),
+      parse_mode: 'HTML',
+      ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
+    });
+    if (!result) {
+      return null;
+    }
+    const messageId = Number(result.message_id);
+    const chatId = Number((result.chat as { id?: number } | undefined)?.id ?? telegramId);
+    if (!Number.isFinite(messageId)) {
+      return null;
+    }
+    return { messageId, chatId };
+  }
+
   /** Удалить сообщение бота (по сохранённому message_id рассылки). */
   async deleteMessage(chatId: string | number, messageId: number): Promise<boolean> {
     const result = await this.callTelegramApi('deleteMessage', {

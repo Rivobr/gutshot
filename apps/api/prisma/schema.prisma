@@ -176,12 +176,14 @@ enum BroadcastSegment {
   ALL_ACTIVE
   TOURNAMENT_REGISTERED
   TOURNAMENT_RSVP_PENDING
+  SINGLE_PLAYER
 }
 
 enum BroadcastButtons {
   NONE
   OPEN_APP
   RSVP
+  CUSTOM
 }
 
 enum BroadcastDeliveryStatus {
@@ -232,6 +234,7 @@ model User {
   weeklyFinalQualifications  WeeklyFinalQualification[]
   events                     PlayerEvent[]
   broadcastDeliveries        BroadcastDelivery[]
+  targetedBroadcasts         BroadcastCampaign[] @relation("BroadcastTargetUser")
 
   @@index([telegramId])
   @@index([qrCode])
@@ -570,7 +573,13 @@ model BroadcastCampaign {
   bodyHtml       String
   segment        BroadcastSegment
   tournamentId   String?
+  /// Конкретный игрок (для сегмента SINGLE_PLAYER).
+  targetUserId   String?
+  /// URL картинки для sendPhoto (Telegram скачает сам).
+  photoUrl       String?
   buttons        BroadcastButtons @default(NONE)
+  /// Свои кнопки: [{ text, type?: "url"|"open_app", url?: string }]
+  customButtons  Json?
   status         BroadcastStatus  @default(DRAFT)
   createdById    String?
   recipientCount Int              @default(0)
@@ -581,12 +590,14 @@ model BroadcastCampaign {
   updatedAt      DateTime         @updatedAt
 
   tournament Tournament?         @relation(fields: [tournamentId], references: [id], onDelete: SetNull)
+  targetUser User?               @relation("BroadcastTargetUser", fields: [targetUserId], references: [id], onDelete: SetNull)
   createdBy  AdminUser?          @relation(fields: [createdById], references: [id], onDelete: SetNull)
   deliveries BroadcastDelivery[]
 
   @@index([status])
   @@index([createdAt])
   @@index([tournamentId])
+  @@index([targetUserId])
 }
 
 model BroadcastDelivery {

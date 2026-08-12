@@ -2,6 +2,7 @@ import type {
   BroadcastButtons,
   BroadcastCampaignDetailsDto,
   BroadcastCampaignDto,
+  BroadcastCustomButton,
   BroadcastSegment,
   BroadcastSegmentPreviewDto,
 } from '@gutshot/types';
@@ -12,7 +13,10 @@ export interface CreateBroadcastInput {
   bodyHtml: string;
   segment: BroadcastSegment;
   tournamentId?: string;
+  targetUserId?: string;
+  photoUrl?: string;
   buttons?: BroadcastButtons;
+  customButtons?: BroadcastCustomButton[];
 }
 
 export interface UpdateBroadcastInput {
@@ -20,7 +24,10 @@ export interface UpdateBroadcastInput {
   bodyHtml?: string;
   segment?: BroadcastSegment;
   tournamentId?: string | null;
+  targetUserId?: string | null;
+  photoUrl?: string | null;
   buttons?: BroadcastButtons;
+  customButtons?: BroadcastCustomButton[] | null;
 }
 
 export const adminBroadcastApi = {
@@ -37,9 +44,10 @@ export const adminBroadcastApi = {
   async preview(
     segment: BroadcastSegment,
     tournamentId?: string,
+    targetUserId?: string,
   ): Promise<BroadcastSegmentPreviewDto> {
     const { data } = await apiClient.get('/admin/broadcasts/preview', {
-      params: { segment, tournamentId },
+      params: { segment, tournamentId, targetUserId },
     });
     return data.data;
   },

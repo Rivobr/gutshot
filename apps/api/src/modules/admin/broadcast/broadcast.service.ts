@@ -9,13 +9,24 @@ import {
   BroadcastDeliveryStatus,
   BroadcastSegment,
   BroadcastStatus,
+  Prisma,
   RegistrationStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { TelegramService } from '../../telegram/telegram.service';
-import { CreateBroadcastDto, UpdateBroadcastDto } from './dto/broadcast.dto';
+import {
+  CreateBroadcastDto,
+  CustomBroadcastButtonDto,
+  UpdateBroadcastDto,
+} from './dto/broadcast.dto';
 
 type Recipient = { userId: string; telegramId: string; name: string };
+
+type CustomButton = {
+  text: string;
+  type?: 'url' | 'open_app';
+  url?: string;
+};
 
 @Injectable()
 export class AdminBroadcastService {
@@ -32,6 +43,9 @@ export class AdminBroadcastService {
       take: 100,
       include: {
         tournament: { select: { id: true, title: true, date: true } },
+        targetUser: {
+          select: { id: true, nickname: true, firstName: true, username: true, telegramId: true },
+        },
       },
     });
     return items.map((item) => this.serializeCampaign(item));
@@ -42,6 +56,9 @@ export class AdminBroadcastService {
       where: { id },
       include: {
         tournament: { select: { id: true, title: true, date: true } },
+        targetUser: {
+          select: { id: true, nickname: true, firstName: true, username: true, telegramId: true },
+        },
         deliveries: {
           orderBy: { createdAt: 'asc' },
           include: {
@@ -81,19 +98,30 @@ export class AdminBroadcastService {
     };
   }
 
-  async previewSegment(segment: BroadcastSegment, tournamentId?: string) {
-    const recipients = await this.resolveRecipients(segment, tournamentId);
+  async previewSegment(
+    segment: BroadcastSegment,
+    tournamentId?: string,
+    targetUserId?: string,
+  ) {
+    const recipients = await this.resolveRecipients(segment, tournamentId, targetUserId);
     return {
       segment,
       tournamentId: tournamentId ?? null,
+      targetUserId: targetUserId ?? null,
       count: recipients.length,
       sample: recipients.slice(0, 10),
     };
   }
 
   async create(dto: CreateBroadcastDto, createdById?: string) {
-    this.assertSegmentButtons(dto.segment, dto.buttons ?? BroadcastButtons.NONE, dto.tournamentId);
-    const recipients = await this.resolveRecipients(dto.segment, dto.tournamentId);
+    const buttons = dto.buttons ?? BroadcastButtons.NONE;
+    const customButtons = this.normalizeCustomButtons(dto.customButtons);
+    this.assertConfig(dto.segment, buttons, dto.tournamentId, dto.targetUserId, customButtons);
+    const recipients = await this.resolveRecipients(
+      dto.segment,
+      dto.tournamentId,
+      dto.targetUserId,
+    );
 
     const campaign = await this.prisma.broadcastCampaign.create({
       data: {
@@ -101,12 +129,23 @@ export class AdminBroadcastService {
         bodyHtml: dto.bodyHtml.trim(),
         segment: dto.segment,
         tournamentId: dto.tournamentId || null,
-        buttons: dto.buttons ?? BroadcastButtons.NONE,
+        targetUserId: dto.targetUserId || null,
+        photoUrl: dto.photoUrl?.trim() || null,
+        buttons,
+        customButtons:
+          buttons === BroadcastButtons.CUSTOM
+            ? (customButtons as unknown as Prisma.InputJsonValue)
+            : Prisma.JsonNull,
         createdById: createdById || null,
         recipientCount: recipients.length,
         status: BroadcastStatus.DRAFT,
       },
-      include: { tournament: { select: { id: true, title: true, date: true } } },
+      include: {
+        tournament: { select: { id: true, title: true, date: true } },
+        targetUser: {
+          select: { id: true, nickname: true, firstName: true, username: true, telegramId: true },
+        },
+      },
     });
 
     return this.serializeCampaign(campaign);
@@ -125,9 +164,16 @@ export class AdminBroadcastService {
     const buttons = dto.buttons ?? existing.buttons;
     const tournamentId =
       dto.tournamentId === undefined ? existing.tournamentId : dto.tournamentId;
+    const targetUserId =
+      dto.targetUserId === undefined ? existing.targetUserId : dto.targetUserId;
+    const photoUrl = dto.photoUrl === undefined ? existing.photoUrl : dto.photoUrl;
+    const customButtons =
+      dto.customButtons === undefined
+        ? this.readCustomButtons(existing.customButtons)
+        : this.normalizeCustomButtons(dto.customButtons ?? []);
 
-    this.assertSegmentButtons(segment, buttons, tournamentId ?? undefined);
-    const recipients = await this.resolveRecipients(segment, tournamentId ?? undefined);
+    this.assertConfig(segment, buttons, tournamentId, targetUserId, customButtons);
+    const recipients = await this.resolveRecipients(segment, tournamentId, targetUserId);
 
     const campaign = await this.prisma.broadcastCampaign.update({
       where: { id },
@@ -137,9 +183,20 @@ export class AdminBroadcastService {
         segment: dto.segment,
         buttons: dto.buttons,
         tournamentId: tournamentId || null,
+        targetUserId: targetUserId || null,
+        photoUrl: photoUrl?.trim() || null,
+        customButtons:
+          buttons === BroadcastButtons.CUSTOM
+            ? (customButtons as unknown as Prisma.InputJsonValue)
+            : Prisma.JsonNull,
         recipientCount: recipients.length,
       },
-      include: { tournament: { select: { id: true, title: true, date: true } } },
+      include: {
+        tournament: { select: { id: true, title: true, date: true } },
+        targetUser: {
+          select: { id: true, nickname: true, firstName: true, username: true, telegramId: true },
+        },
+      },
     });
 
     return this.serializeCampaign(campaign);
@@ -151,14 +208,18 @@ export class AdminBroadcastService {
       throw new NotFoundException('Рассылка не найдена');
     }
 
-    const markup = this.buildMarkup(campaign.buttons, campaign.tournamentId, telegramId);
-    const result = await this.telegramService.sendMessageDetailed(
+    const result = await this.deliverOne(
       telegramId.trim(),
       campaign.bodyHtml,
-      markup,
+      campaign.photoUrl,
+      campaign.buttons,
+      campaign.tournamentId,
+      this.readCustomButtons(campaign.customButtons),
     );
     if (!result) {
-      throw new BadRequestException('Не удалось отправить тест. Проверьте Telegram ID и что бот не заблокирован.');
+      throw new BadRequestException(
+        'Не удалось отправить тест. Проверьте Telegram ID, фото-URL и что бот не заблокирован.',
+      );
     }
     return {
       ok: true,
@@ -177,10 +238,18 @@ export class AdminBroadcastService {
       throw new BadRequestException('Рассылка уже отправляется или отправлена');
     }
 
-    this.assertSegmentButtons(campaign.segment, campaign.buttons, campaign.tournamentId ?? undefined);
+    const customButtons = this.readCustomButtons(campaign.customButtons);
+    this.assertConfig(
+      campaign.segment,
+      campaign.buttons,
+      campaign.tournamentId,
+      campaign.targetUserId,
+      customButtons,
+    );
     const recipients = await this.resolveRecipients(
       campaign.segment,
-      campaign.tournamentId ?? undefined,
+      campaign.tournamentId,
+      campaign.targetUserId,
     );
     if (recipients.length === 0) {
       throw new BadRequestException('Нет получателей для выбранного сегмента');
@@ -210,15 +279,13 @@ export class AdminBroadcastService {
     let failedCount = 0;
 
     for (const recipient of recipients) {
-      const markup = this.buildMarkup(
-        campaign.buttons,
-        campaign.tournamentId,
-        recipient.telegramId,
-      );
-      const result = await this.telegramService.sendMessageDetailed(
+      const result = await this.deliverOne(
         recipient.telegramId,
         campaign.bodyHtml,
-        markup,
+        campaign.photoUrl,
+        campaign.buttons,
+        campaign.tournamentId,
+        customButtons,
       );
 
       if (result) {
@@ -255,7 +322,12 @@ export class AdminBroadcastService {
         failedCount,
         sentAt: new Date(),
       },
-      include: { tournament: { select: { id: true, title: true, date: true } } },
+      include: {
+        tournament: { select: { id: true, title: true, date: true } },
+        targetUser: {
+          select: { id: true, nickname: true, firstName: true, username: true, telegramId: true },
+        },
+      },
     });
 
     this.logger.log(
@@ -305,10 +377,31 @@ export class AdminBroadcastService {
     return { ok: true };
   }
 
+  private async deliverOne(
+    telegramId: string,
+    bodyHtml: string,
+    photoUrl: string | null,
+    buttons: BroadcastButtons,
+    tournamentId: string | null,
+    customButtons: CustomButton[],
+  ) {
+    const markup = this.buildMarkup(buttons, tournamentId, telegramId, customButtons);
+    if (photoUrl?.trim()) {
+      return this.telegramService.sendPhotoDetailed(
+        telegramId,
+        photoUrl.trim(),
+        bodyHtml,
+        markup,
+      );
+    }
+    return this.telegramService.sendMessageDetailed(telegramId, bodyHtml, markup);
+  }
+
   private buildMarkup(
     buttons: BroadcastButtons,
     tournamentId: string | null,
     telegramId: string,
+    customButtons: CustomButton[],
   ): object | undefined {
     if (buttons === BroadcastButtons.OPEN_APP) {
       return this.telegramService.buildOpenAppKeyboard(telegramId);
@@ -319,13 +412,32 @@ export class AdminBroadcastService {
       }
       return this.telegramService.buildRsvpKeyboard(tournamentId);
     }
+    if (buttons === BroadcastButtons.CUSTOM) {
+      const mapped = customButtons.map((btn) => {
+        if (btn.type === 'open_app') {
+          const keyboard = this.telegramService.buildOpenAppKeyboard(telegramId) as {
+            inline_keyboard: Array<Array<{ text: string; web_app?: { url: string } }>>;
+          };
+          const open = keyboard.inline_keyboard[0]?.[0];
+          return { text: btn.text || open?.text || '♠️ Открыть клуб', web_app: open?.web_app };
+        }
+        return { text: btn.text, url: btn.url };
+      });
+      const rows: Array<typeof mapped> = [];
+      for (let i = 0; i < mapped.length; i += 2) {
+        rows.push(mapped.slice(i, i + 2));
+      }
+      return { inline_keyboard: rows };
+    }
     return undefined;
   }
 
-  private assertSegmentButtons(
+  private assertConfig(
     segment: BroadcastSegment,
     buttons: BroadcastButtons,
     tournamentId?: string | null,
+    targetUserId?: string | null,
+    customButtons: CustomButton[] = [],
   ) {
     const needsTournament =
       segment === BroadcastSegment.TOURNAMENT_REGISTERED ||
@@ -335,12 +447,88 @@ export class AdminBroadcastService {
     if (needsTournament && !tournamentId) {
       throw new BadRequestException('Укажите турнир для этого сегмента / RSVP');
     }
+    if (segment === BroadcastSegment.SINGLE_PLAYER && !targetUserId) {
+      throw new BadRequestException('Выберите игрока');
+    }
+    if (buttons === BroadcastButtons.CUSTOM) {
+      if (!customButtons.length) {
+        throw new BadRequestException('Добавьте хотя бы одну свою кнопку');
+      }
+      for (const btn of customButtons) {
+        if (!btn.text?.trim()) {
+          throw new BadRequestException('У кнопки должен быть текст');
+        }
+        if ((btn.type ?? 'url') === 'url' && !btn.url?.trim()) {
+          throw new BadRequestException(`У кнопки «${btn.text}» нужна ссылка`);
+        }
+      }
+    }
+  }
+
+  private normalizeCustomButtons(
+    buttons?: CustomBroadcastButtonDto[] | null,
+  ): CustomButton[] {
+    return (buttons ?? [])
+      .map((btn) => ({
+        text: btn.text.trim(),
+        type: btn.type ?? 'url',
+        url: btn.url?.trim() || undefined,
+      }))
+      .filter((btn) => btn.text);
+  }
+
+  private readCustomButtons(value: Prisma.JsonValue | null | undefined): CustomButton[] {
+    if (!value || !Array.isArray(value)) {
+      return [];
+    }
+    return value
+      .map((item) => {
+        if (!item || typeof item !== 'object') return null;
+        const raw = item as Record<string, unknown>;
+        const text = typeof raw.text === 'string' ? raw.text : '';
+        const type = raw.type === 'open_app' ? 'open_app' : 'url';
+        const url = typeof raw.url === 'string' ? raw.url : undefined;
+        if (!text) return null;
+        return { text, type, url } as CustomButton;
+      })
+      .filter((item): item is CustomButton => item != null);
   }
 
   private async resolveRecipients(
     segment: BroadcastSegment,
     tournamentId?: string | null,
+    targetUserId?: string | null,
   ): Promise<Recipient[]> {
+    if (segment === BroadcastSegment.SINGLE_PLAYER) {
+      if (!targetUserId) {
+        throw new BadRequestException('Выберите игрока');
+      }
+      const user = await this.prisma.user.findUnique({
+        where: { id: targetUserId },
+        select: {
+          id: true,
+          telegramId: true,
+          nickname: true,
+          firstName: true,
+          username: true,
+          isBlocked: true,
+        },
+      });
+      if (!user || user.isBlocked) {
+        throw new NotFoundException('Игрок не найден или заблокирован');
+      }
+      if (!/^[0-9]{6,}$/.test(user.telegramId)) {
+        throw new BadRequestException('У игрока нет корректного Telegram ID');
+      }
+      return [
+        {
+          userId: user.id,
+          telegramId: user.telegramId,
+          name: user.nickname || user.firstName || user.username || user.telegramId,
+        },
+      ];
+    }
+
     if (segment === BroadcastSegment.ALL_ACTIVE) {
       const users = await this.prisma.user.findMany({
         where: {
@@ -428,7 +616,10 @@ export class AdminBroadcastService {
     bodyHtml: string;
     segment: BroadcastSegment;
     tournamentId: string | null;
+    targetUserId?: string | null;
+    photoUrl?: string | null;
     buttons: BroadcastButtons;
+    customButtons?: Prisma.JsonValue | null;
     status: BroadcastStatus;
     recipientCount: number;
     sentCount: number;
@@ -437,6 +628,13 @@ export class AdminBroadcastService {
     createdAt: Date;
     updatedAt: Date;
     tournament?: { id: string; title: string; date: Date } | null;
+    targetUser?: {
+      id: string;
+      nickname: string | null;
+      firstName: string | null;
+      username: string | null;
+      telegramId: string;
+    } | null;
   }) {
     return {
       id: campaign.id,
@@ -444,7 +642,10 @@ export class AdminBroadcastService {
       bodyHtml: campaign.bodyHtml,
       segment: campaign.segment,
       tournamentId: campaign.tournamentId,
+      targetUserId: campaign.targetUserId ?? null,
+      photoUrl: campaign.photoUrl ?? null,
       buttons: campaign.buttons,
+      customButtons: this.readCustomButtons(campaign.customButtons),
       status: campaign.status,
       recipientCount: campaign.recipientCount,
       sentCount: campaign.sentCount,
@@ -457,6 +658,17 @@ export class AdminBroadcastService {
             id: campaign.tournament.id,
             title: campaign.tournament.title,
             date: campaign.tournament.date.toISOString(),
+          }
+        : null,
+      targetUser: campaign.targetUser
+        ? {
+            id: campaign.targetUser.id,
+            name:
+              campaign.targetUser.nickname ||
+              campaign.targetUser.firstName ||
+              campaign.targetUser.username ||
+              campaign.targetUser.telegramId,
+            telegramId: campaign.targetUser.telegramId,
           }
         : null,
     };

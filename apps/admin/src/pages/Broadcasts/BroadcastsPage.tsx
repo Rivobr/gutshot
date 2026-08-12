@@ -15,6 +15,7 @@ const SEGMENT_LABEL: Record<string, string> = {
   ALL_ACTIVE: 'Все активные',
   TOURNAMENT_REGISTERED: 'Записанные на турнир',
   TOURNAMENT_RSVP_PENDING: 'Не подтвердили RSVP',
+  SINGLE_PLAYER: 'Один игрок',
 };
 
 export function BroadcastsPage(): JSX.Element {
@@ -54,6 +55,8 @@ export function BroadcastsPage(): JSX.Element {
                   <p className="text-xs text-muted-foreground">
                     {STATUS_LABEL[item.status]} · {SEGMENT_LABEL[item.segment] ?? item.segment}
                     {item.tournament ? ` · ${item.tournament.title}` : ''}
+                    {item.targetUser ? ` · ${item.targetUser.name}` : ''}
+                    {item.photoUrl ? ' · с фото' : ''}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {formatDateTime(item.createdAt)}

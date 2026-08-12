@@ -737,9 +737,16 @@ export type BroadcastStatus = 'DRAFT' | 'SENDING' | 'SENT' | 'FAILED';
 export type BroadcastSegment =
   | 'ALL_ACTIVE'
   | 'TOURNAMENT_REGISTERED'
-  | 'TOURNAMENT_RSVP_PENDING';
-export type BroadcastButtons = 'NONE' | 'OPEN_APP' | 'RSVP';
+  | 'TOURNAMENT_RSVP_PENDING'
+  | 'SINGLE_PLAYER';
+export type BroadcastButtons = 'NONE' | 'OPEN_APP' | 'RSVP' | 'CUSTOM';
 export type BroadcastDeliveryStatus = 'PENDING' | 'SENT' | 'FAILED' | 'SKIPPED';
+
+export interface BroadcastCustomButton {
+  text: string;
+  type?: 'url' | 'open_app';
+  url?: string;
+}
 
 export interface BroadcastCampaignDto {
   id: string;
@@ -747,7 +754,10 @@ export interface BroadcastCampaignDto {
   bodyHtml: string;
   segment: BroadcastSegment;
   tournamentId: string | null;
+  targetUserId: string | null;
+  photoUrl: string | null;
   buttons: BroadcastButtons;
+  customButtons: BroadcastCustomButton[];
   status: BroadcastStatus;
   recipientCount: number;
   sentCount: number;
@@ -756,6 +766,7 @@ export interface BroadcastCampaignDto {
   createdAt: string;
   updatedAt: string;
   tournament: { id: string; title: string; date: string } | null;
+  targetUser: { id: string; name: string; telegramId: string } | null;
 }
 
 export interface BroadcastDeliveryDto {
@@ -777,6 +788,7 @@ export interface BroadcastCampaignDetailsDto extends BroadcastCampaignDto {
 export interface BroadcastSegmentPreviewDto {
   segment: BroadcastSegment;
   tournamentId: string | null;
+  targetUserId: string | null;
   count: number;
   sample: Array<{ userId: string; telegramId: string; name: string }>;
 }

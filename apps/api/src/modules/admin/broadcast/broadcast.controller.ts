@@ -39,8 +39,9 @@ export class AdminBroadcastController {
   preview(
     @Query('segment') segment: BroadcastSegment,
     @Query('tournamentId') tournamentId?: string,
+    @Query('targetUserId') targetUserId?: string,
   ) {
-    return this.broadcastService.previewSegment(segment, tournamentId);
+    return this.broadcastService.previewSegment(segment, tournamentId, targetUserId);
   }
 
   @Get(':id')
