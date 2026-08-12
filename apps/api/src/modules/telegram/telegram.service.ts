@@ -453,7 +453,8 @@ export class TelegramService {
     try {
       const body: Record<string, unknown> = {
         url: webhookUrl,
-        allowed_updates: ['message'],
+        // message — /start и команды; callback_query — inline-кнопки (RSVP и т.п.)
+        allowed_updates: ['message', 'callback_query'],
         drop_pending_updates: false,
       };
 
