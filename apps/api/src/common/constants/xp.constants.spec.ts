@@ -5,6 +5,7 @@ import {
   LEVEL_100_XP,
   MAX_SCORING_PLACE,
   requiredXpForLevel,
+  xpToNextLevel,
 } from './xp-defaults.constants';
 
 describe('getXpForPlace', () => {
@@ -43,27 +44,33 @@ describe('getXpForPlace', () => {
   });
 });
 
-describe('таблица уровней 1–100 (600k)', () => {
+describe('таблица уровней 1–100 (быстрый старт, тяжёлый эндшпиль)', () => {
   const byLevel = new Map(DEFAULT_LEVEL_THRESHOLDS.map((row) => [row.level, row.requiredXp]));
 
   it('содержит 100 уровней и стартует с нуля', () => {
     expect(DEFAULT_LEVEL_THRESHOLDS).toHaveLength(100);
     expect(byLevel.get(1)).toBe(0);
     expect(requiredXpForLevel(100)).toBe(LEVEL_100_XP);
+    expect(byLevel.get(100)).toBe(LEVEL_100_XP);
   });
 
-  it('совпадает с контрольными значениями модели 600k', () => {
-    expect(byLevel.get(2)).toBe(Math.round(2328 + 37.68));
-    expect(byLevel.get(10)).toBe(Math.round(2328 * 9 + 37.68 * 81));
-    expect(byLevel.get(20)).toBe(Math.round(2328 * 19 + 37.68 * 361));
-    expect(byLevel.get(50)).toBe(Math.round(2328 * 49 + 37.68 * 2401));
-    expect(byLevel.get(75)).toBe(Math.round(2328 * 74 + 37.68 * 5476));
-    expect(byLevel.get(100)).toBe(600_000);
+  it('ранние уровни дешёвые, с 20-го шаг растёт', () => {
+    expect(xpToNextLevel(1)).toBe(200);
+    expect(xpToNextLevel(19)).toBe(920);
+    expect(xpToNextLevel(20)).toBe(1000);
+    expect(xpToNextLevel(49)).toBe(3610);
+    expect(xpToNextLevel(50)).toBe(4000);
+    expect(xpToNextLevel(1)).toBeLessThan(xpToNextLevel(20));
+    expect(xpToNextLevel(20)).toBeLessThan(xpToNextLevel(50));
+    expect(xpToNextLevel(50)).toBeLessThan(xpToNextLevel(99));
+    expect(byLevel.get(10)!).toBeLessThan(8_000);
+    expect(byLevel.get(20)!).toBeLessThan(15_000);
   });
 
-  it('пороги строго растут', () => {
+  it('пороги строго растут и не выходят за 600k', () => {
     for (let level = 2; level <= 100; level += 1) {
       expect(byLevel.get(level)!).toBeGreaterThan(byLevel.get(level - 1)!);
+      expect(byLevel.get(level)!).toBeLessThanOrEqual(LEVEL_100_XP);
     }
   });
 });

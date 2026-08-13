@@ -121,14 +121,36 @@ export const MAX_LEVEL = 100;
 export const LEVEL_100_XP = 600_000;
 
 /**
- * Плавная кривая до 600 000 XP на 100 уровне (×2.4 от модели 250k):
- * XP(L) ≈ 2328×(L−1) + 37.68×(L−1)²
+ * Сколько XP нужно, чтобы перейти с `fromLevel` на следующий.
+ *
+ * 1–20: быстро (один-два турнира на уровень).
+ * 20–50: каждый уровень заметно дороже.
+ * 50–100: тяжёлый эндшпиль, потолок всё ещё 600k / 100 ур.
+ */
+export function xpToNextLevel(fromLevel: number): number {
+  if (fromLevel < 1 || fromLevel >= MAX_LEVEL) {
+    return 0;
+  }
+  if (fromLevel < 20) {
+    return 200 + 40 * (fromLevel - 1);
+  }
+  if (fromLevel < 50) {
+    return 1000 + 90 * (fromLevel - 20);
+  }
+  return 4000 + 261 * (fromLevel - 50);
+}
+
+/**
+ * Накопительный XP для уровня. 100-й уровень всегда ровно 600 000.
  */
 export function requiredXpForLevel(level: number): number {
   if (level <= 1) return 0;
-  if (level >= 100) return LEVEL_100_XP;
-  const n = level - 1;
-  return Math.round(2328 * n + 37.68 * n * n);
+  if (level >= MAX_LEVEL) return LEVEL_100_XP;
+  let total = 0;
+  for (let from = 1; from < level; from += 1) {
+    total += xpToNextLevel(from);
+  }
+  return total;
 }
 
 /** Полная таблица уровней 1–100 с накопительным XP. */
@@ -145,6 +167,16 @@ export function buildLevelThresholds(maxLevel = MAX_LEVEL): {
 
 /** Таблица уровней по умолчанию: 1–100. */
 export const DEFAULT_LEVEL_THRESHOLDS = buildLevelThresholds();
+
+/**
+ * Кривая v3 (почти линейная 600k@100) — для справки / старых миграций.
+ */
+export function requiredXpForLevelV3(level: number): number {
+  if (level <= 1) return 0;
+  if (level >= 100) return LEVEL_100_XP;
+  const n = level - 1;
+  return Math.round(2328 * n + 37.68 * n * n);
+}
 
 /**
  * Кривая v2 (250k@100) — для пересчёта XP при миграции на 600k.

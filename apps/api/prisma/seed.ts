@@ -63,8 +63,13 @@ const DEFAULT_XP_SETTINGS: Record<XpSettingKey, number> = {
 function requiredXpForLevel(level: number): number {
   if (level <= 1) return 0;
   if (level >= 100) return 600_000;
-  const n = level - 1;
-  return Math.round(2328 * n + 37.68 * n * n);
+  let total = 0;
+  for (let from = 1; from < level; from += 1) {
+    if (from < 20) total += 200 + 40 * (from - 1);
+    else if (from < 50) total += 1000 + 90 * (from - 20);
+    else total += 4000 + 261 * (from - 50);
+  }
+  return total;
 }
 
 const DEFAULT_LEVEL_THRESHOLDS = Array.from({ length: 100 }, (_, index) => {
