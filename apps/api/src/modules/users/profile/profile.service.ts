@@ -5,6 +5,7 @@ import { PlayerEventsService } from '../../progression/player-events.service';
 import { AchievementsService } from '../../progression/achievements.service';
 import { AchievementEngineService } from '../../progression/achievement-engine.service';
 import { UsersService } from '../users.service';
+import { ACHIEVEMENTS_BY_ID } from '../../../common/constants/achievements-catalog';
 
 /** Сколько достижений игрок может закрепить в профиле. */
 export const MAX_PINNED_ACHIEVEMENTS = 3;
@@ -284,7 +285,9 @@ export class ProfileService {
 
   /** Витрина достижений в профиле: показывается другим игрокам. */
   async setPinnedAchievements(userId: string, achievementIds: string[]) {
-    const unique = Array.from(new Set(achievementIds)).slice(0, MAX_PINNED_ACHIEVEMENTS);
+    const unique = Array.from(new Set(achievementIds))
+      .filter((id) => ACHIEVEMENTS_BY_ID.has(id))
+      .slice(0, MAX_PINNED_ACHIEVEMENTS);
     await this.prisma.user.update({
       where: { id: userId },
       data: { pinnedAchievements: unique },

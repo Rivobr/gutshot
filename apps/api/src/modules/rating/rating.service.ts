@@ -58,11 +58,14 @@ export class RatingService implements OnModuleInit {
     }
   }
 
-  /** Общий прогресс уровня (XP) — не таблица рейтинга. */
+  /**
+   * Глобальный рейтинг по XP. Владельцы клуба здесь видны —
+   * hiddenFromRating действует только на недельный / финальный рейтинг очков.
+   */
   async getOverallRating() {
     const [profiles, thresholds] = await Promise.all([
       this.prisma.playerProfile.findMany({
-        where: { user: { hiddenFromRating: false } },
+        where: { user: { isBlocked: false } },
         orderBy: { xp: 'desc' },
         include: { user: true },
       }),
@@ -70,7 +73,7 @@ export class RatingService implements OnModuleInit {
     ]);
 
     const base = profiles
-      .filter((profile) => !this.isHiddenFromRating(profile.user))
+      .filter((profile) => !profile.user.isBlocked)
       .map((profile, index) => ({
         rank: index + 1,
         userId: profile.userId,
@@ -78,6 +81,7 @@ export class RatingService implements OnModuleInit {
         lastName: profile.user.lastName,
         nickname: profile.user.nickname,
         photoUrl: profile.user.photoUrl,
+        username: profile.user.username,
         xp: profile.xp,
         points: profile.xp,
         level: this.levelsService.computeProgress(thresholds, profile.xp).level,

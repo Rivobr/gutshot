@@ -37,6 +37,11 @@ export class RatingController {
     return this.ratingService.getOverallRating();
   }
 
+  @Get('xp')
+  getXp() {
+    return this.ratingService.getOverallRating();
+  }
+
   @Get('weekly')
   getWeekly(@Query('week') week?: string) {
     const mode = week === 'previous' || week === 'current' || week === 'auto' ? week : 'auto';

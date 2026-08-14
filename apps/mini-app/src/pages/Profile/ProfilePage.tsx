@@ -19,11 +19,12 @@ import { displayNameOf } from '../../shared/lib/display-name';
 import { formatDate } from '../../shared/lib/format';
 import { PLAYER_EVENT_LABELS, formatEventDate } from '../../shared/lib/event-labels';
 import {
-  RARITY_STYLE,
+  styleForAchievement,
   buildAchievementViews,
   sortAchievementsByAvailability,
 } from '../../shared/lib/achievements-catalog';
 import { AchievementMedallion } from '../../shared/ui/AchievementMedallion';
+import { GlobalXpRatingCard } from '../../widgets/GlobalXpRating/GlobalXpRatingCard';
 
 interface StatItem {
   icon: string;
@@ -399,6 +400,8 @@ export function ProfilePage(): JSX.Element {
           </div>
         </motion.section>
 
+        <GlobalXpRatingCard currentUserId={profile.id} />
+
         {/* Достижения */}
         <motion.section
           initial={{ opacity: 0, y: 18 }}
@@ -434,7 +437,7 @@ export function ProfilePage(): JSX.Element {
                 whileTap={{ scale: 0.96 }}
                 className="relative shrink-0 flex flex-col items-center gap-2 p-3 rounded-[16px]"
                 style={(() => {
-                  const rarityStyle = a.unlocked ? RARITY_STYLE[a.rarity] : null;
+                  const rarityStyle = a.unlocked ? styleForAchievement(a.id, a.rarity) : null;
                   return {
                     width: 100,
                     cursor: 'pointer' as const,
@@ -455,7 +458,7 @@ export function ProfilePage(): JSX.Element {
                     className="sans absolute top-1.5 right-2"
                     style={{
                       fontSize: 10,
-                      color: a.unlocked ? RARITY_STYLE[a.rarity].accent : '#F7D98A',
+                      color: a.unlocked ? styleForAchievement(a.id, a.rarity).accent : '#F7D98A',
                     }}
                     aria-label="В витрине профиля"
                   >
@@ -468,6 +471,7 @@ export function ProfilePage(): JSX.Element {
                   locked={!a.unlocked}
                   size={42}
                   title={a.title}
+                  achievementId={a.id}
                 />
                 <span
                   className="sans text-center"
