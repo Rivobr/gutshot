@@ -32,7 +32,11 @@ export function GutshotChipDecor({
   );
 }
 
-/** Лицо фишки — SVG один-в-один с физической фишкой клуба */
+/**
+ * Лицо фишки 1:1 с физической Gutshot:
+ * тёмно-зелёный обод, 5 салатовых «лезвий» по часовой, белый центр,
+ * логотип бота, POKER CLUB, 10 000.
+ */
 function ChipFace({ id, mirrored = false }: { id: string; mirrored?: boolean }): JSX.Element {
   return (
     <svg
@@ -43,94 +47,83 @@ function ChipFace({ id, mirrored = false }: { id: string; mirrored?: boolean }):
       aria-hidden
     >
       <defs>
-        <linearGradient id={`${id}-gold`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#D4B06A" />
-          <stop offset="40%" stopColor="#A07828" />
-          <stop offset="100%" stopColor="#6B4A12" />
+        <radialGradient id={`${id}-forest`} cx="42%" cy="36%" r="68%">
+          <stop offset="0%" stopColor="#1F9A36" />
+          <stop offset="55%" stopColor="#157A2C" />
+          <stop offset="100%" stopColor="#0A3F18" />
+        </radialGradient>
+        <linearGradient id={`${id}-lime`} x1="0.15" y1="0" x2="0.9" y2="1">
+          <stop offset="0%" stopColor="#8CFF6E" />
+          <stop offset="38%" stopColor="#4AE24C" />
+          <stop offset="100%" stopColor="#1CB83A" />
         </linearGradient>
-        <linearGradient id={`${id}-red`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#FF4D5E" />
-          <stop offset="45%" stopColor="#E0112F" />
-          <stop offset="100%" stopColor="#8A0A1C" />
-        </linearGradient>
+        <mask id={`${id}-rim`}>
+          <rect width="200" height="200" fill="black" />
+          <circle cx="100" cy="100" r="97.2" fill="white" />
+          <circle cx="100" cy="100" r="67.8" fill="black" />
+        </mask>
+        <clipPath id={`${id}-inlay`}>
+          <circle cx="100" cy="100" r="64.2" />
+        </clipPath>
       </defs>
 
-      <circle cx="100" cy="100" r="99.5" fill="#0B0B0B" />
-      <circle cx="100" cy="100" r="97" fill="#2FBF3A" />
+      <circle cx="100" cy="100" r="99.8" fill="#07140A" />
+      <circle cx="100" cy="100" r="97.4" fill={`url(#${id}-forest)`} />
 
-      {[0, 60, 120, 180, 240, 300].map((deg) => (
-        <path
-          key={deg}
-          d="M100 8.5
-             C117.2 9.4 132 16.4 137.5 26.6
-             C128.1 32 119.5 40.6 116.4 51.6
-             C111.7 40.6 107 33.6 100 29.7
-             C93 33.6 88.3 40.6 83.6 51.6
-             C80.5 40.6 71.9 32 62.5 26.6
-             C68 16.4 82.8 9.4 100 8.5 Z"
-          fill="#0A0A0A"
-          transform={`rotate(${deg} 100 100)`}
+      <g mask={`url(#${id}-rim)`}>
+        {[0, 72, 144, 216, 288].map((deg) => (
+          <path
+            key={deg}
+            d="M83.16 4.47A97 97 0 0 1 154.24 19.58L144.35 47.14Q115.59 26.64 97.49 28.04Z"
+            fill={`url(#${id}-lime)`}
+            transform={`rotate(${deg} 100 100)`}
+          />
+        ))}
+      </g>
+
+      <circle cx="100" cy="100" r="67.6" fill="none" stroke="#08180C" strokeWidth="2.6" />
+      <circle cx="100" cy="100" r="65.6" fill="none" stroke="#1C1C1C" strokeWidth="0.8" />
+      <circle cx="100" cy="100" r="64.4" fill="#F6F3EC" />
+      <circle cx="100" cy="100" r="64.4" fill="none" stroke="#D4CFC4" strokeWidth="0.45" />
+
+      <g clipPath={`url(#${id}-inlay)`}>
+        <image
+          href="/gutshot-logo-chip.png"
+          x="54"
+          y="36"
+          width="92"
+          height="73"
+          preserveAspectRatio="xMidYMid meet"
         />
-      ))}
-
-      <circle cx="100" cy="100" r="68" fill="none" stroke="#C89A3D" strokeWidth="0.8" opacity="0.5" />
-      <circle cx="100" cy="100" r="66.5" fill="#121212" />
-      <circle cx="100" cy="100" r="63.5" fill="#FFFFFF" />
-
-      {[82.5, 90.5, 98.5, 106.5, 114.5].map((x, i) => (
-        <rect
-          key={x}
-          x={x}
-          y="47.5"
-          width="4.4"
-          height="15.5"
-          rx="1.1"
-          fill={i === 2 ? `url(#${id}-red)` : `url(#${id}-gold)`}
-        />
-      ))}
-
-      <text
-        x="100"
-        y="80"
-        textAnchor="middle"
-        fill="#8B6914"
-        style={{
-          fontFamily: 'Georgia, "Times New Roman", serif',
-          fontSize: 17.5,
-          fontWeight: 700,
-          letterSpacing: '0.16em',
-        }}
-      >
-        GUTSHOT
-      </text>
-      <text
-        x="100"
-        y="91.5"
-        textAnchor="middle"
-        fill="#8B6914"
-        style={{
-          fontFamily: 'Arial, Helvetica, sans-serif',
-          fontSize: 5.2,
-          fontWeight: 600,
-          letterSpacing: '0.24em',
-        }}
-      >
-        — POKER CLUB —
-      </text>
-      <text
-        x="100"
-        y="124"
-        textAnchor="middle"
-        fill="#111111"
-        style={{
-          fontFamily: 'Georgia, "Times New Roman", serif',
-          fontSize: 22.5,
-          fontWeight: 700,
-          letterSpacing: '0.04em',
-        }}
-      >
-        10 000
-      </text>
+        <text
+          x="100"
+          y="118"
+          textAnchor="middle"
+          fill="#6B5420"
+          style={{
+            fontFamily: 'Sora, Arial, Helvetica, sans-serif',
+            fontSize: 5.4,
+            fontWeight: 600,
+            letterSpacing: '0.32em',
+          }}
+        >
+          POKER CLUB
+        </text>
+        <text
+          x="100"
+          y="144"
+          textAnchor="middle"
+          fill="#111111"
+          style={{
+            fontFamily: 'Sora, Arial, Helvetica, sans-serif',
+            fontSize: 20,
+            fontWeight: 800,
+            letterSpacing: '0.06em',
+          }}
+        >
+          10 000
+        </text>
+      </g>
     </svg>
   );
 }
@@ -225,7 +218,7 @@ export function GutshotChip({
         {Array.from({ length: EDGE_LAYERS }, (_, i) => {
           const t = i / (EDGE_LAYERS - 1);
           const z = -half + t * THICKNESS;
-          const green = t < 0.15 || t > 0.85 ? '#1F9A2A' : '#2FBF3A';
+          const green = t < 0.15 || t > 0.85 ? '#0B4A1C' : '#157A2C';
           return (
             <div
               key={i}
