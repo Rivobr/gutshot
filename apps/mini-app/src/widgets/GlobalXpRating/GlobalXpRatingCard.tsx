@@ -1,9 +1,9 @@
-import type { CSSProperties } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import type { RatingEntry } from '@gutshot/types';
 import { useXpRating } from '../../entities/player';
 import { PlayerAvatar } from '../../shared/ui/PlayerAvatar';
+import { GutshotChipDecor } from '../../shared/ui/GutshotChip';
 import { displayNameOf } from '../../shared/lib/display-name';
 
 const PREVIEW_SIZE = 5;
@@ -37,22 +37,6 @@ function rankTone(rank: number) {
       bg: 'rgba(9,9,9,0.4)',
       border: 'rgba(199,154,61,0.16)',
     }
-  );
-}
-
-function Chip({ size, style }: { size: number; style: CSSProperties }): JSX.Element {
-  return (
-    <span
-      aria-hidden
-      style={{
-        width: size,
-        height: size,
-        borderRadius: 999,
-        display: 'inline-block',
-        boxShadow: 'inset 0 0 0 3px rgba(255,255,255,0.18), 0 2px 6px rgba(0,0,0,0.35)',
-        ...style,
-      }}
-    />
   );
 }
 
@@ -151,56 +135,54 @@ export function GlobalXpRatingCard({
           '0 0 0 1px rgba(247,217,138,0.12), 0 10px 36px rgba(0,0,0,0.55), inset 0 1px 0 rgba(247,217,138,0.18)',
       }}
     >
-      <div className="absolute inset-0 deco-lines opacity-30 pointer-events-none" />
-      <div
-        className="pointer-events-none absolute -right-8 -top-10 opacity-25"
+      <div className="absolute inset-0 deco-lines opacity-25 pointer-events-none" />
+      <GutshotChipDecor
+        size={148}
+        className="pointer-events-none absolute"
         style={{
-          width: 140,
-          height: 140,
-          background: 'radial-gradient(circle, rgba(247,217,138,0.35), transparent 68%)',
+          left: -42,
+          bottom: 52,
+          opacity: 0.2,
+          transform: 'rotate(-28deg)',
+          filter: 'saturate(0.85)',
+        }}
+      />
+      <GutshotChipDecor
+        size={108}
+        className="pointer-events-none absolute"
+        style={{
+          right: -34,
+          top: -18,
+          opacity: 0.18,
+          transform: 'rotate(22deg)',
+          filter: 'saturate(0.85)',
+        }}
+      />
+      <GutshotChipDecor
+        size={78}
+        className="pointer-events-none absolute"
+        style={{
+          right: 18,
+          bottom: -18,
+          opacity: 0.16,
+          transform: 'rotate(-12deg)',
+          filter: 'saturate(0.9)',
         }}
       />
 
-      <div className="relative mb-3 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <span style={{ fontSize: 22 }} aria-hidden>
-            🏆
-          </span>
-          <div className="min-w-0">
-            <p
-              className="gold-text serif font-semibold uppercase"
-              style={{ fontSize: 16, letterSpacing: '0.08em', lineHeight: 1.15 }}
-            >
-              Глобальный рейтинг
-            </p>
-            <p
-              className="sans uppercase mt-0.5"
-              style={{ fontSize: 9, color: '#8A7A62', letterSpacing: '0.16em' }}
-            >
-              Топ по XP
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-1.5 pr-1" aria-hidden>
-          <Chip
-            size={18}
-            style={{
-              background: 'radial-gradient(circle at 35% 30%, #ffe08a, #c89a3d 55%, #7a5418)',
-            }}
-          />
-          <Chip
-            size={14}
-            style={{
-              background: 'radial-gradient(circle at 35% 30%, #ffd0d0, #b4232a 55%, #6b1014)',
-            }}
-          />
-          <Chip
-            size={16}
-            style={{
-              background: 'radial-gradient(circle at 35% 30%, #d8e8ff, #4a6fa5 55%, #24385c)',
-            }}
-          />
-        </div>
+      <div className="relative mb-3 text-center">
+        <p
+          className="gold-text serif font-semibold uppercase"
+          style={{ fontSize: 16, letterSpacing: '0.08em', lineHeight: 1.15 }}
+        >
+          Глобальный рейтинг
+        </p>
+        <p
+          className="sans uppercase mt-0.5"
+          style={{ fontSize: 9, color: '#8A7A62', letterSpacing: '0.16em' }}
+        >
+          Топ по XP
+        </p>
       </div>
 
       <div
