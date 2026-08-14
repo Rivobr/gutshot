@@ -11,7 +11,7 @@ import {
 import {
   buildAchievementViews,
   groupAchievements,
-  RARITY_STYLE,
+  styleForAchievement,
   sortAchievementsByAvailability,
   type AchievementView,
 } from '../../shared/lib/achievements-catalog';
@@ -193,7 +193,7 @@ function AchievementCard({
   pinned: boolean;
   onSelect: () => void;
 }): JSX.Element {
-  const rarity = RARITY_STYLE[item.rarity];
+  const rarity = styleForAchievement(item.id, item.rarity);
   const done = item.unlocked;
   const span2 = Boolean(item.span2);
 
@@ -256,6 +256,7 @@ function AchievementCard({
         locked={!done}
         size={span2 ? 64 : 72}
         title={item.title}
+        achievementId={item.id}
       />
 
       <div
@@ -357,7 +358,7 @@ function AchievementHowToModal({
   onTogglePin: () => void;
   onClose: () => void;
 }): JSX.Element {
-  const rarity = RARITY_STYLE[item.rarity];
+  const rarity = styleForAchievement(item.id, item.rarity);
   const done = item.unlocked;
 
   return (
@@ -399,6 +400,7 @@ function AchievementHowToModal({
             locked={!done}
             size={88}
             title={item.title}
+            achievementId={item.id}
           />
           <p
             className="sans uppercase mt-3"

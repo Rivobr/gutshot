@@ -12,10 +12,11 @@ import { SectionLabel } from '../../shared/ui/figma';
 import { PlayerAvatar } from '../../shared/ui/PlayerAvatar';
 import { displayNameOf } from '../../shared/lib/display-name';
 import {
-  RARITY_STYLE,
+  styleForAchievement,
   buildAchievementViews,
 } from '../../shared/lib/achievements-catalog';
 import { AchievementMedallion } from '../../shared/ui/AchievementMedallion';
+import { GlobalXpRatingCard } from '../../widgets/GlobalXpRating/GlobalXpRatingCard';
 
 function LevelBadge({ level, current = false }: { level: number; current?: boolean }): JSX.Element {
   return (
@@ -242,6 +243,10 @@ export function PlayerProfilePage(): JSX.Element {
         </div>
       </div>
 
+      <div className="px-5 pt-2">
+        <GlobalXpRatingCard currentUserId={me?.id} />
+      </div>
+
       <div className="px-5 pt-2 pb-8">
         <SectionLabel>Витрина достижений</SectionLabel>
         {pinnedViews.length === 0 ? (
@@ -251,7 +256,7 @@ export function PlayerProfilePage(): JSX.Element {
         ) : (
           <div className="mt-3 flex flex-col gap-2">
             {pinnedViews.map((item) => {
-              const rarity = RARITY_STYLE[item.rarity];
+              const rarity = styleForAchievement(item.id, item.rarity);
               return (
                 <div
                   key={item.id}
@@ -267,6 +272,7 @@ export function PlayerProfilePage(): JSX.Element {
                     rarity={item.rarity}
                     size={40}
                     title={item.title}
+                    achievementId={item.id}
                   />
                   <div className="min-w-0">
                     <p className="serif truncate" style={{ fontSize: 14, color: '#F5EDD6' }}>

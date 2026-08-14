@@ -1,7 +1,7 @@
 /** Золотые значки достижений — ассеты в стиле постера «Система достижений». */
 
 import type { AchievementGroup, AchievementRarity } from '@gutshot/types';
-import { RARITY_STYLE } from '../lib/achievements-catalog';
+import { styleForAchievement } from '../lib/achievements-catalog';
 
 /** Значок подбирается по группе достижения — так работает весь каталог клуба. */
 const ICON_BY_GROUP: Record<AchievementGroup, string> = {
@@ -27,6 +27,7 @@ export function AchievementMedallion({
   size = 56,
   rarity,
   title,
+  achievementId,
 }: {
   group?: AchievementGroup;
   locked?: boolean;
@@ -34,9 +35,10 @@ export function AchievementMedallion({
   /** Редкость — рамка и свечение вокруг значка. */
   rarity?: AchievementRarity;
   title?: string;
+  achievementId?: string;
 }): JSX.Element {
   const src = (group && ICON_BY_GROUP[group]) || FALLBACK_ICON;
-  const style = rarity ? RARITY_STYLE[rarity] : null;
+  const style = rarity ? styleForAchievement(achievementId, rarity) : null;
   const pad = rarity && rarity !== 'common' ? Math.max(2, Math.round(size * 0.08)) : 0;
   const outer = size + pad * 2;
 

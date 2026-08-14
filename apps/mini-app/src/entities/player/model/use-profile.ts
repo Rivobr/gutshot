@@ -109,6 +109,14 @@ export function useAchievementsCatalog() {
   });
 }
 
+export function useXpRating() {
+  return useQuery({
+    queryKey: ['ratings', 'xp'],
+    queryFn: playerApi.getXpRating,
+    staleTime: 60_000,
+  });
+}
+
 async function acceptConsentWithRetry(): Promise<{ consentAcceptedAt: string }> {
   let lastError: unknown;
   for (let attempt = 1; attempt <= 3; attempt += 1) {

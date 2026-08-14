@@ -61,6 +61,7 @@ export function PlayerShowcaseMedals({
         group={rarest.group}
         rarity={rarest.rarity}
         title={rarest.title}
+        achievementId={rarest.id}
         size={size}
       />
     </div>

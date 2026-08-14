@@ -5,6 +5,7 @@ import { HomePage } from '../../pages/Home/HomePage';
 import { TournamentsPage } from '../../pages/Tournaments/TournamentsPage';
 import { TournamentPage } from '../../pages/Tournament/TournamentPage';
 import { RatingPage } from '../../pages/Rating/RatingPage';
+import { XpRatingPage } from '../../pages/XpRating/XpRatingPage';
 import { ProfilePage } from '../../pages/Profile/ProfilePage';
 import { PlayerProfilePage } from '../../pages/PlayerProfile/PlayerProfilePage';
 import { AchievementsPage } from '../../pages/Achievements/AchievementsPage';
@@ -23,6 +24,7 @@ export const router = createBrowserRouter([
       { path: '/tournaments', element: <TournamentsPage /> },
       { path: '/tournaments/:id', element: <TournamentPage /> },
       { path: '/rating', element: <RatingPage /> },
+      { path: '/rating/xp', element: <XpRatingPage /> },
       { path: '/profile', element: <ProfilePage /> },
       { path: '/players/:userId', element: <PlayerProfilePage /> },
       { path: '/achievements', element: <AchievementsPage /> },

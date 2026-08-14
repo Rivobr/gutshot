@@ -50,21 +50,40 @@ export const RARITY_STYLE: Record<
     chip: 'rgba(186,85,255,0.24)',
   },
   legend: {
-    border: 'rgba(255,196,74,0.9)',
-    glow: '0 0 42px rgba(255,178,40,0.5)',
-    accent: '#FFD873',
+    border: 'rgba(220,48,48,0.88)',
+    glow: '0 0 42px rgba(210,36,36,0.48)',
+    accent: '#FF6B6B',
     label: 'Легенда',
-    fill: 'linear-gradient(150deg, rgba(255,178,40,0.34), rgba(120,60,10,0.28) 45%, rgba(16,11,4,0.96))',
-    chip: 'rgba(255,196,74,0.28)',
+    fill: 'linear-gradient(150deg, rgba(180,28,28,0.36), rgba(80,10,10,0.28) 45%, rgba(16,4,4,0.96))',
+    chip: 'rgba(220,48,48,0.28)',
   },
 };
+
+/** «Легенда Gutshot» всегда золотая, даже при rarity=legend. */
+export const LEGEND_GUTSHOT_STYLE = {
+  border: 'rgba(255,196,74,0.9)',
+  glow: '0 0 42px rgba(255,178,40,0.5)',
+  accent: '#FFD873',
+  label: 'Легенда Gutshot',
+  fill: 'linear-gradient(150deg, rgba(255,178,40,0.34), rgba(120,60,10,0.28) 45%, rgba(16,11,4,0.96))',
+  chip: 'rgba(255,196,74,0.28)',
+} as const;
+
+export function styleForAchievement(
+  id: string | undefined,
+  rarity: AchievementRarity,
+): (typeof RARITY_STYLE)[AchievementRarity] {
+  if (id === 'legend_gutshot') {
+    return LEGEND_GUTSHOT_STYLE;
+  }
+  return RARITY_STYLE[rarity];
+}
 
 export const GROUP_ORDER: AchievementGroup[] = [
   'wins',
   'final_tables',
   'tournaments',
   'active_weeks',
-  'weekly_rating',
   'monthly_final',
   'four_of_a_kind',
   'straight_flush',

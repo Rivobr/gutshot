@@ -8,6 +8,7 @@ import {
   PlayerEventDto,
   PlayerProfileDto,
   PublicPlayerProfileDto,
+  RatingEntry,
   Registration,
 } from '@gutshot/types';
 import { apiClient } from '../../../shared/api/client';
@@ -83,5 +84,10 @@ export const playerApi = {
   async getNotifications(): Promise<NotificationDto[]> {
     const { data } = await apiClient.get('/notifications');
     return data.data;
+  },
+  async getXpRating(): Promise<RatingEntry[]> {
+    const { data } = await apiClient.get('/ratings/xp');
+    const payload = data?.data ?? data;
+    return Array.isArray(payload) ? payload : [];
   },
 };
