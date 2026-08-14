@@ -33,9 +33,8 @@ export function GutshotChipDecor({
 }
 
 /**
- * Лицо фишки 1:1 с физической Gutshot:
- * тёмно-зелёный обод, 5 салатовых «лезвий» по часовой, белый центр,
- * логотип бота, POKER CLUB, 10 000.
+ * Лицо фишки как у физической Gutshot:
+ * зелёный обод, 6 чёрных «двузубых» пятен, белый центр, логотип бота, 10 000.
  */
 function ChipFace({ id, mirrored = false }: { id: string; mirrored?: boolean }): JSX.Element {
   return (
@@ -47,44 +46,37 @@ function ChipFace({ id, mirrored = false }: { id: string; mirrored?: boolean }):
       aria-hidden
     >
       <defs>
-        <radialGradient id={`${id}-forest`} cx="42%" cy="36%" r="68%">
-          <stop offset="0%" stopColor="#1F9A36" />
-          <stop offset="55%" stopColor="#157A2C" />
-          <stop offset="100%" stopColor="#0A3F18" />
+        <radialGradient id={`${id}-green`} cx="38%" cy="32%" r="72%">
+          <stop offset="0%" stopColor="#48D45A" />
+          <stop offset="42%" stopColor="#2FBF3A" />
+          <stop offset="100%" stopColor="#1A8A28" />
         </radialGradient>
-        <linearGradient id={`${id}-lime`} x1="0.15" y1="0" x2="0.9" y2="1">
-          <stop offset="0%" stopColor="#8CFF6E" />
-          <stop offset="38%" stopColor="#4AE24C" />
-          <stop offset="100%" stopColor="#1CB83A" />
-        </linearGradient>
-        <mask id={`${id}-rim`}>
-          <rect width="200" height="200" fill="black" />
-          <circle cx="100" cy="100" r="97.2" fill="white" />
-          <circle cx="100" cy="100" r="67.8" fill="black" />
-        </mask>
         <clipPath id={`${id}-inlay`}>
-          <circle cx="100" cy="100" r="64.2" />
+          <circle cx="100" cy="100" r="63.5" />
         </clipPath>
       </defs>
 
-      <circle cx="100" cy="100" r="99.8" fill="#07140A" />
-      <circle cx="100" cy="100" r="97.4" fill={`url(#${id}-forest)`} />
+      <circle cx="100" cy="100" r="99.5" fill="#0B0B0B" />
+      <circle cx="100" cy="100" r="97" fill={`url(#${id}-green)`} />
 
-      <g mask={`url(#${id}-rim)`}>
-        {[0, 72, 144, 216, 288].map((deg) => (
-          <path
-            key={deg}
-            d="M83.16 4.47A97 97 0 0 1 154.24 19.58L144.35 47.14Q115.59 26.64 97.49 28.04Z"
-            fill={`url(#${id}-lime)`}
-            transform={`rotate(${deg} 100 100)`}
-          />
-        ))}
-      </g>
+      {[0, 60, 120, 180, 240, 300].map((deg) => (
+        <path
+          key={deg}
+          d="M100 8.5
+             C117.2 9.4 132 16.4 137.5 26.6
+             C128.1 32 119.5 40.6 116.4 51.6
+             C111.7 40.6 107 33.6 100 29.7
+             C93 33.6 88.3 40.6 83.6 51.6
+             C80.5 40.6 71.9 32 62.5 26.6
+             C68 16.4 82.8 9.4 100 8.5 Z"
+          fill="#0A0A0A"
+          transform={`rotate(${deg} 100 100)`}
+        />
+      ))}
 
-      <circle cx="100" cy="100" r="67.6" fill="none" stroke="#08180C" strokeWidth="2.6" />
-      <circle cx="100" cy="100" r="65.6" fill="none" stroke="#1C1C1C" strokeWidth="0.8" />
-      <circle cx="100" cy="100" r="64.4" fill="#F6F3EC" />
-      <circle cx="100" cy="100" r="64.4" fill="none" stroke="#D4CFC4" strokeWidth="0.45" />
+      <circle cx="100" cy="100" r="66.5" fill="#121212" />
+      <circle cx="100" cy="100" r="63.5" fill="#F6F3EC" />
+      <circle cx="100" cy="100" r="63.5" fill="none" stroke="#1A1A1A" strokeWidth="0.7" />
 
       <g clipPath={`url(#${id}-inlay)`}>
         <image
@@ -97,7 +89,7 @@ function ChipFace({ id, mirrored = false }: { id: string; mirrored?: boolean }):
         />
         <text
           x="100"
-          y="118"
+          y="116"
           textAnchor="middle"
           fill="#6B5420"
           style={{
@@ -111,7 +103,7 @@ function ChipFace({ id, mirrored = false }: { id: string; mirrored?: boolean }):
         </text>
         <text
           x="100"
-          y="144"
+          y="142"
           textAnchor="middle"
           fill="#111111"
           style={{
@@ -218,7 +210,7 @@ export function GutshotChip({
         {Array.from({ length: EDGE_LAYERS }, (_, i) => {
           const t = i / (EDGE_LAYERS - 1);
           const z = -half + t * THICKNESS;
-          const green = t < 0.15 || t > 0.85 ? '#0B4A1C' : '#157A2C';
+          const green = t < 0.15 || t > 0.85 ? '#1A8A28' : '#2FBF3A';
           return (
             <div
               key={i}
