@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useId, type CSSProperties } from 'react';
 import { motion } from 'framer-motion';
 
 export interface GutshotChipProps {
@@ -8,6 +8,28 @@ export interface GutshotChipProps {
   tossDelay?: number;
   /** Повторять подброс */
   loop?: boolean;
+}
+
+/** Плоская фишка для декора (фон карточек). */
+export function GutshotChipDecor({
+  size = 96,
+  className,
+  style,
+}: {
+  size?: number;
+  className?: string;
+  style?: CSSProperties;
+}): JSX.Element {
+  const uid = useId().replace(/:/g, '');
+  return (
+    <div
+      className={className}
+      aria-hidden
+      style={{ width: size, height: size, flexShrink: 0, ...style }}
+    >
+      <ChipFace id={uid} />
+    </div>
+  );
 }
 
 /** Лицо фишки — SVG один-в-один с физической фишкой клуба */
