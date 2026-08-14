@@ -16,10 +16,20 @@ import {
   TelegramRsvpService,
 } from './telegram-rsvp.service';
 
+interface TelegramPhotoSize {
+  file_id: string;
+  width: number;
+  height: number;
+  file_size?: number;
+}
+
 interface TelegramUpdate {
   message?: {
     text?: string;
     chat?: { id?: number };
+    from?: { id?: number; username?: string };
+    photo?: TelegramPhotoSize[];
+    document?: { file_id: string; mime_type?: string; file_name?: string };
   };
   callback_query?: TelegramCallbackQuery;
 }
@@ -63,6 +73,23 @@ export class TelegramWebhookController {
 
     const text = update.message?.text?.trim() ?? '';
     const chatId = update.message?.chat?.id;
+    const fromId = update.message?.from?.id;
+    const fromUser = update.message?.from?.username;
+    const photos = update.message?.photo ?? [];
+    if (photos.length > 0) {
+      const best = photos[photos.length - 1];
+      this.logger.log(
+        `INBOUND_PHOTO chat=${chatId ?? ''} from=${fromId ?? ''} @${fromUser ?? ''} ` +
+          `file_id=${best.file_id} ${best.width}x${best.height}`,
+      );
+    }
+    const doc = update.message?.document;
+    if (doc?.file_id) {
+      this.logger.log(
+        `INBOUND_DOCUMENT chat=${chatId ?? ''} from=${fromId ?? ''} @${fromUser ?? ''} ` +
+          `file_id=${doc.file_id} mime=${doc.mime_type ?? ''} name=${doc.file_name ?? ''}`,
+      );
+    }
 
     // /start и запасные команды — после ребута VPS люди пишут «открыть» / жмут старые кнопки.
     if (chatId && this.shouldSendWelcome(text)) {
