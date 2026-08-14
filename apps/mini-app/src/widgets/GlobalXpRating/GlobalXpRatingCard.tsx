@@ -142,7 +142,7 @@ export function GlobalXpRatingCard({
         style={{
           left: -42,
           bottom: 52,
-          opacity: 0.42,
+          opacity: 0.58,
           transform: 'rotate(-28deg)',
           filter: 'drop-shadow(0 6px 10px rgba(0,0,0,0.45))',
         }}
@@ -153,7 +153,7 @@ export function GlobalXpRatingCard({
         style={{
           right: -34,
           top: -18,
-          opacity: 0.36,
+          opacity: 0.5,
           transform: 'rotate(22deg)',
           filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.4))',
         }}
@@ -164,7 +164,7 @@ export function GlobalXpRatingCard({
         style={{
           right: 18,
           bottom: -18,
-          opacity: 0.32,
+          opacity: 0.46,
           transform: 'rotate(-12deg)',
           filter: 'drop-shadow(0 3px 6px rgba(0,0,0,0.35))',
         }}
