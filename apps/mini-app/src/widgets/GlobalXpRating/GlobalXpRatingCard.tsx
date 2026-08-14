@@ -137,17 +137,6 @@ export function GlobalXpRatingCard({
     >
       <div className="absolute inset-0 deco-lines opacity-25 pointer-events-none" />
       <GutshotChipDecor
-        size={148}
-        className="pointer-events-none absolute"
-        style={{
-          left: -42,
-          bottom: 52,
-          opacity: 0.58,
-          transform: 'rotate(-28deg)',
-          filter: 'drop-shadow(0 6px 10px rgba(0,0,0,0.45))',
-        }}
-      />
-      <GutshotChipDecor
         size={108}
         className="pointer-events-none absolute"
         style={{
