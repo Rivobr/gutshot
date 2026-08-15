@@ -16,7 +16,6 @@ import {
   buildAchievementViews,
 } from '../../shared/lib/achievements-catalog';
 import { AchievementMedallion } from '../../shared/ui/AchievementMedallion';
-import { GlobalXpRatingCard } from '../../widgets/GlobalXpRating/GlobalXpRatingCard';
 
 function LevelBadge({ level, current = false }: { level: number; current?: boolean }): JSX.Element {
   return (
@@ -241,10 +240,6 @@ export function PlayerProfilePage(): JSX.Element {
             </div>
           ))}
         </div>
-      </div>
-
-      <div className="px-5 pt-2">
-        <GlobalXpRatingCard currentUserId={me?.id} />
       </div>
 
       <div className="px-5 pt-2 pb-8">
