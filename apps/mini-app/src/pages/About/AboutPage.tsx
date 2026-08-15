@@ -1,8 +1,13 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import type { LegalDocumentDto, LegalDocumentType } from '@gutshot/types';
 import { PageHeader } from '../../widgets/PageHeader/PageHeader';
+import { LegalDocumentSheet } from '../../widgets/LegalDocumentSheet/LegalDocumentSheet';
 import { InfoCard } from '../../shared/ui/figma';
 import { club } from '../../shared/config/club';
+import { resolveLegalDocument } from '../../shared/config/legal-document-pages';
+import { useLegalDocuments } from '../../entities/player';
 
 const PARAGRAPHS = [
   'GUTSHOT — клуб спортивного покера в Санкт-Петербурге. Мы проводим регулярные турниры по правилам спортивного покера: без ставок на деньги, с зачётом очков в клубный рейтинг.',
@@ -15,7 +20,22 @@ const INSTAGRAM_GRADIENT =
 const TIKTOK_GRADIENT =
   'linear-gradient(135deg, #00f2ea 0%, #111111 42%, #111111 58%, #ff0050 100%)';
 
+const ABOUT_DOCUMENTS: { type: LegalDocumentType; kicker: string; title: string }[] = [
+  { type: 'USER_AGREEMENT', kicker: 'Документы', title: 'Публичная оферта' },
+  {
+    type: 'PERSONAL_DATA_CONSENT',
+    kicker: 'Документы',
+    title: 'Персональные данные',
+  },
+];
+
 export function AboutPage(): JSX.Element {
+  const { data: documents } = useLegalDocuments();
+  const [openDocument, setOpenDocument] = useState<LegalDocumentDto | null>(null);
+  const documentsByType = new Map<LegalDocumentType, LegalDocumentDto>(
+    (documents ?? []).map((document) => [document.type, document]),
+  );
+
   return (
     <PageHeader title="О клубе" subtitle={club.fullName}>
       <div className="flex flex-col gap-4">
@@ -88,6 +108,36 @@ export function AboutPage(): JSX.Element {
           </span>
           <span style={{ color: 'rgba(199,154,61,0.6)', fontSize: 20 }}>›</span>
         </Link>
+
+        {ABOUT_DOCUMENTS.map((item) => (
+          <button
+            key={item.type}
+            type="button"
+            onClick={() =>
+              setOpenDocument(resolveLegalDocument(item.type, documentsByType.get(item.type)))
+            }
+            className="vip-card rounded-[18px] px-5 py-4 flex items-center justify-between"
+            style={{
+              border: 'none',
+              width: '100%',
+              textAlign: 'left',
+              cursor: 'pointer',
+            }}
+          >
+            <span className="flex flex-col">
+              <span
+                className="sans uppercase"
+                style={{ fontSize: 8.5, color: '#6B614E', letterSpacing: '0.18em' }}
+              >
+                {item.kicker}
+              </span>
+              <span className="serif font-semibold" style={{ fontSize: 15, color: '#F5EDD6' }}>
+                {item.title}
+              </span>
+            </span>
+            <span style={{ color: 'rgba(199,154,61,0.6)', fontSize: 20 }}>›</span>
+          </button>
+        ))}
 
         <a
           href={`tel:${club.phoneTel}`}
@@ -201,6 +251,7 @@ export function AboutPage(): JSX.Element {
           />
         </div>
       </div>
+      <LegalDocumentSheet document={openDocument} onClose={() => setOpenDocument(null)} />
     </PageHeader>
   );
 }

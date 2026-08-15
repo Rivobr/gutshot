@@ -13,8 +13,8 @@ const DOCUMENT_ORDER: LegalDocumentType[] = [
 
 const DOCUMENT_LABELS: Record<LegalDocumentType, string> = {
   CLUB_RULES: 'Правила клуба',
-  USER_AGREEMENT: 'Пользовательское соглашение',
-  PERSONAL_DATA_CONSENT: 'Обработка персональных данных',
+  USER_AGREEMENT: 'Публичная оферта',
+  PERSONAL_DATA_CONSENT: 'Персональные данные',
   MEDIA_CONSENT: 'Фото- и видеосъёмка',
 };
 
@@ -51,7 +51,7 @@ export function LegalDocumentsPage(): JSX.Element {
         <h1 className="text-2xl font-medium">Документы</h1>
         <p className="text-sm text-muted-foreground">
           Тексты хранятся в базе и сразу отображаются в Mini App. «Правила клуба» — страница
-          «Правила» у игроков.
+          «Правила» у игроков. Оферта и политика персональных данных показываются сканами.
         </p>
       </div>
 

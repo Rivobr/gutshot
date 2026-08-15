@@ -96,15 +96,15 @@ const LEGAL_DOCUMENTS: { type: LegalDocumentType; title: string; content: string
   },
   {
     type: LegalDocumentType.USER_AGREEMENT,
-    title: 'Пользовательское соглашение',
+    title: 'Публичная оферта',
     content:
-      'Пользовательское соглашение GUTSHOT.\n\nЗаполните этот документ в админ-панели: раздел «Документы».',
+      'Публичная оферта GUTSHOT.\n\nСкан документа показывается в Mini App.',
   },
   {
     type: LegalDocumentType.PERSONAL_DATA_CONSENT,
-    title: 'Согласие на обработку персональных данных',
+    title: 'Политика обработки персональных данных',
     content:
-      'Согласие на обработку персональных данных.\n\nЗаполните этот документ в админ-панели: раздел «Документы».',
+      'Политика обработки персональных данных GUTSHOT.\n\nСкан документа показывается в Mini App.',
   },
   {
     type: LegalDocumentType.MEDIA_CONSENT,
