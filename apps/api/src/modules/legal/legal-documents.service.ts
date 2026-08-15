@@ -5,8 +5,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 /** Заголовки и заглушки документов, создаваемые при первом запуске. */
 export const DEFAULT_LEGAL_DOCUMENTS: Record<LegalDocumentType, string> = {
   CLUB_RULES: 'Правила клуба',
-  USER_AGREEMENT: 'Пользовательское соглашение',
-  PERSONAL_DATA_CONSENT: 'Согласие на обработку персональных данных',
+  USER_AGREEMENT: 'Публичная оферта',
+  PERSONAL_DATA_CONSENT: 'Политика обработки персональных данных',
   MEDIA_CONSENT: 'Согласие на фото- и видеосъемку',
 };
 
