@@ -2,8 +2,9 @@
  * Периоды клубного рейтинга в часовом поясе Санкт-Петербурга.
  * Москва без DST с 2014 → постоянно UTC+3.
  *
- * Обычный цикл: понедельник 00:00 → воскресенье (до следующего пн 00:00).
- * Закрытие недели — после воскресенья (в понедельник).
+ * Обычный цикл: понедельник 00:00 → суббота (окно до следующего пн 00:00,
+ * чтобы поздний субботний турнир успел попасть в ту же неделю).
+ * Закрытие — сразу после субботнего турнира, запасной cron в вс 06:00 МСК.
  */
 export const CLUB_TZ_OFFSET_HOURS = 3;
 export const WEEKLY_FINAL_TOP = 7;
@@ -11,7 +12,7 @@ export const WEEKLY_FINAL_TOP = 7;
 /**
  * Стартовая «длинная» неделя открытия клуба:
  * с пн 03.08.2026 по вс 16.08.2026 (конец следующей недели).
- * После неё — обычные недели пн–вс.
+ * После неё — обычные недели пн–сб.
  */
 export const OPENING_EXTENDED_WEEK = {
   startYmd: [2026, 8, 3] as const,
@@ -81,7 +82,7 @@ export function getOpeningExtendedWeekBounds(): ClubPeriodBounds {
   };
 }
 
-/** Обычная ISO-неделя клуба без спец. удлинения: пн–вс. */
+/** Обычная ISO-неделя клуба без спец. удлинения: пн–сб. */
 export function getNaturalClubWeekBounds(date = new Date()): ClubPeriodBounds {
   const [year, month, day] = clubDateString(date).split('-').map(Number);
   const utcNoon = new Date(Date.UTC(year, month - 1, day, 12));
@@ -113,7 +114,7 @@ export function getNaturalClubWeekBounds(date = new Date()): ClubPeriodBounds {
 /**
  * Текущая (или указанная) рейтинговая неделя клуба.
  * До 17.08.2026 00:00 МСК — удлинённая неделя открытия (03.08–16.08).
- * Далее — обычные недели пн–вс (закрытие каждое воскресенье / в пн ночью).
+ * Далее — обычные недели пн–сб (закрытие после субботнего турнира).
  */
 export function getClubWeekBounds(date = new Date()): ClubPeriodBounds {
   const extended = getOpeningExtendedWeekBounds();
@@ -177,4 +178,15 @@ export function resolveWeeklyDisplayWeeks(
 
 export function monthKey(date = new Date()): string {
   return getClubMonthBounds(date).monthKey;
+}
+
+/** День недели клуба: пн=0 … вс=6. */
+export function clubWeekday(date = new Date()): number {
+  const [year, month, day] = clubDateString(date).split('-').map(Number);
+  const utcNoon = new Date(Date.UTC(year, month - 1, day, 12));
+  return (utcNoon.getUTCDay() + 6) % 7;
+}
+
+export function isClubSaturday(date = new Date()): boolean {
+  return clubWeekday(date) === 5;
 }

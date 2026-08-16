@@ -5,6 +5,7 @@ import {
   getNaturalClubWeekBounds,
   getOpeningExtendedWeekBounds,
   getPreviousClubWeekBounds,
+  isClubSaturday,
   resolveWeeklyDisplayWeeks,
   weekKey,
 } from './rating-period';
@@ -67,6 +68,12 @@ describe('rating-period', () => {
     const month = getClubMonthBounds(new Date('2026-08-09T10:00:00.000Z'));
     expect(month.monthKey).toBe('2026-08');
     expect(month.start.toISOString()).toBe('2026-07-31T21:00:00.000Z');
+  });
+
+  it('detects Saturday in club timezone', () => {
+    expect(isClubSaturday(new Date('2026-08-15T15:00:00.000Z'))).toBe(true);
+    expect(isClubSaturday(new Date('2026-08-14T16:00:00.000Z'))).toBe(false);
+    expect(isClubSaturday(new Date('2026-08-16T02:45:00.000Z'))).toBe(false);
   });
 
   it('weekKey helper matches bounds', () => {
