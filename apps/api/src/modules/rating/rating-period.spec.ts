@@ -5,6 +5,7 @@ import {
   getNaturalClubWeekBounds,
   getOpeningExtendedWeekBounds,
   getPreviousClubWeekBounds,
+  resolveWeeklyDisplayWeeks,
   weekKey,
 } from './rating-period';
 
@@ -42,6 +43,17 @@ describe('rating-period', () => {
   it('previous week after extension is the extended opening week', () => {
     const previous = getPreviousClubWeekBounds(new Date('2026-08-17T12:00:00.000Z'));
     expect(previous.weekKey).toBe('2026-W32E');
+  });
+
+  it('moves a force-closed current week into previous and opens the next as current', () => {
+    const now = new Date('2026-08-16T02:50:00.000Z');
+    const open = resolveWeeklyDisplayWeeks(now, false);
+    expect(open.current.weekKey).toBe('2026-W32E');
+
+    const closed = resolveWeeklyDisplayWeeks(now, true);
+    expect(closed.previous.weekKey).toBe('2026-W32E');
+    expect(closed.current.weekKey).toBe('2026-W34');
+    expect(closed.current.start.toISOString()).toBe('2026-08-16T21:00:00.000Z');
   });
 
   it('natural Mon–Sun club week around a mid-week date (without override)', () => {
