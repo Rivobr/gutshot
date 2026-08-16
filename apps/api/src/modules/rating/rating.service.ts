@@ -14,6 +14,7 @@ import {
   getClubMonthBounds,
   getClubWeekBounds,
   getPreviousClubWeekBounds,
+  resolveWeeklyDisplayWeeks,
   type ClubPeriodBounds,
 } from './rating-period';
 
@@ -97,6 +98,7 @@ export class RatingService implements OnModuleInit {
   /**
    * Недельный рейтинг клуба (пн–вс, Europe/Moscow).
    * mode=auto: если текущая неделя пустая — отдаём прошлую (чтобы в пн утром таблица не пропадала).
+   * Закрытая досрочно неделя показывается как прошлая, актуальная — следующая.
    */
   async getWeeklyRating(mode: 'current' | 'previous' | 'auto' = 'auto'): Promise<{
     weekKey: string;
@@ -107,19 +109,27 @@ export class RatingService implements OnModuleInit {
     end: string;
     entries: RatingRow[];
   }> {
+    const calendarCurrent = getClubWeekBounds();
+    const currentWeekClosed =
+      (await this.prisma.weeklyFinalQualification.count({
+        where: { weekKey: calendarCurrent.weekKey },
+      })) > 0;
+    const display = resolveWeeklyDisplayWeeks(new Date(), currentWeekClosed);
+
     if (mode === 'previous') {
-      return this.buildWeeklyRating(getPreviousClubWeekBounds(), 'previous', false);
+      return this.buildWeeklyRating(display.previous, 'previous', false);
     }
 
-    const current = getClubWeekBounds();
-    const currentEntries = await this.getPointsLeaderboard(current.start, current.end);
+    const currentEntries = await this.getPointsLeaderboard(
+      display.current.start,
+      display.current.end,
+    );
 
-    if (mode === 'current' || currentEntries.length > 0) {
-      return this.buildWeeklyRating(current, 'current', false, currentEntries);
+    if (mode === 'current' || currentEntries.length > 0 || currentWeekClosed) {
+      return this.buildWeeklyRating(display.current, 'current', false, currentEntries);
     }
 
-    const previous = getPreviousClubWeekBounds();
-    return this.buildWeeklyRating(previous, 'previous', true);
+    return this.buildWeeklyRating(display.previous, 'previous', true);
   }
 
   private async buildWeeklyRating(
