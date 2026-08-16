@@ -148,6 +148,33 @@ export function weekKey(date = new Date()): string {
   return getClubWeekBounds(date).weekKey;
 }
 
+/** Следующая рейтинговая неделя после указанных границ. */
+export function getNextClubWeekBounds(week: ClubPeriodBounds): ClubPeriodBounds {
+  return getClubWeekBounds(new Date(week.end.getTime() + 12 * 60 * 60 * 1000));
+}
+
+/**
+ * Какую неделю показывать как текущую / прошлую.
+ * Если календарная неделя уже закрыта досрочно — она уходит в «прошлую»,
+ * а «актуальная» становится следующей (обычно пустой).
+ */
+export function resolveWeeklyDisplayWeeks(
+  now = new Date(),
+  currentWeekClosed = false,
+): { current: ClubPeriodBounds; previous: ClubPeriodBounds } {
+  const calendarCurrent = getClubWeekBounds(now);
+  if (currentWeekClosed) {
+    return {
+      current: getNextClubWeekBounds(calendarCurrent),
+      previous: calendarCurrent,
+    };
+  }
+  return {
+    current: calendarCurrent,
+    previous: getPreviousClubWeekBounds(now),
+  };
+}
+
 export function monthKey(date = new Date()): string {
   return getClubMonthBounds(date).monthKey;
 }
