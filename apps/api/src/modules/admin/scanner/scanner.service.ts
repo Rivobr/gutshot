@@ -274,6 +274,7 @@ export class ScannerService {
         tournamentId: registration?.tournamentId ?? tournamentId ?? null,
         performedById: adminId,
         metadata: { label: config.label, achievementUnlocked: achievementUnlocked ?? false },
+        applyToProfile: event !== ScannerEvent.BOUNTY,
       });
 
       return { award, achievementUnlocked };
@@ -291,6 +292,7 @@ export class ScannerService {
       result.award.xpAwarded,
       result.award.levelUp,
       result.award.level,
+      event === ScannerEvent.BOUNTY ? 'очков рейтинга' : 'XP',
     );
 
     for (const achievement of unlockedAchievements) {
@@ -341,8 +343,9 @@ export class ScannerService {
     xpAwarded: number,
     levelUp: boolean,
     level: number,
+    unit = 'XP',
   ): Promise<void> {
-    const xpPart = xpAwarded > 0 ? ` (+${xpAwarded} XP)` : '';
+    const xpPart = xpAwarded > 0 ? ` (+${xpAwarded} ${unit})` : '';
     const levelPart = levelUp ? `\n🎉 Новый уровень: ${level}` : '';
 
     await this.notificationsService.notify({
