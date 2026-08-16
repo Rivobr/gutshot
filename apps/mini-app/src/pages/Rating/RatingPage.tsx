@@ -56,7 +56,8 @@ function formatPoints(value: number): string {
 function formatWeekRange(startIso: string, endIso: string): string {
   if (!startIso || !endIso) return '';
   const start = new Date(startIso);
-  const end = new Date(new Date(endIso).getTime() - 1000);
+  // Окно в БД до следующего пн 00:00; на экране неделя пн–сб.
+  const end = new Date(new Date(endIso).getTime() - 24 * 60 * 60 * 1000 - 1000);
   const fmt = new Intl.DateTimeFormat('ru-RU', {
     day: 'numeric',
     month: 'short',
@@ -191,7 +192,7 @@ export function RatingPage(): JSX.Element {
           Рейтинг клуба
         </h2>
         <p className="sans mt-1" style={{ fontSize: 12, color: '#6B614E' }}>
-          Топ-7 недели → финал месяца · неделя до воскресенья
+          Топ-7 недели → финал месяца · неделя пн–сб
         </p>
 
         <div

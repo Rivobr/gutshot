@@ -3,8 +3,9 @@ import { Cron } from '@nestjs/schedule';
 import { RatingRewardsService } from './rating-rewards.service';
 
 /**
- * Автозакрытие рейтинговой недели после воскресенья.
- * Пн 00:15 Europe/Moscow → закрываем предыдущую неделю (топ-7 в финал месяца).
+ * Автозакрытие рейтинговой недели после субботы.
+ * Вс 06:00 Europe/Moscow — если субботний турнир уже завершён
+ * (основное закрытие срабатывает сразу после finish субботы).
  */
 @Injectable()
 export class RatingWeekCloseCron {
@@ -12,19 +13,20 @@ export class RatingWeekCloseCron {
 
   constructor(private readonly ratingRewardsService: RatingRewardsService) {}
 
-  @Cron('15 0 * * 1', { timeZone: 'Europe/Moscow' })
-  async closePreviousWeekAfterSunday(): Promise<void> {
+  @Cron('0 6 * * 0', { timeZone: 'Europe/Moscow' })
+  async closeWeekAfterSaturday(): Promise<void> {
     try {
-      const result = await this.ratingRewardsService.closeWeek(
-        { target: 'previous' },
+      const result = await this.ratingRewardsService.closeCurrentWeekIfNoLiveSaturday(
         'system-cron',
       );
+      if (!result) {
+        return;
+      }
       this.logger.log(
         `Автозакрытие недели ${result.weekKey}: alreadyClosed=${result.alreadyClosed}, финалистов=${result.qualified.length}`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      // Пустая неделя / ещё идёт — не ошибка деплоя, просто лог.
       this.logger.warn(`Автозакрытие недели пропущено: ${message}`);
     }
   }

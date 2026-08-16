@@ -1,5 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { NotificationType, PlayerEventType, RatingPeriodType, XPReason } from '@prisma/client';
+import {
+  NotificationType,
+  PlayerEventType,
+  RatingPeriodType,
+  TournamentStatus,
+  XPReason,
+} from '@prisma/client';
 import type { XpSettingKey } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { XpService } from '../progression/xp.service';
@@ -10,7 +16,9 @@ import { RatingService, type RatingRow } from './rating.service';
 import {
   WEEKLY_FINAL_TOP,
   getClubMonthBounds,
+  getClubWeekBounds,
   getPreviousClubWeekBounds,
+  isClubSaturday,
   monthKey as clubMonthKey,
   weekKey as clubWeekKey,
 } from './rating-period';
@@ -85,6 +93,64 @@ export class RatingRewardsService {
       ...result,
       topN: WEEKLY_FINAL_TOP,
     };
+  }
+
+  /**
+   * После субботнего турнира закрывает неделю, которой принадлежит турнир.
+   * Если на эту субботу ещё идёт другой турнир — ждём его.
+   */
+  async maybeCloseWeekAfterSaturdayTournament(
+    tournament: { id: string; date: Date },
+    adminId?: string | null,
+  ) {
+    if (!isClubSaturday(tournament.date)) {
+      return null;
+    }
+
+    const live = await this.prisma.tournament.findMany({
+      where: { status: TournamentStatus.IN_PROGRESS, id: { not: tournament.id } },
+      select: { id: true, date: true },
+    });
+    if (live.some((row) => isClubSaturday(row.date))) {
+      this.logger.log(
+        `Автозакрытие недели отложено: ещё идёт субботний турнир ${live.map((row) => row.id).join(', ')}`,
+      );
+      return null;
+    }
+
+    const week = getClubWeekBounds(tournament.date);
+    const current = getClubWeekBounds();
+
+    try {
+      return await this.closeWeek(
+        {
+          weekKey: week.weekKey,
+          force: week.weekKey === current.weekKey,
+        },
+        adminId,
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Не удалось закрыть неделю после субботнего турнира: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      return null;
+    }
+  }
+
+  /** Запасное закрытие: вс 06:00, если субботний турнир уже не идёт. */
+  async closeCurrentWeekIfNoLiveSaturday(adminId?: string | null) {
+    const live = await this.prisma.tournament.findMany({
+      where: { status: TournamentStatus.IN_PROGRESS },
+      select: { id: true, date: true },
+    });
+    if (live.some((row) => isClubSaturday(row.date))) {
+      this.logger.log('Автозакрытие недели пропущено: субботний турнир ещё идёт');
+      return null;
+    }
+
+    return this.closeWeek({ target: 'current', force: true }, adminId);
   }
 
   async payoutWeekly(adminId?: string | null) {
