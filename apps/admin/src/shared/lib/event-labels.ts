@@ -44,7 +44,7 @@ export const XP_SETTING_LABELS: Record<XpSettingKey, string> = {
   ATTENDANCE: 'Посещение турнира (XP)',
   ELIMINATION: 'Вылет (XP)',
   RE_ENTRY: 'Ре-энтри (XP)',
-  BOUNTY: 'Баунти (XP)',
+  BOUNTY: 'Баунти (очки рейтинга)',
   FOUR_OF_A_KIND: 'Каре (XP)',
   STRAIGHT_FLUSH: 'Стрит-флеш (XP)',
   ROYAL_FLUSH: 'Роял-флеш (XP)',

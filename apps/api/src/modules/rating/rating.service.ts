@@ -17,8 +17,12 @@ import {
   type ClubPeriodBounds,
 } from './rating-period';
 
-/** Очки рейтинга — только места в турнирах (не XP за явку/комбо). */
-const RATING_POINT_REASONS: XPReason[] = [XPReason.TOURNAMENT_WIN, XPReason.TOURNAMENT_PLACE];
+/** Очки рейтинга — места в турнирах и баунти (не XP за явку/комбо). */
+export const RATING_POINT_REASONS: XPReason[] = [
+  XPReason.TOURNAMENT_WIN,
+  XPReason.TOURNAMENT_PLACE,
+  XPReason.BOUNTY,
+];
 
 export interface RatingRow {
   rank: number;

@@ -13,6 +13,8 @@ export interface AwardXpInput {
   tournamentResultId?: string | null;
   performedById?: string | null;
   metadata?: Prisma.InputJsonValue | null;
+  /** false — записать историю (рейтинг), не менять XP профиля. */
+  applyToProfile?: boolean;
 }
 
 export interface AwardXpResult {
@@ -46,13 +48,16 @@ export class XpService {
     });
 
     const previousXp = profile.xp;
-    const totalXp = Math.max(previousXp + input.amount, 0);
+    const applyToProfile = input.applyToProfile !== false;
+    const totalXp = applyToProfile ? Math.max(previousXp + input.amount, 0) : previousXp;
 
     if (input.amount !== 0) {
-      await tx.playerProfile.update({
-        where: { userId: input.userId },
-        data: { xp: totalXp },
-      });
+      if (applyToProfile) {
+        await tx.playerProfile.update({
+          where: { userId: input.userId },
+          data: { xp: totalXp },
+        });
+      }
 
       await tx.xPHistory.create({
         data: {
