@@ -3,6 +3,7 @@ import { TelegramModule } from '../telegram/telegram.module';
 import { RegistrationsModule } from '../registrations/registrations.module';
 import { ProgressionModule } from '../progression/progression.module';
 import { UsersModule } from '../users/users.module';
+import { RatingModule } from '../rating/rating.module';
 import { DashboardController } from './dashboard/dashboard.controller';
 import { DashboardService } from './dashboard/dashboard.service';
 import { AdminPlayersController } from './players/players.controller';
@@ -20,7 +21,7 @@ import { AdminBroadcastController } from './broadcast/broadcast.controller';
 import { AdminBroadcastService } from './broadcast/broadcast.service';
 
 @Module({
-  imports: [TelegramModule, RegistrationsModule, ProgressionModule, UsersModule],
+  imports: [TelegramModule, RegistrationsModule, ProgressionModule, UsersModule, RatingModule],
   controllers: [
     DashboardController,
     AdminPlayersController,
