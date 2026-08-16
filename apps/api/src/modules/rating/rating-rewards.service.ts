@@ -100,10 +100,11 @@ export class RatingRewardsService {
    * Если на эту субботу ещё идёт другой турнир — ждём его.
    */
   async maybeCloseWeekAfterSaturdayTournament(
-    tournament: { id: string; date: Date },
+    tournament: { id: string; date: Date | string },
     adminId?: string | null,
   ) {
-    if (!isClubSaturday(tournament.date)) {
+    const tournamentDate = new Date(tournament.date);
+    if (!isClubSaturday(tournamentDate)) {
       return null;
     }
 
@@ -118,7 +119,7 @@ export class RatingRewardsService {
       return null;
     }
 
-    const week = getClubWeekBounds(tournament.date);
+    const week = getClubWeekBounds(tournamentDate);
     const current = getClubWeekBounds();
 
     try {
