@@ -12,7 +12,7 @@ import { PlayerLevelBadge, PlayerShowcaseMedals } from '../../shared/ui/PlayerSh
 import { displayNameOf } from '../../shared/lib/display-name';
 
 type Tab = 'weekly' | 'final';
-type WeekMode = 'auto' | 'previous';
+type WeekMode = 'current' | 'previous';
 
 async function fetchFinalRating(): Promise<RatingEntry[]> {
   const { data } = await apiClient.get('/ratings/final');
@@ -76,7 +76,7 @@ const WEEKLY_TOP = 7;
 export function RatingPage(): JSX.Element {
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>('weekly');
-  const [weekMode, setWeekMode] = useState<WeekMode>('auto');
+  const [weekMode, setWeekMode] = useState<WeekMode>('current');
   const { data: profile } = useProfile();
 
   const weeklyQuery = useQuery({
@@ -227,7 +227,7 @@ export function RatingPage(): JSX.Element {
             >
               {(
                 [
-                  { id: 'auto' as const, label: 'Актуальная' },
+                  { id: 'current' as const, label: 'Актуальная' },
                   { id: 'previous' as const, label: 'Прошлая' },
                 ] as const
               ).map((option) => (
@@ -456,7 +456,7 @@ export function RatingPage(): JSX.Element {
                 <p className="serif" style={{ fontSize: 16, color: '#6B614E' }}>
                   {tab === 'weekly' ? 'На этой неделе пока нет очков' : 'Рейтинг пуст'}
                 </p>
-                {tab === 'weekly' && weekMode === 'auto' && (
+                {tab === 'weekly' && weekMode === 'current' && (
                   <button
                     type="button"
                     onClick={() => setWeekMode('previous')}
