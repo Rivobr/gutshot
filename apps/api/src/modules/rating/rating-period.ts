@@ -176,6 +176,17 @@ export function resolveWeeklyDisplayWeeks(
   };
 }
 
+/**
+ * Какую таблицу отдать по query week=.
+ * auto = текущая (даже пустая). Прошлая неделя только при явном previous —
+ * иначе в понедельник «актуальная» снова показывает уже закрытую неделю.
+ */
+export function selectWeeklyRatingPeriod(
+  mode: 'current' | 'previous' | 'auto',
+): 'current' | 'previous' {
+  return mode === 'previous' ? 'previous' : 'current';
+}
+
 export function monthKey(date = new Date()): string {
   return getClubMonthBounds(date).monthKey;
 }
