@@ -15,6 +15,7 @@ import {
   getClubWeekBounds,
   getPreviousClubWeekBounds,
   resolveWeeklyDisplayWeeks,
+  selectWeeklyRatingPeriod,
   type ClubPeriodBounds,
 } from './rating-period';
 
@@ -97,8 +98,9 @@ export class RatingService implements OnModuleInit {
 
   /**
    * Недельный рейтинг клуба (пн–сб, Europe/Moscow).
-   * mode=auto: если текущая неделя пустая — отдаём прошлую (чтобы в пн утром таблица не пропадала).
-   * Закрытая досрочно неделя показывается как прошлая, актуальная — следующая.
+   * current/auto — живая неделя (пустая, пока нет очков).
+   * previous — явно прошлый период.
+   * Закрытая досрочно календарная неделя уходит в previous, current = следующая.
    */
   async getWeeklyRating(mode: 'current' | 'previous' | 'auto' = 'auto'): Promise<{
     weekKey: string;
@@ -115,21 +117,9 @@ export class RatingService implements OnModuleInit {
         where: { weekKey: calendarCurrent.weekKey },
       })) > 0;
     const display = resolveWeeklyDisplayWeeks(new Date(), currentWeekClosed);
-
-    if (mode === 'previous') {
-      return this.buildWeeklyRating(display.previous, 'previous', false);
-    }
-
-    const currentEntries = await this.getPointsLeaderboard(
-      display.current.start,
-      display.current.end,
-    );
-
-    if (mode === 'current' || currentEntries.length > 0 || currentWeekClosed) {
-      return this.buildWeeklyRating(display.current, 'current', false, currentEntries);
-    }
-
-    return this.buildWeeklyRating(display.previous, 'previous', true);
+    const period = selectWeeklyRatingPeriod(mode);
+    const week = period === 'previous' ? display.previous : display.current;
+    return this.buildWeeklyRating(week, period, false);
   }
 
   private async buildWeeklyRating(

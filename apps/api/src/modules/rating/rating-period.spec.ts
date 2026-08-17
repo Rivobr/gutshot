@@ -7,6 +7,7 @@ import {
   getPreviousClubWeekBounds,
   isClubSaturday,
   resolveWeeklyDisplayWeeks,
+  selectWeeklyRatingPeriod,
   weekKey,
 } from './rating-period';
 
@@ -44,6 +45,12 @@ describe('rating-period', () => {
   it('previous week after extension is the extended opening week', () => {
     const previous = getPreviousClubWeekBounds(new Date('2026-08-17T12:00:00.000Z'));
     expect(previous.weekKey).toBe('2026-W32E');
+  });
+
+  it('never treats auto as previous — empty current week stays current', () => {
+    expect(selectWeeklyRatingPeriod('auto')).toBe('current');
+    expect(selectWeeklyRatingPeriod('current')).toBe('current');
+    expect(selectWeeklyRatingPeriod('previous')).toBe('previous');
   });
 
   it('moves a force-closed current week into previous and opens the next as current', () => {
