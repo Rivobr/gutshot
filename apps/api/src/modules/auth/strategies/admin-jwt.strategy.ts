@@ -4,6 +4,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { Request } from 'express';
 import { AdminJwtPayload } from '../../../common/interfaces/jwt-payload.interface';
+import { PrismaService } from '../../../prisma/prisma.service';
 import { TokenBlacklistService } from '../token-blacklist.service';
 
 @Injectable()
@@ -11,6 +12,7 @@ export class AdminJwtStrategy extends PassportStrategy(Strategy, 'admin-jwt') {
   constructor(
     configService: ConfigService,
     private readonly tokenBlacklistService: TokenBlacklistService,
+    private readonly prisma: PrismaService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -31,6 +33,19 @@ export class AdminJwtStrategy extends PassportStrategy(Strategy, 'admin-jwt') {
       throw new UnauthorizedException('Токен отозван');
     }
 
-    return payload;
+    const admin = await this.prisma.adminUser.findUnique({
+      where: { id: payload.sub },
+      select: { id: true, email: true, role: true },
+    });
+
+    if (!admin) {
+      throw new UnauthorizedException('Администратор не найден');
+    }
+
+    return {
+      ...payload,
+      email: admin.email,
+      role: admin.role,
+    };
   }
 }

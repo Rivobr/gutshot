@@ -1,18 +1,54 @@
 import { isAxiosError } from 'axios';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { PlayerProfileDto } from '@gutshot/types';
+import type { PlayerBootstrapDto, PlayerProfileDto } from '@gutshot/types';
 import { playerApi } from '../api/player.api';
 import { getTelegramInitData } from '../../../shared/lib/telegram';
-import { loginWithTelegramInitData } from '../../../processes/startup/use-startup';
+import { loginWithTicket, loginWithTelegramInitData } from '../../../processes/startup/use-startup';
+
+function readTicketFromUrl(): string {
+  try {
+    return new URLSearchParams(window.location.search).get('ticket') || '';
+  } catch {
+    return '';
+  }
+}
+
+export const BOOTSTRAP_QUERY_KEY = ['profile', 'bootstrap'] as const;
+
+/**
+ * Лёгкий профиль для входа (ConsentGate). Не тянет метрики/ачивки.
+ * Без ретраев: ConsentGate ждёт по своему таймауту, а повторы только
+ * растягивали ожидание за его пределы и давали ложную ошибку.
+ */
+export function useBootstrap() {
+  return useQuery({
+    queryKey: BOOTSTRAP_QUERY_KEY,
+    queryFn: playerApi.getBootstrap,
+    retry: false,
+    staleTime: 60_000,
+    meta: { critical: true },
+  });
+}
 
 export function useProfile() {
   return useQuery({
     queryKey: ['profile'],
     queryFn: playerApi.getProfile,
+    // Full profile is no longer on the critical boot path.
+    retry: 1,
+    retryDelay: 500,
+    staleTime: 60_000,
+  });
+}
+
+/** Публичный профиль другого игрока. */
+export function usePublicProfile(userId: string) {
+  return useQuery({
+    queryKey: ['players', userId],
+    queryFn: () => playerApi.getPublicProfile(userId),
+    enabled: Boolean(userId),
     retry: 1,
     staleTime: 60_000,
-    // Не висеть бесконечно при плохой сети — ConsentGate тоже режет по таймеру.
-    meta: { critical: true },
   });
 }
 
@@ -38,7 +74,10 @@ export function useXpHistory() {
 }
 
 export function useTournamentHistory() {
-  return useQuery({ queryKey: ['profile', 'tournaments'], queryFn: playerApi.getTournamentHistory });
+  return useQuery({
+    queryKey: ['profile', 'tournaments'],
+    queryFn: playerApi.getTournamentHistory,
+  });
 }
 
 export function useNotifications() {
@@ -61,27 +100,64 @@ export function useAchievementTexts() {
   });
 }
 
+/** Каталог достижений клуба — единый источник с сервера. */
+export function useAchievementsCatalog() {
+  return useQuery({
+    queryKey: ['achievements-catalog'],
+    queryFn: playerApi.getAchievementsCatalog,
+    staleTime: 10 * 60_000,
+  });
+}
+
+export function useXpRating() {
+  return useQuery({
+    queryKey: ['ratings', 'xp'],
+    queryFn: playerApi.getXpRating,
+    staleTime: 60_000,
+  });
+}
+
+async function acceptConsentWithRetry(): Promise<{ consentAcceptedAt: string }> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      return await playerApi.acceptConsent();
+    } catch (error) {
+      lastError = error;
+      // Протухший JWT на экране согласия — перелогин (initData или ticket) и повтор.
+      if (isAxiosError(error) && error.response?.status === 401) {
+        const initData = getTelegramInitData();
+        if (initData) {
+          await loginWithTelegramInitData(initData);
+          return playerApi.acceptConsent();
+        }
+        const ticket = readTicketFromUrl();
+        if (ticket) {
+          await loginWithTicket(ticket);
+          return playerApi.acceptConsent();
+        }
+        throw error;
+      }
+      // Сетевой обрыв (часто iOS WebView + SSL keepalive) — короткая пауза и повтор.
+      const isNetwork = isAxiosError(error) && !error.response;
+      if (!isNetwork || attempt === 3) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 350 * attempt));
+    }
+  }
+  throw lastError;
+}
+
 export function useAcceptConsent() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async () => {
-      try {
-        return await playerApi.acceptConsent();
-      } catch (error) {
-        // Протухший JWT на экране согласия — перелогин и один повтор.
-        if (!isAxiosError(error) || error.response?.status !== 401) {
-          throw error;
-        }
-        const initData = getTelegramInitData();
-        if (!initData) {
-          throw error;
-        }
-        await loginWithTelegramInitData(initData);
-        return playerApi.acceptConsent();
-      }
-    },
+    mutationFn: () => acceptConsentWithRetry(),
     onSuccess: (result) => {
+      queryClient.setQueryData(BOOTSTRAP_QUERY_KEY, (current: PlayerBootstrapDto | undefined) =>
+        current ? { ...current, consentAcceptedAt: result.consentAcceptedAt } : current,
+      );
       queryClient.setQueryData(['profile'], (current: PlayerProfileDto | undefined) => {
         if (!current) {
           return current;
@@ -91,7 +167,22 @@ export function useAcceptConsent() {
           consentAcceptedAt: result.consentAcceptedAt,
         };
       });
+      void queryClient.invalidateQueries({ queryKey: BOOTSTRAP_QUERY_KEY });
       void queryClient.invalidateQueries({ queryKey: ['profile'] });
+    },
+  });
+}
+
+export function usePinAchievements() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (achievementIds: string[]) => playerApi.setPinnedAchievements(achievementIds),
+    onSuccess: (result) => {
+      queryClient.setQueryData(['profile'], (current: PlayerProfileDto | undefined) =>
+        current ? { ...current, pinnedAchievements: result.pinnedAchievements } : current,
+      );
+      void queryClient.invalidateQueries({ queryKey: ['tournaments'] });
     },
   });
 }

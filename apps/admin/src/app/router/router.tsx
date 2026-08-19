@@ -13,6 +13,11 @@ import { AchievementsAdminPage } from '../../pages/Achievements/AchievementsPage
 import { HistoryPage } from '../../pages/History/HistoryPage';
 import { StatisticsPage } from '../../pages/Statistics/StatisticsPage';
 import { SettingsPage } from '../../pages/Settings/SettingsPage';
+import { BroadcastsPage } from '../../pages/Broadcasts/BroadcastsPage';
+import {
+  BroadcastDetailsPage,
+  BroadcastNewPage,
+} from '../../pages/Broadcasts/BroadcastEditorPage';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -28,6 +33,9 @@ export const router = createBrowserRouter([
           { path: '/players', element: <PlayersPage /> },
           { path: '/scanner', element: <ScannerPage /> },
           { path: '/history', element: <HistoryPage /> },
+          { path: '/broadcasts', element: <BroadcastsPage /> },
+          { path: '/broadcasts/new', element: <BroadcastNewPage /> },
+          { path: '/broadcasts/:id', element: <BroadcastDetailsPage /> },
           { path: '/xp-settings', element: <XpSettingsPage /> },
           { path: '/legal-documents', element: <LegalDocumentsPage /> },
           { path: '/achievements', element: <AchievementsAdminPage /> },

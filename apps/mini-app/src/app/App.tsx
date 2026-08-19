@@ -1,23 +1,50 @@
 import { useEffect, useRef, useState } from 'react';
+import { isAxiosError } from 'axios';
 import { RouterProvider } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { QueryProvider } from './providers/query-provider';
 import { router } from './router/router';
 import {
+  loginWithTicket,
   loginWithTelegramInitData,
   useStartup,
   waitForInitData,
 } from '../processes/startup/use-startup';
 import { ConsentScreen } from '../pages/Onboarding/ConsentScreen';
-import { useProfile } from '../entities/player';
+import { playerApi, useBootstrap } from '../entities/player';
 import { tournamentApi } from '../entities/tournament/api/tournament.api';
 import { EmptyState, Button } from '@gutshot/ui';
 import { clearReauthFlag } from '../shared/api/client';
 import { tokenStorage } from '../shared/lib/token-storage';
 import { getTelegramInitData } from '../shared/lib/telegram';
 import { SplashScreen } from '../widgets/SplashScreen/SplashScreen';
+import { ToastHost } from '../shared/ui/toast';
 
-const PROFILE_WAIT_MS = 6_000;
+/**
+ * Потолок ожидания входа. Должен быть больше таймаута самого запроса (8с),
+ * иначе на медленной сети показываем ошибку, пока ответ ещё идёт.
+ */
+const BOOTSTRAP_WAIT_MS = 10_000;
+
+function readTicketFromUrl(): string {
+  try {
+    return new URLSearchParams(window.location.search).get('ticket') || '';
+  } catch {
+    return '';
+  }
+}
+
+async function recoverSession(): Promise<void> {
+  const initData = getTelegramInitData() || (await waitForInitData(2_000));
+  if (initData) {
+    await loginWithTelegramInitData(initData);
+    return;
+  }
+  const ticket = readTicketFromUrl();
+  if (ticket) {
+    await loginWithTicket(ticket);
+  }
+}
 
 export function App(): JSX.Element {
   const { status, errorMessage } = useStartup();
@@ -45,6 +72,7 @@ export function App(): JSX.Element {
 
   return (
     <QueryProvider>
+      <ToastHost />
       <ConsentGate>
         <RouterProvider router={router} />
       </ConsentGate>
@@ -52,30 +80,67 @@ export function App(): JSX.Element {
   );
 }
 
+/** Текст ошибки от сервера — иначе всё сводится к общей фразе. */
+function serverMessage(error: unknown): string | null {
+  if (!isAxiosError(error)) {
+    return null;
+  }
+  const message = (error.response?.data as { message?: string | string[] } | undefined)?.message;
+  if (typeof message === 'string' && message.trim()) {
+    return message;
+  }
+  if (Array.isArray(message) && typeof message[0] === 'string') {
+    return message[0];
+  }
+  return null;
+}
+
 function ConsentGate({ children }: { children: JSX.Element }): JSX.Element {
   const queryClient = useQueryClient();
-  const { data: profile, isPending, isError, isFetching, refetch } = useProfile();
+  const { data: boot, isPending, isError, error, refetch } = useBootstrap();
   const [timedOut, setTimedOut] = useState(false);
   const [recovering, setRecovering] = useState(false);
   const recoveryTried = useRef(false);
+  const waitStartedAt = useRef<number | null>(null);
+
+  const isBlocked = isAxiosError(error) && error.response?.status === 403;
+  const blockedMessage = isBlocked
+    ? (serverMessage(error) ?? 'Аккаунт заблокирован. Обратитесь к администратору клуба.')
+    : null;
+  const errorDescription =
+    serverMessage(error) ?? 'Сессия могла устареть или сервер не ответил. Нажмите «Повторить».';
 
   useEffect(() => {
-    if (!isPending && !isFetching && !recovering) {
+    if (boot) {
+      // Ответ мог прийти уже после срабатывания таймера — тогда ошибку не показываем.
+      waitStartedAt.current = null;
       setTimedOut(false);
       return;
     }
-    const timer = window.setTimeout(() => setTimedOut(true), PROFILE_WAIT_MS);
+    if (!isPending && !recovering) {
+      return;
+    }
+    if (waitStartedAt.current == null) {
+      waitStartedAt.current = Date.now();
+    }
+    const remaining = BOOTSTRAP_WAIT_MS - (Date.now() - waitStartedAt.current);
+    if (remaining <= 0) {
+      setTimedOut(true);
+      return;
+    }
+    const timer = window.setTimeout(() => setTimedOut(true), remaining);
     return () => window.clearTimeout(timer);
-  }, [isPending, isFetching, recovering]);
+  }, [boot, isPending, recovering]);
 
   useEffect(() => {
-    if (profile?.id) {
+    if (boot?.id) {
       clearReauthFlag();
     }
-  }, [profile?.id]);
+  }, [boot?.id]);
 
+  // После успешного boot — тяжёлый профиль и nearest в фоне, не блокируя UI.
   useEffect(() => {
-    if (!profile?.consentAcceptedAt) {
+    if (!boot?.consentAcceptedAt) {
       return;
     }
     void queryClient.prefetchQuery({
@@ -83,11 +148,16 @@ function ConsentGate({ children }: { children: JSX.Element }): JSX.Element {
       queryFn: tournamentApi.getNearest,
       staleTime: 30_000,
     });
-  }, [profile?.consentAcceptedAt, queryClient]);
+    void queryClient.prefetchQuery({
+      queryKey: ['profile'],
+      queryFn: playerApi.getProfile,
+      staleTime: 60_000,
+    });
+  }, [boot?.consentAcceptedAt, queryClient]);
 
-  // Один тихий recovery без reload: перелогин по initData + повтор профиля.
   useEffect(() => {
-    if (!isError || profile || recoveryTried.current) {
+    // Заблокированного перелогин не спасёт — не дёргаем сервер зря.
+    if (!isError || boot || recoveryTried.current || isBlocked) {
       return;
     }
     recoveryTried.current = true;
@@ -95,11 +165,7 @@ function ConsentGate({ children }: { children: JSX.Element }): JSX.Element {
 
     void (async () => {
       try {
-        const initData = getTelegramInitData() || (await waitForInitData(1_500));
-        if (!initData) {
-          return;
-        }
-        await loginWithTelegramInitData(initData);
+        await recoverSession();
         await refetch();
       } catch {
         // UI покажет кнопку «Повторить»
@@ -107,25 +173,44 @@ function ConsentGate({ children }: { children: JSX.Element }): JSX.Element {
         setRecovering(false);
       }
     })();
-  }, [isError, profile, refetch]);
+  }, [isError, boot, isBlocked, refetch]);
 
-  if ((isPending || recovering) && !timedOut) {
-    return <SplashScreen subtitle="Загружаем профиль…" />;
-  }
-
-  if (isError || !profile || timedOut) {
+  if (blockedMessage) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-4">
-        <EmptyState
-          icon="⚠️"
-          title="Не удалось загрузить профиль"
-          description="Сессия могла устареть или сервер не ответил. Нажмите «Повторить»."
-        />
+        <EmptyState icon="🚫" title="Доступ закрыт" description={blockedMessage} />
+      </div>
+    );
+  }
+
+  if ((isPending || recovering) && !timedOut) {
+    return <SplashScreen subtitle="Открываем клуб…" />;
+  }
+
+  if (isError || !boot || timedOut) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-4">
+        <EmptyState icon="⚠️" title="Не удалось открыть клуб" description={errorDescription} />
         <Button
           onClick={() => {
-            tokenStorage.clear();
-            clearReauthFlag();
-            window.location.reload();
+            void (async () => {
+              setTimedOut(false);
+              setRecovering(true);
+              recoveryTried.current = false;
+              waitStartedAt.current = null;
+              try {
+                tokenStorage.clear();
+                clearReauthFlag();
+                await recoverSession();
+                await refetch();
+              } catch {
+                tokenStorage.clear();
+                clearReauthFlag();
+                window.location.reload();
+              } finally {
+                setRecovering(false);
+              }
+            })();
           }}
         >
           Повторить
@@ -134,7 +219,7 @@ function ConsentGate({ children }: { children: JSX.Element }): JSX.Element {
     );
   }
 
-  if (!profile.consentAcceptedAt) {
+  if (!boot.consentAcceptedAt) {
     return <ConsentScreen />;
   }
 

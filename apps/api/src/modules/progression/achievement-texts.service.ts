@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { AchievementText } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { REMOVED_ACHIEVEMENT_IDS } from '../../common/constants/achievements-catalog';
 import {
   ACHIEVEMENT_TEXT_ORDER,
   DEFAULT_ACHIEVEMENT_TEXTS,
@@ -56,20 +57,22 @@ export class AchievementTextsService {
   }
 
   async ensureDefaults(): Promise<void> {
+    await this.prisma.achievementText.deleteMany({
+      where: { id: { in: [...REMOVED_ACHIEVEMENT_IDS] } },
+    });
+
     const existing = await this.prisma.achievementText.findMany({ select: { id: true } });
     const known = new Set(existing.map((row) => row.id));
     const missing = ACHIEVEMENT_TEXT_ORDER.filter((id) => !known.has(id));
 
-    if (missing.length === 0) {
-      return;
+    if (missing.length > 0) {
+      await this.prisma.achievementText.createMany({
+        data: missing.map((id) => ({
+          id,
+          ...DEFAULT_ACHIEVEMENT_TEXTS[id],
+        })),
+        skipDuplicates: true,
+      });
     }
-
-    await this.prisma.achievementText.createMany({
-      data: missing.map((id) => ({
-        id,
-        ...DEFAULT_ACHIEVEMENT_TEXTS[id],
-      })),
-      skipDuplicates: true,
-    });
   }
 }

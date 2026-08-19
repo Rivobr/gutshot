@@ -28,9 +28,7 @@ export class LegalDocumentsController {
 
   @Public()
   @Get(':type')
-  findOne(
-    @Param('type', new ParseEnumPipe(LegalDocumentType)) type: LegalDocumentType,
-  ) {
+  findOne(@Param('type', new ParseEnumPipe(LegalDocumentType)) type: LegalDocumentType) {
     return this.legalDocumentsService.findOne(type);
   }
 }
@@ -38,6 +36,7 @@ export class LegalDocumentsController {
 @ApiTags('Admin / Legal Documents')
 @ApiBearerAuth()
 @UseGuards(AdminAuthGuard, RolesGuard)
+@Roles(AdminRole.OWNER, AdminRole.ADMIN)
 @Controller('admin/legal-documents')
 export class AdminLegalDocumentsController {
   constructor(private readonly legalDocumentsService: LegalDocumentsService) {}

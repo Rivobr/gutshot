@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <title>GUTSHOT</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #090909;
+        color: #c9a227;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      }
+      #s {
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        padding: 24px;
+        text-align: center;
+      }
+      .spin {
+        width: 28px;
+        height: 28px;
+        border: 3px solid rgba(255, 255, 255, 0.12);
+        border-top-color: #c9a227;
+        border-radius: 50%;
+        animation: r 0.8s linear infinite;
+      }
+      @keyframes r {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .btn {
+        display: none;
+        margin-top: 8px;
+        padding: 12px 20px;
+        border-radius: 12px;
+        background: #c9a227;
+        color: #111;
+        font-weight: 700;
+        font-size: 15px;
+        text-decoration: none;
+      }
+      .btn.show {
+        display: inline-block;
+      }
+      .msg {
+        font-size: 14px;
+        opacity: 0.85;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="s">
+      <div class="spin" id="sp"></div>
+      <div class="msg" id="m">Открываем…</div>
+      <a class="btn" id="b" href="/enter.html">Открыть клуб</a>
+    </div>
+    <script>
+      // Единая точка входа — enter.html. Раньше boot.html был его копией
+      // и расходился при правках; теперь только редирект с ticket.
+      (function () {
+        try {
+          if (window.Telegram && Telegram.WebApp) {
+            Telegram.WebApp.ready();
+            Telegram.WebApp.expand();
+          }
+        } catch (e) {}
+
+        var search = location.search || '';
+        var target = '/enter.html' + (search ? search + '&' : '?') + 'from=boot';
+
+        try {
+          location.replace(target);
+        } catch (e) {
+          try {
+            location.href = target;
+          } catch (e2) {}
+        }
+
+        setTimeout(function () {
+          var sp = document.getElementById('sp');
+          var m = document.getElementById('m');
+          var b = document.getElementById('b');
+          if (sp) sp.style.display = 'none';
+          if (m) m.textContent = 'Нажмите кнопку, чтобы открыть клуб';
+          if (b) {
+            b.href = target;
+            b.className = 'btn show';
+          }
+        }, 1500);
+      })();
+    </script>
+  </body>
+</html>

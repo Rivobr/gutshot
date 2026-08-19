@@ -1,10 +1,14 @@
 import {
+  AchievementDefinitionDto,
   AchievementDto,
   AchievementTextDto,
   LegalDocumentDto,
   NotificationDto,
+  PlayerBootstrapDto,
   PlayerEventDto,
   PlayerProfileDto,
+  PublicPlayerProfileDto,
+  RatingEntry,
   Registration,
 } from '@gutshot/types';
 import { apiClient } from '../../../shared/api/client';
@@ -17,8 +21,19 @@ export interface XPHistoryDto {
 }
 
 export const playerApi = {
+  /** Лёгкий boot-профиль для ConsentGate (быстрый вход). */
+  async getBootstrap(): Promise<PlayerBootstrapDto> {
+    // Свой таймаут: вход не должен зависеть от общего 12с axios.
+    const { data } = await apiClient.get('/profile/bootstrap', { timeout: 8_000 });
+    return data.data;
+  },
   async getProfile(): Promise<PlayerProfileDto> {
     const { data } = await apiClient.get('/profile');
+    return data.data;
+  },
+  /** Публичный профиль другого игрока. */
+  async getPublicProfile(userId: string): Promise<PublicPlayerProfileDto> {
+    const { data } = await apiClient.get(`/players/${encodeURIComponent(userId)}`);
     return data.data;
   },
   async updateNickname(nickname: string): Promise<PlayerProfileDto> {
@@ -37,6 +52,10 @@ export const playerApi = {
     const { data } = await apiClient.get('/profile/achievements');
     return data.data;
   },
+  async setPinnedAchievements(achievementIds: string[]): Promise<{ pinnedAchievements: string[] }> {
+    const { data } = await apiClient.put('/profile/achievements/pinned', { achievementIds });
+    return data.data;
+  },
   async acceptConsent(): Promise<{ consentAcceptedAt: string }> {
     // Явно шлём {} — пустой POST с Content-Type JSON даёт 400 на Nest.
     const { data } = await apiClient.post('/profile/consent', {});
@@ -50,6 +69,10 @@ export const playerApi = {
     const { data } = await apiClient.get('/achievement-texts');
     return data.data;
   },
+  async getAchievementsCatalog(): Promise<AchievementDefinitionDto[]> {
+    const { data } = await apiClient.get('/achievements/catalog');
+    return data.data;
+  },
   async getXpHistory(): Promise<XPHistoryDto[]> {
     const { data } = await apiClient.get('/profile/history');
     return data.data;
@@ -61,5 +84,10 @@ export const playerApi = {
   async getNotifications(): Promise<NotificationDto[]> {
     const { data } = await apiClient.get('/notifications');
     return data.data;
+  },
+  async getXpRating(): Promise<RatingEntry[]> {
+    const { data } = await apiClient.get('/ratings/xp');
+    const payload = data?.data ?? data;
+    return Array.isArray(payload) ? payload : [];
   },
 };

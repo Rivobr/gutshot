@@ -10,42 +10,72 @@ import { randomBytes } from 'crypto';
 
 const prisma = new PrismaClient();
 
-// Значения продублированы из src/common/constants/xp-defaults.constants.ts,
-// чтобы seed оставался самостоятельным скриптом без зависимости от кода приложения.
+// Значения продублированы из src/common/constants/xp-defaults.constants.ts
 const DEFAULT_XP_SETTINGS: Record<XpSettingKey, number> = {
   ATTENDANCE: 100,
   ELIMINATION: 50,
   RE_ENTRY: 0,
-  BOUNTY: 75,
-  FOUR_OF_A_KIND: 150,
-  STRAIGHT_FLUSH: 300,
-  ROYAL_FLUSH: 1000,
-  TOURNAMENT_WIN: 3600,
-  PLACE_2: 2900,
-  PLACE_3: 2705,
-  PLACE_4: 2520,
-  PLACE_5: 2335,
-  PLACE_6: 2150,
-  PLACE_7: 1975,
-  PLACE_8: 1805,
-  PLACE_9: 1635,
-  PLACE_10: 1475,
-  PLACE_11: 1320,
-  PLACE_12: 1170,
-  PLACE_13: 1025,
-  PLACE_14: 890,
-  PLACE_15: 760,
-  PLACE_16: 640,
-  PLACE_17: 530,
-  PLACE_18: 435,
-  PLACE_19: 355,
-  PLACE_20: 300,
+  BOUNTY: 50,
+  FOUR_OF_A_KIND: 100,
+  STRAIGHT_FLUSH: 200,
+  ROYAL_FLUSH: 500,
+  TOURNAMENT_WIN: 2000,
+  PLACE_2: 1600,
+  PLACE_3: 1300,
+  PLACE_4: 1100,
+  PLACE_5: 1000,
+  PLACE_6: 900,
+  PLACE_7: 800,
+  PLACE_8: 750,
+  PLACE_9: 700,
+  PLACE_10: 650,
+  PLACE_11: 600,
+  PLACE_12: 550,
+  PLACE_13: 500,
+  PLACE_14: 475,
+  PLACE_15: 450,
+  PLACE_16: 425,
+  PLACE_17: 400,
+  PLACE_18: 375,
+  PLACE_19: 350,
+  PLACE_20: 325,
+  PLACE_21: 250,
+  PLACE_22: 250,
+  PLACE_23: 250,
+  PLACE_24: 250,
+  PLACE_25: 250,
+  PLACE_26: 200,
+  PLACE_27: 200,
+  PLACE_28: 200,
+  PLACE_29: 200,
+  PLACE_30: 200,
+  PLACE_31_40: 125,
+  PLACE_41_50: 100,
+  PLACE_51_PLUS: 75,
+  WEEKLY_TOP_1: 2000,
+  WEEKLY_TOP_2: 1250,
+  WEEKLY_TOP_3: 800,
+  MONTHLY_TOP_1: 5000,
+  MONTHLY_TOP_2: 3000,
+  MONTHLY_TOP_3: 2000,
 };
 
-const DEFAULT_LEVEL_THRESHOLDS = Array.from({ length: 30 }, (_, index) => ({
-  level: index + 1,
-  requiredXp: Math.pow(index, 2) * 100,
-}));
+function requiredXpForLevel(level: number): number {
+  if (level <= 1) return 0;
+  if (level >= 100) return 600_000;
+  let total = 0;
+  for (let from = 1; from < level; from += 1) {
+    if (from < 20) total += 200 + 40 * (from - 1);
+    else if (from < 50) total += 1000 + 90 * (from - 20);
+    else total += 4000 + 261 * (from - 50);
+  }
+  return total;
+}
+
+const DEFAULT_LEVEL_THRESHOLDS = Array.from({ length: 100 }, (_, index) => {
+  const level = index + 1;
+  return { level, requiredXp: requiredXpForLevel(level) };
+});
 
 const QR_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -85,13 +115,36 @@ const LEGAL_DOCUMENTS: { type: LegalDocumentType; title: string; content: string
 ];
 
 async function main(): Promise<void> {
-  const owner = await prisma.adminUser.upsert({
-    where: { email: 'owner@gutshot.club' },
-    update: {},
+  await prisma.adminUser.deleteMany({
+    where: { email: { in: ['owner@gutshot.club', 'tvadmin'] } },
+  });
+
+  const dealer = await prisma.adminUser.upsert({
+    where: { email: 'dl' },
+    update: {
+      name: 'Дилер',
+      role: AdminRole.DEALER,
+      passwordHash: await hash('dl12345', 10),
+    },
     create: {
-      email: 'owner@gutshot.club',
-      passwordHash: await hash('ChangeMe123!', 10),
-      name: 'Владелец клуба',
+      email: 'dl',
+      passwordHash: await hash('dl12345', 10),
+      name: 'Дилер',
+      role: AdminRole.DEALER,
+    },
+  });
+
+  const admin = await prisma.adminUser.upsert({
+    where: { email: 'admin' },
+    update: {
+      name: 'Админ',
+      role: AdminRole.OWNER,
+      passwordHash: await hash('adminowner12345!', 10),
+    },
+    create: {
+      email: 'admin',
+      passwordHash: await hash('adminowner12345!', 10),
+      name: 'Админ',
       role: AdminRole.OWNER,
     },
   });
@@ -127,19 +180,17 @@ async function main(): Promise<void> {
     },
   });
 
-  // Настройки XP и таблица уровней. Существующие значения не перезаписываются,
-  // чтобы seed можно было запускать повторно без потери настроек клуба.
-  await prisma.xpSetting.createMany({
-    data: (Object.keys(DEFAULT_XP_SETTINGS) as XpSettingKey[]).map((key) => ({
-      key,
-      value: DEFAULT_XP_SETTINGS[key],
-    })),
-    skipDuplicates: true,
-  });
+  for (const key of Object.keys(DEFAULT_XP_SETTINGS) as XpSettingKey[]) {
+    await prisma.xpSetting.upsert({
+      where: { key },
+      update: { value: DEFAULT_XP_SETTINGS[key] },
+      create: { key, value: DEFAULT_XP_SETTINGS[key] },
+    });
+  }
 
+  await prisma.levelThreshold.deleteMany();
   await prisma.levelThreshold.createMany({
     data: DEFAULT_LEVEL_THRESHOLDS,
-    skipDuplicates: true,
   });
 
   await prisma.legalDocument.createMany({
@@ -148,7 +199,8 @@ async function main(): Promise<void> {
   });
 
   console.log('Seed завершен:', {
-    owner: owner.email,
+    dealer: dealer.email,
+    admin: admin.email,
     player: player.telegramId,
     qrCode: player.qrCode,
     tournament: tournament.title,

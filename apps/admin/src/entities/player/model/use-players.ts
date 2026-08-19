@@ -5,6 +5,15 @@ export function usePlayers() {
   return useQuery({ queryKey: ['admin', 'players'], queryFn: adminPlayersApi.getAll });
 }
 
+export function useCreatePlayer() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { query: string; isVerified?: boolean }) =>
+      adminPlayersApi.createByQuery(payload),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'players'] }),
+  });
+}
+
 export function usePlayer(id: string) {
   return useQuery({
     queryKey: ['admin', 'players', id],

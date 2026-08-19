@@ -8,13 +8,35 @@ export interface QrScannerProps {
   elementId?: string;
 }
 
+async function safeStopAndClear(scanner: Html5Qrcode): Promise<void> {
+  try {
+    // html5-qrcode@2.3.8: stop() бросает синхронный throw, если сканер ещё не стартовал.
+    if (scanner.isScanning) {
+      await scanner.stop();
+    }
+  } catch {
+    // already stopped / never started
+  }
+
+  try {
+    scanner.clear();
+  } catch {
+    // ignore DOM cleanup races
+  }
+}
+
 export function QrScanner({
   onScan,
   active,
   elementId = 'gutshot-qr-scanner',
 }: QrScannerProps): JSX.Element {
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const onScanRef = useRef(onScan);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    onScanRef.current = onScan;
+  }, [onScan]);
 
   useEffect(() => {
     if (!active) {
@@ -23,35 +45,36 @@ export function QrScanner({
 
     const scanner = new Html5Qrcode(elementId);
     scannerRef.current = scanner;
-    let stopped = false;
+    let cancelled = false;
+    let startPromise: Promise<void> | null = null;
 
-    scanner
+    startPromise = scanner
       .start(
         { facingMode: 'environment' },
         { fps: 10, qrbox: { width: 240, height: 240 } },
         (decodedText) => {
-          onScan(decodedText);
+          onScanRef.current(decodedText);
         },
         () => {
           // Ошибки распознавания отдельных кадров игнорируем.
         },
       )
+      .then(() => undefined)
       .catch(() => {
-        setError('Не удалось получить доступ к камере. Проверьте разрешения браузера.');
+        if (!cancelled) {
+          setError('Не удалось получить доступ к камере. Проверьте разрешения браузера.');
+        }
       });
 
     return () => {
-      stopped = true;
-      scanner
-        .stop()
-        .catch(() => undefined)
-        .finally(() => {
-          if (stopped) {
-            scanner.clear();
-          }
-        });
+      cancelled = true;
+      scannerRef.current = null;
+      // Дожидаемся старта (или его ошибки), затем безопасно гасим камеру.
+      void (startPromise ?? Promise.resolve()).finally(() => {
+        void safeStopAndClear(scanner);
+      });
     };
-  }, [active, elementId, onScan]);
+  }, [active, elementId]);
 
   return (
     <div className="flex flex-col gap-2">

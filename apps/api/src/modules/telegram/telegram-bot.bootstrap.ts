@@ -2,8 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TelegramService } from './telegram.service';
 
-const PRODUCTION_WEBHOOK =
-  'https://api.gutshotapp.ru/api/v1/telegram/webhook';
+const PRODUCTION_WEBHOOK = 'https://api.gutshotapp.ru/api/v1/telegram/webhook';
 
 @Injectable()
 export class TelegramBotBootstrap implements OnModuleInit {
@@ -29,7 +28,10 @@ export class TelegramBotBootstrap implements OnModuleInit {
       return;
     }
 
-    const ok = await this.telegramService.setWebhook(webhookUrl);
+    const ok = await this.withRetries(
+      () => this.telegramService.setWebhook(webhookUrl),
+      `setWebhook ${webhookUrl}`,
+    );
     if (!ok) {
       this.logger.error(`Не удалось установить webhook: ${webhookUrl}`);
     }
@@ -42,14 +44,44 @@ export class TelegramBotBootstrap implements OnModuleInit {
       return;
     }
 
-    const menuOk = await this.telegramService.setChatMenuButton(miniAppUrl);
+    // enter.html — новый entry без кэша старого /t.html (NotFound в Telegram WebView).
+    // ?v= ломает кэш WebView Telegram после фиксов входа.
+    const entryUrl = `${miniAppUrl}/enter.html?v=20260810c`;
+    const menuOk = await this.withRetries(
+      () => this.telegramService.setChatMenuButton(entryUrl),
+      `setChatMenuButton ${entryUrl}`,
+    );
     if (!menuOk) {
       this.logger.error(`Не удалось установить menu button: ${miniAppUrl}`);
     }
   }
 
+  /** Telegram API иногда недоступен в момент старта контейнера — пробуем несколько раз. */
+  private async withRetries(
+    action: () => Promise<boolean>,
+    label: string,
+    attempts = 5,
+  ): Promise<boolean> {
+    for (let i = 1; i <= attempts; i += 1) {
+      const ok = await action();
+      if (ok) {
+        return true;
+      }
+      if (i < attempts) {
+        const delayMs = Math.min(8000, 500 * 2 ** (i - 1));
+        this.logger.warn(
+          `${label}: попытка ${i}/${attempts} не удалась, повтор через ${delayMs}ms`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+    return false;
+  }
+
   private resolveMiniAppUrl(): string | undefined {
-    const raw = this.configService.get<string>('telegram.miniAppUrl')?.trim();
+    const raw =
+      this.configService.get<string>('telegram.miniAppPublicUrl')?.trim() ||
+      this.configService.get<string>('telegram.miniAppUrl')?.trim();
     const url = (raw || 'https://app.gutshotapp.ru').replace(/\/$/, '');
     if (!url.startsWith('https://') || /admin/i.test(url)) {
       this.logger.error(`Некорректный MINI_APP_URL: ${raw ?? '—'}`);

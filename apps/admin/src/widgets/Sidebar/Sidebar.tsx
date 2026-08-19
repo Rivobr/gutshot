@@ -2,11 +2,13 @@ import { NavLink } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@gutshot/ui';
 import { useLogout } from '../../features/auth/model/use-auth';
+import { adminSession } from '../../shared/lib/admin-session';
 
-const ITEMS = [
+const ALL_ITEMS = [
   { to: '/', label: 'Dashboard', icon: '📊' },
   { to: '/scanner', label: 'QR Scanner', icon: '🔍' },
   { to: '/tournaments', label: 'Турниры', icon: '🏆' },
+  { to: '/broadcasts', label: 'Рассылки', icon: '📣' },
   { to: '/players', label: 'Игроки', icon: '👥' },
   { to: '/history', label: 'История', icon: '🕘' },
   { to: '/xp-settings', label: 'Очки и XP', icon: '⭐' },
@@ -16,14 +18,35 @@ const ITEMS = [
   { to: '/settings', label: 'Настройки', icon: '⚙️' },
 ];
 
+const DEALER_ITEMS = [{ to: '/scanner', label: 'QR Scanner', icon: '🔍' }];
+
+const ALL_BOTTOM_ITEMS = [
+  { to: '/scanner', label: 'Скан', icon: '🔍' },
+  { to: '/tournaments', label: 'Турниры', icon: '🏆' },
+  { to: '/players', label: 'Игроки', icon: '👥' },
+  { to: '/', label: 'Обзор', icon: '📊' },
+];
+
+const DEALER_BOTTOM_ITEMS = [{ to: '/scanner', label: 'Скан', icon: '🔍' }];
+
+function useNavItems() {
+  const dealer = adminSession.isDealer();
+  return {
+    items: dealer ? DEALER_ITEMS : ALL_ITEMS,
+    bottomItems: dealer ? DEALER_BOTTOM_ITEMS : ALL_BOTTOM_ITEMS,
+    title: dealer ? 'GUTSHOT · Дилер' : 'GUTSHOT CRM',
+  };
+}
+
 function NavItems({ onNavigate }: { onNavigate?: () => void }): JSX.Element {
   const logout = useLogout();
+  const { items, title } = useNavItems();
   return (
     <div className="flex h-full flex-col justify-between">
       <div className="flex flex-col gap-6">
-        <h1 className="px-2 text-lg font-medium text-primary">GUTSHOT CRM</h1>
+        <h1 className="px-2 text-lg font-medium text-primary">{title}</h1>
         <nav className="flex flex-col gap-1">
-          {ITEMS.map((item) => (
+          {items.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -63,6 +86,33 @@ export function Sidebar(): JSX.Element {
     <aside className="hidden h-screen w-64 shrink-0 border-r border-border bg-sidebar px-4 py-6 md:block">
       <NavItems />
     </aside>
+  );
+}
+
+export function MobileTabBar(): JSX.Element {
+  const { bottomItems } = useNavItems();
+  return (
+    <nav
+      className="fixed inset-x-0 bottom-0 z-40 flex border-t border-border bg-background/95 backdrop-blur md:hidden"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
+      {bottomItems.map((item) => (
+        <NavLink
+          key={item.to}
+          to={item.to}
+          end={item.to === '/'}
+          className={({ isActive }) =>
+            cn(
+              'flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition-colors',
+              isActive ? 'text-primary' : 'text-muted-foreground',
+            )
+          }
+        >
+          <span className="text-lg leading-none">{item.icon}</span>
+          {item.label}
+        </NavLink>
+      ))}
+    </nav>
   );
 }
 

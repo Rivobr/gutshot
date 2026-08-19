@@ -1,76 +1,22 @@
-/** Тексты достижений по умолчанию — как на постере «Система достижений». */
+import { ACHIEVEMENTS_CATALOG } from '../../common/constants/achievements-catalog';
+
+/**
+ * Тексты достижений по умолчанию. Источник — каталог клуба;
+ * админ может переопределить название, описание и «как получить».
+ */
 export const DEFAULT_ACHIEVEMENT_TEXTS: Record<
   string,
   { icon: string; title: string; description: string; howTo: string }
-> = {
-  first_visit: {
-    icon: '🚪',
-    title: 'Первый визит',
-    description: 'Приди в клуб',
-    howTo:
-      'Запишитесь на турнир, придите в клуб и покажите QR администратору. Когда отметят явку — достижение откроется.',
-  },
-  visit_5: {
-    icon: '5️⃣',
-    title: 'Посети клуб',
-    description: '5 раз',
-    howTo: 'Нужно 5 отметок явки по QR у администратора на турнирах GUTSHOT.',
-  },
-  four_kind: {
-    icon: '🃏',
-    title: 'Каре',
-    description: 'Собери каре в любой раздаче',
-    howTo:
-      'Соберите каре за столом, покажите карты и QR администратору — он отметит событие «Каре».',
-  },
-  first_knockout: {
-    icon: '🎯',
-    title: 'Первый нокаут',
-    description: 'Выбей соперника из турнира',
-    howTo:
-      'Выбейте игрока из турнира и сразу покажите QR администратору — событие «Баунти».',
-  },
-  royal_flush: {
-    icon: '💎',
-    title: 'Флеш-рояль',
-    description: 'Собери флеш-рояль в любой раздаче',
-    howTo:
-      'Соберите Т–В–Д–К–Т одной масти, покажите руку и QR — админ отметит «Роял-флеш».',
-  },
-  visit_10: {
-    icon: '🔟',
-    title: 'Посети клуб',
-    description: '10 раз',
-    howTo: 'Нужно 10 отметок явки по QR у администратора.',
-  },
-  first_win: {
-    icon: '🏆',
-    title: 'Первая победа',
-    description: 'Выиграй турнир',
-    howTo:
-      'Займите 1 место. Когда администратор завершит турнир и укажет ваше место — достижение откроется.',
-  },
-  straight_flush: {
-    icon: '🔥',
-    title: 'Стрит-флеш',
-    description: 'Собери стрит-флеш в любой раздаче',
-    howTo:
-      'Соберите стрит-флеш, покажите карты и QR — админ отметит «Стрит-флеш».',
-  },
-  final_table: {
-    icon: '🪙',
-    title: 'Финальный стол',
-    description: 'Попади за финальный стол',
-    howTo:
-      'Закончите турнир в топ-9. Место вносит администратор при завершении турнира.',
-  },
-  win_streak: {
-    icon: '⭐',
-    title: 'Серия побед',
-    description: 'Выиграй 3 турнира подряд',
-    howTo:
-      'Три раза подряд займите 1 место в турнирах клуба (по порядку дат турниров).',
-  },
-};
+> = Object.fromEntries(
+  ACHIEVEMENTS_CATALOG.map((definition) => [
+    definition.id,
+    {
+      icon: definition.icon,
+      title: definition.title,
+      description: definition.description,
+      howTo: definition.howTo,
+    },
+  ]),
+);
 
-export const ACHIEVEMENT_TEXT_ORDER = Object.keys(DEFAULT_ACHIEVEMENT_TEXTS);
+export const ACHIEVEMENT_TEXT_ORDER = ACHIEVEMENTS_CATALOG.map((definition) => definition.id);

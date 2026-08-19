@@ -37,6 +37,6 @@ import { TokenBlacklistService } from './token-blacklist.service';
     RolesGuard,
     TelegramAuthGuard,
   ],
-  exports: [JwtModule, JwtAuthGuard, AdminAuthGuard, RolesGuard, TelegramAuthGuard],
+  exports: [AuthService, JwtModule, JwtAuthGuard, AdminAuthGuard, RolesGuard, TelegramAuthGuard],
 })
 export class AuthModule {}

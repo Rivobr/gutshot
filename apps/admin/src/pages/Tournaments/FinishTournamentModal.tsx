@@ -1,16 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { AdminTournamentRegistration } from '@gutshot/types';
 import { Button } from '@gutshot/ui';
 import { useFinishTournament } from '../../entities/tournament';
-
-function displayName(user: AdminTournamentRegistration['user'] & { nickname?: string | null }): string {
-  if (user.nickname?.trim()) {
-    return user.nickname.trim();
-  }
-  const name = `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim();
-  return name || user.username || 'Игрок';
-}
+import { displayPlayerName } from '../../shared/lib/display-name';
 
 export interface FinishTournamentModalProps {
   open: boolean;
@@ -26,8 +19,24 @@ export function FinishTournamentModal({
   onClose,
 }: FinishTournamentModalProps): JSX.Element {
   const finishTournament = useFinishTournament();
-  const players = registrations.filter((item) =>
-    ['REGISTERED', 'CHECKED_IN', 'PLAYING', 'FINISHED'].includes(item.status),
+  const players = useMemo(
+    () =>
+      registrations
+        .filter((item) => ['REGISTERED', 'CHECKED_IN', 'PLAYING', 'FINISHED'].includes(item.status))
+        .slice()
+        .sort((a, b) => {
+          if (a.place != null && b.place != null) {
+            return a.place - b.place;
+          }
+          if (a.place != null) {
+            return -1;
+          }
+          if (b.place != null) {
+            return 1;
+          }
+          return 0;
+        }),
+    [registrations],
   );
   const [places, setPlaces] = useState<Record<string, string>>({});
 
@@ -37,11 +46,16 @@ export function FinishTournamentModal({
     }
 
     const next: Record<string, string> = {};
-    players.forEach((player, index) => {
-      next[player.id] = String(index + 1);
+    players.forEach((player) => {
+      next[player.id] = player.place != null ? String(player.place) : '';
     });
     setPlaces(next);
-  }, [open, registrations]);
+  }, [open, players]);
+
+  const missingPlaces = players.filter((player) => {
+    const value = Number(places[player.id]);
+    return !Number.isInteger(value) || value < 1;
+  });
 
   const onSubmit = () => {
     const results = players.map((player) => ({
@@ -53,6 +67,11 @@ export function FinishTournamentModal({
       return;
     }
 
+    const unique = new Set(results.map((item) => item.place));
+    if (unique.size !== results.length) {
+      return;
+    }
+
     finishTournament.mutate(
       { id: tournamentId, results },
       {
@@ -60,6 +79,11 @@ export function FinishTournamentModal({
       },
     );
   };
+
+  const placeValues = players.map((player) => Number(places[player.id]));
+  const hasDuplicatePlaces =
+    placeValues.filter((value) => Number.isInteger(value) && value >= 1).length !==
+    new Set(placeValues.filter((value) => Number.isInteger(value) && value >= 1)).size;
 
   return (
     <AnimatePresence>
@@ -80,7 +104,8 @@ export function FinishTournamentModal({
           >
             <h2 className="mb-1 text-lg font-medium">Завершить турнир</h2>
             <p className="mb-4 text-sm text-muted-foreground">
-              Укажите места игроков — очки рейтинга начислятся по шкале настроек.
+              Места, которые уже проставили во время игры, подставлены автоматически. Можно
+              поправить перед начислением XP.
             </p>
 
             {players.length === 0 ? (
@@ -92,7 +117,7 @@ export function FinishTournamentModal({
                     key={player.id}
                     className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2"
                   >
-                    <span className="text-sm">{displayName(player.user)}</span>
+                    <span className="text-sm">{displayPlayerName(player.user)}</span>
                     <input
                       type="number"
                       min={1}
@@ -105,6 +130,19 @@ export function FinishTournamentModal({
                   </label>
                 ))}
               </div>
+            )}
+
+            {missingPlaces.length > 0 && (
+              <p className="mt-3 text-sm text-amber-500">
+                Не указаны места у {missingPlaces.length} игроков
+                {missingPlaces.length <= 5
+                  ? `: ${missingPlaces.map((item) => displayPlayerName(item.user)).join(', ')}`
+                  : ''}
+              </p>
+            )}
+
+            {hasDuplicatePlaces && (
+              <p className="mt-3 text-sm text-destructive">Места не должны повторяться</p>
             )}
 
             {finishTournament.isError && (
@@ -120,7 +158,7 @@ export function FinishTournamentModal({
               <Button
                 type="button"
                 isLoading={finishTournament.isPending}
-                disabled={players.length === 0}
+                disabled={players.length === 0 || missingPlaces.length > 0 || hasDuplicatePlaces}
                 onClick={onSubmit}
               >
                 Завершить и начислить очки

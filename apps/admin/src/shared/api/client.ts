@@ -1,5 +1,6 @@
 import { createApiClient } from '@gutshot/shared';
 import { env } from '../config/env';
+import { adminSession } from '../lib/admin-session';
 import { tokenStorage } from '../lib/token-storage';
 
 export const apiClient = createApiClient({
@@ -7,6 +8,7 @@ export const apiClient = createApiClient({
   getToken: () => tokenStorage.get(),
   onUnauthorized: () => {
     tokenStorage.clear();
+    adminSession.clear();
     window.location.href = '/login';
   },
 });

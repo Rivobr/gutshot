@@ -45,3 +45,10 @@ docker/nginx/www/
 # Misc
 *.tsbuildinfo
 .turbo/
+
+# Agent skills (local install)
+.agents/
+
+# Cursor local (keep mcp.json)
+.cursor/*
+!.cursor/mcp.json

@@ -35,6 +35,51 @@ export function useMarkAttendance(tournamentId: string) {
   });
 }
 
+function invalidateTournamentPlayers(
+  queryClient: ReturnType<typeof useQueryClient>,
+  tournamentId: string,
+) {
+  queryClient.invalidateQueries({
+    queryKey: ['admin', 'tournaments', tournamentId, 'registrations'],
+  });
+  queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments', tournamentId] });
+  queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] });
+}
+
+/** Проставить / сбросить место во время турнира. */
+export function useSetTournamentPlace(tournamentId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ registrationId, place }: { registrationId: string; place: number | null }) =>
+      adminTournamentsApi.setPlace(tournamentId, registrationId, place),
+    onSuccess: (registrations) => {
+      queryClient.setQueryData(
+        ['admin', 'tournaments', tournamentId, 'registrations'],
+        registrations,
+      );
+      invalidateTournamentPlayers(queryClient, tournamentId);
+    },
+  });
+}
+
+/** Игрок выбыл — авто-место с конца. */
+export function useEliminatePlayer(tournamentId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (registrationId: string) =>
+      adminTournamentsApi.eliminate(tournamentId, registrationId),
+    onSuccess: (registrations) => {
+      queryClient.setQueryData(
+        ['admin', 'tournaments', tournamentId, 'registrations'],
+        registrations,
+      );
+      invalidateTournamentPlayers(queryClient, tournamentId);
+    },
+  });
+}
+
 export function useCreateTournament() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -51,6 +96,24 @@ export function useUpdateTournament() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments', variables.id] });
+    },
+  });
+}
+
+/** Добавить игрока в турнир по Telegram ID / @username / никнейму. */
+export function useAddTournamentPlayer(tournamentId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (query: string) => adminTournamentsApi.addPlayerByQuery(tournamentId, query),
+    onSuccess: (registrations) => {
+      queryClient.setQueryData(
+        ['admin', 'tournaments', tournamentId, 'registrations'],
+        registrations,
+      );
+      invalidateTournamentPlayers(queryClient, tournamentId);
+      queryClient.invalidateQueries({ queryKey: ['admin', 'players'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'history'] });
     },
   });
 }

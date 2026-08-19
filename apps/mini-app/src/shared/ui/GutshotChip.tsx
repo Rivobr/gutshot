@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import type { CSSProperties } from 'react';
 import { motion } from 'framer-motion';
 
 export interface GutshotChipProps {
@@ -10,106 +10,48 @@ export interface GutshotChipProps {
   loop?: boolean;
 }
 
-/** Лицо фишки — SVG один-в-один с физической фишкой клуба */
-function ChipFace({ id, mirrored = false }: { id: string; mirrored?: boolean }): JSX.Element {
+/** Плоская фишка для декора — фото физической фишки клуба. */
+export function GutshotChipDecor({
+  size = 96,
+  className,
+  style,
+}: {
+  size?: number;
+  className?: string;
+  style?: CSSProperties;
+}): JSX.Element {
   return (
-    <svg
-      viewBox="0 0 200 200"
-      width="100%"
-      height="100%"
-      style={mirrored ? { transform: 'scaleX(-1)' } : undefined}
+    <img
+      src="/gutshot-chip-photo.png"
+      alt=""
       aria-hidden
-    >
-      <defs>
-        <linearGradient id={`${id}-gold`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#D4B06A" />
-          <stop offset="40%" stopColor="#A07828" />
-          <stop offset="100%" stopColor="#6B4A12" />
-        </linearGradient>
-        <linearGradient id={`${id}-red`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#FF4D5E" />
-          <stop offset="45%" stopColor="#E0112F" />
-          <stop offset="100%" stopColor="#8A0A1C" />
-        </linearGradient>
-      </defs>
+      draggable={false}
+      className={className}
+      style={{
+        width: size,
+        height: size,
+        flexShrink: 0,
+        objectFit: 'contain',
+        ...style,
+      }}
+    />
+  );
+}
 
-      <circle cx="100" cy="100" r="99.5" fill="#0B0B0B" />
-      <circle cx="100" cy="100" r="97" fill="#2FBF3A" />
-
-      {[0, 60, 120, 180, 240, 300].map((deg) => (
-        <path
-          key={deg}
-          d="M100 8.5
-             C117.2 9.4 132 16.4 137.5 26.6
-             C128.1 32 119.5 40.6 116.4 51.6
-             C111.7 40.6 107 33.6 100 29.7
-             C93 33.6 88.3 40.6 83.6 51.6
-             C80.5 40.6 71.9 32 62.5 26.6
-             C68 16.4 82.8 9.4 100 8.5 Z"
-          fill="#0A0A0A"
-          transform={`rotate(${deg} 100 100)`}
-        />
-      ))}
-
-      <circle cx="100" cy="100" r="68" fill="none" stroke="#C89A3D" strokeWidth="0.8" opacity="0.5" />
-      <circle cx="100" cy="100" r="66.5" fill="#121212" />
-      <circle cx="100" cy="100" r="63.5" fill="#FFFFFF" />
-
-      {[82.5, 90.5, 98.5, 106.5, 114.5].map((x, i) => (
-        <rect
-          key={x}
-          x={x}
-          y="47.5"
-          width="4.4"
-          height="15.5"
-          rx="1.1"
-          fill={i === 2 ? `url(#${id}-red)` : `url(#${id}-gold)`}
-        />
-      ))}
-
-      <text
-        x="100"
-        y="80"
-        textAnchor="middle"
-        fill="#8B6914"
-        style={{
-          fontFamily: 'Georgia, "Times New Roman", serif',
-          fontSize: 17.5,
-          fontWeight: 700,
-          letterSpacing: '0.16em',
-        }}
-      >
-        GUTSHOT
-      </text>
-      <text
-        x="100"
-        y="91.5"
-        textAnchor="middle"
-        fill="#8B6914"
-        style={{
-          fontFamily: 'Arial, Helvetica, sans-serif',
-          fontSize: 5.2,
-          fontWeight: 600,
-          letterSpacing: '0.24em',
-        }}
-      >
-        — POKER CLUB —
-      </text>
-      <text
-        x="100"
-        y="124"
-        textAnchor="middle"
-        fill="#111111"
-        style={{
-          fontFamily: 'Georgia, "Times New Roman", serif',
-          fontSize: 22.5,
-          fontWeight: 700,
-          letterSpacing: '0.04em',
-        }}
-      >
-        10 000
-      </text>
-    </svg>
+function ChipFace({ mirrored = false }: { mirrored?: boolean }): JSX.Element {
+  return (
+    <img
+      src="/gutshot-chip-photo.png"
+      alt=""
+      aria-hidden
+      draggable={false}
+      style={{
+        width: '100%',
+        height: '100%',
+        objectFit: 'contain',
+        transform: mirrored ? 'scaleX(-1)' : undefined,
+      }}
+    />
   );
 }
 
@@ -125,7 +67,6 @@ export function GutshotChip({
   tossDelay = 0.35,
   loop = true,
 }: GutshotChipProps): JSX.Element {
-  const uid = useId().replace(/:/g, '');
   const half = THICKNESS / 2;
 
   return (
@@ -203,7 +144,7 @@ export function GutshotChip({
         {Array.from({ length: EDGE_LAYERS }, (_, i) => {
           const t = i / (EDGE_LAYERS - 1);
           const z = -half + t * THICKNESS;
-          const green = t < 0.15 || t > 0.85 ? '#1F9A2A' : '#2FBF3A';
+          const green = t < 0.15 || t > 0.85 ? '#1E9A58' : '#2EBF71';
           return (
             <div
               key={i}
@@ -231,7 +172,7 @@ export function GutshotChip({
             boxShadow: 'inset 0 2px 6px rgba(255,255,255,0.35)',
           }}
         >
-          <ChipFace id={`${uid}-f`} />
+          <ChipFace />
         </div>
 
         {/* Задняя сторона */}
@@ -245,7 +186,7 @@ export function GutshotChip({
             backfaceVisibility: 'hidden',
           }}
         >
-          <ChipFace id={`${uid}-b`} mirrored />
+          <ChipFace mirrored />
         </div>
       </motion.div>
     </div>

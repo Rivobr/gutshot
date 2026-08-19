@@ -4,19 +4,40 @@ import type { ScannedPlayerDto, ScannerEventType } from '@gutshot/types';
 import { Avatar, Badge, Button, Card } from '@gutshot/ui';
 import { useApplyScannerEvent, useScanPlayer } from '../../entities/scanner';
 import { QrScanner } from '../../widgets/QrScanner/QrScanner';
+import { displayPlayerName } from '../../shared/lib/display-name';
 import { PLAYER_EVENT_LABELS, SCANNER_EVENTS, formatDateTime } from '../../shared/lib/event-labels';
+import { showToast } from '../../shared/ui/toast';
 
 interface EventFeedback {
+  playerName: string;
   label: string;
   xpAwarded: number;
   levelUp: boolean;
   level: number;
   achievementUnlocked: string | null;
+  unlockedTitles: string[];
 }
 
-function playerName(player: ScannedPlayerDto): string {
-  const name = `${player.firstName ?? ''} ${player.lastName ?? ''}`.trim();
-  return name || player.username || 'Игрок';
+function buildActionMessage(feedback: EventFeedback): string {
+  const lines = [`Действие выполнено: ${feedback.label}`, `Игрок: ${feedback.playerName}`];
+
+  if (feedback.xpAwarded > 0) {
+    lines.push(`+${feedback.xpAwarded} XP`);
+  } else {
+    lines.push('XP не начислен (уже было или отключено)');
+  }
+
+  if (feedback.levelUp) {
+    lines.push(`Новый уровень: ${feedback.level}`);
+  }
+
+  if (feedback.unlockedTitles.length > 0) {
+    lines.push(`Достижение: ${feedback.unlockedTitles.join(', ')}`);
+  } else if (feedback.achievementUnlocked) {
+    lines.push('Достижение разблокировано');
+  }
+
+  return lines.join('\n');
 }
 
 export function ScannerPage(): JSX.Element {
@@ -30,7 +51,6 @@ export function ScannerPage(): JSX.Element {
 
   const lookup = useCallback(
     (code: string) => {
-      setFeedback(null);
       scanPlayer.mutate(code, { onSuccess: (data) => setPlayer(data) });
     },
     [scanPlayer],
@@ -40,6 +60,7 @@ export function ScannerPage(): JSX.Element {
     (scanned: string) => {
       setScanning(false);
       setQrCode(scanned);
+      setFeedback(null);
       lookup(scanned);
     },
     [lookup],
@@ -50,6 +71,8 @@ export function ScannerPage(): JSX.Element {
       return;
     }
 
+    const playerName = displayPlayerName(player);
+
     applyEvent.mutate(
       {
         qrCode,
@@ -58,14 +81,24 @@ export function ScannerPage(): JSX.Element {
       },
       {
         onSuccess: (result) => {
-          setFeedback({
+          const nextFeedback: EventFeedback = {
+            playerName,
             label,
             xpAwarded: result.xpAwarded,
             levelUp: result.levelUp,
             level: result.level,
             achievementUnlocked: result.achievementUnlocked,
-          });
+            unlockedTitles: (result.unlockedAchievements ?? []).map((item) => item.title),
+          };
+          setFeedback(nextFeedback);
+          showToast(buildActionMessage(nextFeedback), 'success');
           lookup(qrCode);
+        },
+        onError: () => {
+          showToast(
+            `Не удалось выполнить «${label}» для ${playerName}.\nПроверьте регистрацию игрока на турнир.`,
+            'error',
+          );
         },
       },
     );
@@ -90,7 +123,11 @@ export function ScannerPage(): JSX.Element {
             placeholder="Код игрока, например GS-XXXXXXXXXXXXXXXX"
             className="flex-1 rounded-md border border-border bg-secondary px-3 py-2.5 text-foreground outline-none focus:ring-2 focus:ring-primary"
           />
-          <Button onClick={() => lookup(qrCode)} isLoading={scanPlayer.isPending} disabled={!qrCode}>
+          <Button
+            onClick={() => lookup(qrCode)}
+            isLoading={scanPlayer.isPending}
+            disabled={!qrCode}
+          >
             Найти
           </Button>
           <Button variant="ghost" onClick={() => setScanning((value) => !value)}>
@@ -100,6 +137,13 @@ export function ScannerPage(): JSX.Element {
 
         {scanning && (
           <QrScanner active={scanning} onScan={handleScan} elementId="gutshot-scanner-page" />
+        )}
+
+        {!player && !scanning && !scanPlayer.isPending && (
+          <div className="rounded-md border border-dashed border-border bg-secondary/40 px-4 py-6 text-sm text-muted-foreground">
+            Введите код игрока или нажмите «Сканировать», чтобы открыть камеру. Это рабочий экран
+            дилера, а не ошибка загрузки.
+          </div>
         )}
 
         {scanPlayer.isError && (
@@ -115,12 +159,17 @@ export function ScannerPage(): JSX.Element {
             exit={{ opacity: 0 }}
             className="rounded-lg border border-primary/40 bg-primary/10 px-4 py-3 text-sm"
           >
-            <span className="font-medium text-primary">{feedback.label}</span> записано.{' '}
+            <span className="font-medium text-primary">{feedback.label}</span> для{' '}
+            <span className="font-medium">{feedback.playerName}</span> записано.{' '}
             {feedback.xpAwarded > 0
               ? `Начислено ${feedback.xpAwarded} XP.`
               : 'XP не начислен (уже засчитано ранее или отключено в настройках).'}
             {feedback.levelUp && ` Новый уровень: ${feedback.level}.`}
-            {feedback.achievementUnlocked && ' Достижение разблокировано.'}
+            {feedback.unlockedTitles.length > 0
+              ? ` Достижение: ${feedback.unlockedTitles.join(', ')}.`
+              : feedback.achievementUnlocked
+                ? ' Достижение разблокировано.'
+                : ''}
           </motion.div>
         )}
       </AnimatePresence>
@@ -129,11 +178,15 @@ export function ScannerPage(): JSX.Element {
         <>
           <Card className="gap-4">
             <div className="flex items-start gap-4">
-              <Avatar src={player.photoUrl ?? undefined} fallback={playerName(player)} size={64} />
+              <Avatar
+                src={player.photoUrl ?? undefined}
+                fallback={displayPlayerName(player)}
+                size={64}
+              />
 
               <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-lg font-medium">{playerName(player)}</h2>
+                  <h2 className="text-lg font-medium">{displayPlayerName(player)}</h2>
                   {player.isBlocked && (
                     <Badge style={{ background: 'var(--destructive)', color: '#fff' }}>
                       Заблокирован
@@ -192,7 +245,9 @@ export function ScannerPage(): JSX.Element {
                     key={event.value}
                     variant="secondary"
                     disabled={
-                      applyEvent.isPending || player.isBlocked || (needsRegistration && !registration)
+                      applyEvent.isPending ||
+                      player.isBlocked ||
+                      (needsRegistration && !registration)
                     }
                     onClick={() => handleEvent(event.value, event.label)}
                     className="flex-col gap-1 py-4"
