@@ -23,12 +23,24 @@ interface TelegramPhotoSize {
   file_size?: number;
 }
 
+interface TelegramVideo {
+  file_id: string;
+  duration?: number;
+  width?: number;
+  height?: number;
+  mime_type?: string;
+  file_name?: string;
+}
+
 interface TelegramUpdate {
   message?: {
     text?: string;
     chat?: { id?: number };
     from?: { id?: number; username?: string };
     photo?: TelegramPhotoSize[];
+    video?: TelegramVideo;
+    video_note?: { file_id: string; length?: number; duration?: number };
+    animation?: TelegramVideo;
     document?: { file_id: string; mime_type?: string; file_name?: string };
   };
   callback_query?: TelegramCallbackQuery;
@@ -81,6 +93,28 @@ export class TelegramWebhookController {
       this.logger.log(
         `INBOUND_PHOTO chat=${chatId ?? ''} from=${fromId ?? ''} @${fromUser ?? ''} ` +
           `file_id=${best.file_id} ${best.width}x${best.height}`,
+      );
+    }
+    const video = update.message?.video;
+    if (video?.file_id) {
+      this.logger.log(
+        `INBOUND_VIDEO chat=${chatId ?? ''} from=${fromId ?? ''} @${fromUser ?? ''} ` +
+          `file_id=${video.file_id} ${video.width ?? ''}x${video.height ?? ''} ` +
+          `dur=${video.duration ?? ''} mime=${video.mime_type ?? ''} name=${video.file_name ?? ''}`,
+      );
+    }
+    const videoNote = update.message?.video_note;
+    if (videoNote?.file_id) {
+      this.logger.log(
+        `INBOUND_VIDEO_NOTE chat=${chatId ?? ''} from=${fromId ?? ''} @${fromUser ?? ''} ` +
+          `file_id=${videoNote.file_id}`,
+      );
+    }
+    const animation = update.message?.animation;
+    if (animation?.file_id) {
+      this.logger.log(
+        `INBOUND_ANIMATION chat=${chatId ?? ''} from=${fromId ?? ''} @${fromUser ?? ''} ` +
+          `file_id=${animation.file_id} mime=${animation.mime_type ?? ''}`,
       );
     }
     const doc = update.message?.document;
