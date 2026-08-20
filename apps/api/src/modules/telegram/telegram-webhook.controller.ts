@@ -10,11 +10,13 @@ import {
 import { ApiExcludeController } from '@nestjs/swagger';
 import { Request } from 'express';
 import { Public } from '../../common/decorators/public.decorator';
+import { PrismaService } from '../../prisma/prisma.service';
 import { TelegramService } from './telegram.service';
 import {
   TelegramCallbackQuery,
   TelegramRsvpService,
 } from './telegram-rsvp.service';
+import { claimPendingTelegramUser } from '../../common/utils/pending-telegram-user';
 
 interface TelegramPhotoSize {
   file_id: string;
@@ -36,7 +38,7 @@ interface TelegramUpdate {
   message?: {
     text?: string;
     chat?: { id?: number };
-    from?: { id?: number; username?: string };
+    from?: { id?: number; username?: string; first_name?: string; last_name?: string };
     photo?: TelegramPhotoSize[];
     video?: TelegramVideo;
     video_note?: { file_id: string; length?: number; duration?: number };
@@ -54,6 +56,7 @@ export class TelegramWebhookController {
   constructor(
     private readonly telegramService: TelegramService,
     private readonly telegramRsvpService: TelegramRsvpService,
+    private readonly prisma: PrismaService,
   ) {}
 
   @Public()
@@ -70,6 +73,9 @@ export class TelegramWebhookController {
     }
 
     const update = req.body as TelegramUpdate;
+
+    const inboundFrom = update.callback_query?.from ?? update.message?.from;
+    this.claimPendingFromInbound(inboundFrom);
 
     if (update.callback_query) {
       const callbackId = update.callback_query.id;
@@ -137,6 +143,36 @@ export class TelegramWebhookController {
     }
 
     return { ok: true };
+  }
+
+  private claimPendingFromInbound(from?: {
+    id?: number;
+    username?: string;
+    first_name?: string;
+    last_name?: string;
+  }): void {
+    if (!from?.id || !from.username) {
+      return;
+    }
+
+    void claimPendingTelegramUser(this.prisma, {
+      telegramId: String(from.id),
+      username: from.username,
+      firstName: from.first_name ?? null,
+      lastName: from.last_name ?? null,
+    })
+      .then((claimed) => {
+        if (claimed && claimed.telegramId === String(from.id)) {
+          this.logger.log(
+            `Синхронизирован временный игрок @${from.username} → ${from.id}`,
+          );
+        }
+      })
+      .catch((error) => {
+        this.logger.warn(
+          `Не удалось синхронизировать @${from.username}: ${(error as Error).message}`,
+        );
+      });
   }
 
   private shouldSendWelcome(text: string): boolean {
