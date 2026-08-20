@@ -7,8 +7,8 @@ import {
 import { PrismaService } from '../../../prisma/prisma.service';
 import { LevelsService } from '../../progression/levels.service';
 import { PlayerEventsService } from '../../progression/player-events.service';
-import { TelegramService } from '../../telegram/telegram.service';
 import { UsersService } from '../../users/users.service';
+import { isTelegramUsername } from '../../../common/utils/pending-telegram-user';
 
 /** Прячет URL вида api.telegram.org/file/bot<TOKEN>/… из ответов админки. */
 function safePhotoUrl(photoUrl: string | null | undefined): string | null {
@@ -24,7 +24,6 @@ export class AdminPlayersService {
     private readonly levelsService: LevelsService,
     private readonly playerEventsService: PlayerEventsService,
     private readonly usersService: UsersService,
-    private readonly telegramService: TelegramService,
   ) {}
 
   async findAll() {
@@ -121,11 +120,9 @@ export class AdminPlayersService {
     }
 
     // Bot API умеет getChat(@username) для латинских username, если человек доступен боту.
-    if (/^[A-Za-z][A-Za-z0-9_]{4,31}$/.test(username)) {
-      const chat = await this.telegramService.getChatProfile(`@${username}`);
-      if (chat?.telegramId && /^\d{5,20}$/.test(chat.telegramId)) {
-        return this.usersService.findOrCreateByTelegramId(chat.telegramId);
-      }
+    // Если ещё не жал /start — заводим временного игрока, telegramId подтянется позже.
+    if (isTelegramUsername(username)) {
+      return this.usersService.findOrCreateByUsername(username);
     }
 
     throw new NotFoundException(

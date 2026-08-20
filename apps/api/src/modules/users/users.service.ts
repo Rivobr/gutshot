@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma, User } from '@prisma/client';
@@ -9,6 +10,13 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { TelegramInitDataUser } from '../../common/utils/telegram-init-data.util';
 import { generatePlayerQrCode } from '../../common/utils/player-qr.util';
 import { isRatingExcludedUsername } from '../../common/constants/rating-exclusions';
+import {
+  claimPendingTelegramUser,
+  isRealTelegramId,
+  isTelegramUsername,
+  normalizeTelegramUsername,
+  pendingTelegramIdForUsername,
+} from '../../common/utils/pending-telegram-user';
 import { TelegramService } from '../telegram/telegram.service';
 
 function defaultNickname(telegramUser: TelegramInitDataUser): string | null {
@@ -31,6 +39,8 @@ function normalizeNickname(nickname: string): string {
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly telegramService: TelegramService,
@@ -56,6 +66,13 @@ export class UsersService {
       return existing.qrCode ? existing : this.ensureQrCode(existing.id);
     }
 
+    if (isRealTelegramId(id)) {
+      const claimed = await this.claimPendingFromTelegramProfile(id);
+      if (claimed) {
+        return claimed.qrCode ? claimed : this.ensureQrCode(claimed.id);
+      }
+    }
+
     const nickname = await this.allocateUniqueNickname(`player_${id.slice(-6)}`);
     const created = await this.prisma.user.create({
       data: {
@@ -72,6 +89,95 @@ export class UsersService {
   }
 
   /**
+   * Игрок только по @username: сначала Bot API, иначе временный tmp: id.
+   * Когда человек нажмёт /start или откроет Mini App — telegramId подменится на настоящий.
+   */
+  async findOrCreateByUsername(rawUsername: string): Promise<User> {
+    const displayUsername = rawUsername.trim().replace(/^@+/, '');
+    const username = normalizeTelegramUsername(displayUsername);
+    if (!isTelegramUsername(displayUsername) && !isTelegramUsername(username)) {
+      throw new BadRequestException('Укажите корректный Telegram @username');
+    }
+
+    const existing = await this.prisma.user.findFirst({
+      where: { username: { equals: username, mode: 'insensitive' } },
+    });
+    if (existing) {
+      return existing.qrCode ? existing : this.ensureQrCode(existing.id);
+    }
+
+    const chat = await this.telegramService.getChatProfile(`@${username}`);
+    if (chat?.telegramId && isRealTelegramId(chat.telegramId)) {
+      return this.findOrCreateByTelegramId(chat.telegramId);
+    }
+
+    const pendingId = pendingTelegramIdForUsername(username);
+    const alreadyPending = await this.findByTelegramId(pendingId);
+    if (alreadyPending) {
+      return alreadyPending.qrCode ? alreadyPending : this.ensureQrCode(alreadyPending.id);
+    }
+
+    const nickname = await this.allocateUniqueNickname(displayUsername);
+    const created = await this.prisma.user.create({
+      data: {
+        telegramId: pendingId,
+        username: displayUsername,
+        nickname,
+        qrCode: generatePlayerQrCode(),
+        playerProfile: { create: { xp: 0 } },
+      },
+    });
+
+    this.logger.log(
+      `Временный игрок @${displayUsername} (${pendingId}) — синхронизируется при /start`,
+    );
+    return created;
+  }
+
+  /**
+   * Привязывает tmp:-игрока к настоящему telegramId (webhook /start, Mini App, ticket).
+   */
+  async claimPendingFromTelegram(input: {
+    telegramId: string;
+    username?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+  }): Promise<User | null> {
+    const claimed = await claimPendingTelegramUser(this.prisma, input);
+    if (!claimed || claimed.telegramId !== String(input.telegramId)) {
+      return claimed;
+    }
+
+    this.logger.log(
+      `Синхронизирован временный игрок @${input.username ?? claimed.username} → ${input.telegramId}`,
+    );
+    return claimed;
+  }
+
+  private async claimPendingFromTelegramProfile(telegramId: string): Promise<User | null> {
+    const profile = await this.telegramService.getChatProfile(telegramId);
+    if (!profile?.username) {
+      return null;
+    }
+
+    const claimed = await this.claimPendingFromTelegram({
+      telegramId,
+      username: profile.username,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+    });
+    if (!claimed) {
+      return null;
+    }
+
+    if (!claimed.username || !claimed.firstName || !claimed.photoUrl) {
+      void this.refreshTelegramProfileInBackground(claimed.id, telegramId);
+      void this.refreshPhotoInBackground(claimed.id, telegramId);
+    }
+    return claimed;
+  }
+
+  /**
    * Догружает имя/username через Bot API для входов без initData.
    * Без этого игрок висит в админке пустым (только `player_XXXXXX`).
    */
@@ -79,6 +185,9 @@ export class UsersService {
     userId: string,
     telegramId: string,
   ): Promise<void> {
+    if (!isRealTelegramId(telegramId)) {
+      return;
+    }
     try {
       const profile = await this.telegramService.getChatProfile(telegramId);
       if (!profile || (!profile.username && !profile.firstName)) {
@@ -123,7 +232,15 @@ export class UsersService {
 
   async findOrCreateFromTelegram(telegramUser: TelegramInitDataUser): Promise<User> {
     const telegramId = String(telegramUser.id);
-    const existing = await this.findByTelegramId(telegramId);
+    let existing = await this.findByTelegramId(telegramId);
+    if (!existing && telegramUser.username) {
+      existing = await this.claimPendingFromTelegram({
+        telegramId,
+        username: telegramUser.username,
+        firstName: telegramUser.first_name ?? null,
+        lastName: telegramUser.last_name ?? null,
+      });
+    }
     // Не ждём Bot API за аватар на логине — это главный тормоз входа.
     // Берём photo_url из initData (если есть), аватар подтягиваем в фоне.
     const photoFromInit = telegramUser.photo_url ?? null;
@@ -176,6 +293,9 @@ export class UsersService {
 
   /** Фоновая подтяжка аватара — не блокирует /auth/telegram. */
   private async refreshPhotoInBackground(userId: string, telegramId: string): Promise<void> {
+    if (!isRealTelegramId(telegramId)) {
+      return;
+    }
     try {
       const photoUrl = await this.telegramService.getUserProfilePhotoUrl(telegramId);
       if (!photoUrl) {

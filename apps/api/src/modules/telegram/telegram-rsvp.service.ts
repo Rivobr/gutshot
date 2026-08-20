@@ -13,7 +13,7 @@ const RSVP_CALLBACK_RE = /^rsvp:([yn]):([a-z0-9]+)$/i;
 export interface TelegramCallbackQuery {
   id: string;
   data?: string;
-  from?: { id?: number };
+  from?: { id?: number; username?: string; first_name?: string; last_name?: string };
   message?: {
     message_id?: number;
     chat?: { id?: number };
