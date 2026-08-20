@@ -10,11 +10,13 @@ import {
 import { ApiExcludeController } from '@nestjs/swagger';
 import { Request } from 'express';
 import { Public } from '../../common/decorators/public.decorator';
+import { PrismaService } from '../../prisma/prisma.service';
 import { TelegramService } from './telegram.service';
 import {
   TelegramCallbackQuery,
   TelegramRsvpService,
 } from './telegram-rsvp.service';
+import { claimPendingTelegramUser } from '../../common/utils/pending-telegram-user';
 
 interface TelegramPhotoSize {
   file_id: string;
@@ -23,12 +25,24 @@ interface TelegramPhotoSize {
   file_size?: number;
 }
 
+interface TelegramVideo {
+  file_id: string;
+  duration?: number;
+  width?: number;
+  height?: number;
+  mime_type?: string;
+  file_name?: string;
+}
+
 interface TelegramUpdate {
   message?: {
     text?: string;
     chat?: { id?: number };
-    from?: { id?: number; username?: string };
+    from?: { id?: number; username?: string; first_name?: string; last_name?: string };
     photo?: TelegramPhotoSize[];
+    video?: TelegramVideo;
+    video_note?: { file_id: string; length?: number; duration?: number };
+    animation?: TelegramVideo;
     document?: { file_id: string; mime_type?: string; file_name?: string };
   };
   callback_query?: TelegramCallbackQuery;
@@ -42,6 +56,7 @@ export class TelegramWebhookController {
   constructor(
     private readonly telegramService: TelegramService,
     private readonly telegramRsvpService: TelegramRsvpService,
+    private readonly prisma: PrismaService,
   ) {}
 
   @Public()
@@ -58,6 +73,9 @@ export class TelegramWebhookController {
     }
 
     const update = req.body as TelegramUpdate;
+
+    const inboundFrom = update.callback_query?.from ?? update.message?.from;
+    this.claimPendingFromInbound(inboundFrom);
 
     if (update.callback_query) {
       const callbackId = update.callback_query.id;
@@ -83,6 +101,28 @@ export class TelegramWebhookController {
           `file_id=${best.file_id} ${best.width}x${best.height}`,
       );
     }
+    const video = update.message?.video;
+    if (video?.file_id) {
+      this.logger.log(
+        `INBOUND_VIDEO chat=${chatId ?? ''} from=${fromId ?? ''} @${fromUser ?? ''} ` +
+          `file_id=${video.file_id} ${video.width ?? ''}x${video.height ?? ''} ` +
+          `dur=${video.duration ?? ''} mime=${video.mime_type ?? ''} name=${video.file_name ?? ''}`,
+      );
+    }
+    const videoNote = update.message?.video_note;
+    if (videoNote?.file_id) {
+      this.logger.log(
+        `INBOUND_VIDEO_NOTE chat=${chatId ?? ''} from=${fromId ?? ''} @${fromUser ?? ''} ` +
+          `file_id=${videoNote.file_id}`,
+      );
+    }
+    const animation = update.message?.animation;
+    if (animation?.file_id) {
+      this.logger.log(
+        `INBOUND_ANIMATION chat=${chatId ?? ''} from=${fromId ?? ''} @${fromUser ?? ''} ` +
+          `file_id=${animation.file_id} mime=${animation.mime_type ?? ''}`,
+      );
+    }
     const doc = update.message?.document;
     if (doc?.file_id) {
       this.logger.log(
@@ -103,6 +143,36 @@ export class TelegramWebhookController {
     }
 
     return { ok: true };
+  }
+
+  private claimPendingFromInbound(from?: {
+    id?: number;
+    username?: string;
+    first_name?: string;
+    last_name?: string;
+  }): void {
+    if (!from?.id || !from.username) {
+      return;
+    }
+
+    void claimPendingTelegramUser(this.prisma, {
+      telegramId: String(from.id),
+      username: from.username,
+      firstName: from.first_name ?? null,
+      lastName: from.last_name ?? null,
+    })
+      .then((claimed) => {
+        if (claimed && claimed.telegramId === String(from.id)) {
+          this.logger.log(
+            `Синхронизирован временный игрок @${from.username} → ${from.id}`,
+          );
+        }
+      })
+      .catch((error) => {
+        this.logger.warn(
+          `Не удалось синхронизировать @${from.username}: ${(error as Error).message}`,
+        );
+      });
   }
 
   private shouldSendWelcome(text: string): boolean {

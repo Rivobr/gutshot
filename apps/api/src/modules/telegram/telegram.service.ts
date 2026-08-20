@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { WELCOME_CAPTION } from './welcome-message';
+import { isPendingTelegramId } from '../../common/utils/pending-telegram-user';
 
 @Injectable()
 export class TelegramService {
@@ -155,6 +156,12 @@ export class TelegramService {
   ): Promise<Record<string, unknown> | null> {
     if (!this.botToken) {
       this.logger.warn(`TELEGRAM_BOT_TOKEN не задан — ${method} не выполнен`);
+      return null;
+    }
+
+    const chatId = body.chat_id;
+    if (typeof chatId === 'string' && isPendingTelegramId(chatId)) {
+      this.logger.debug(`Пропуск ${method}: временный telegramId ${chatId}`);
       return null;
     }
 

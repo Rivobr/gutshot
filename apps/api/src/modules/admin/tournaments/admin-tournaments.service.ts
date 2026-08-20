@@ -23,6 +23,7 @@ import { LevelsService } from '../../progression/levels.service';
 import { AchievementEngineService } from '../../progression/achievement-engine.service';
 import { PlayerEventsService } from '../../progression/player-events.service';
 import { UsersService } from '../../users/users.service';
+import { isTelegramUsername } from '../../../common/utils/pending-telegram-user';
 import { RatingRewardsService } from '../../rating/rating-rewards.service';
 import { CreateTournamentDto } from './dto/create-tournament.dto';
 import { UpdateTournamentDto, UpdateTournamentLiveDto } from './dto/update-tournament.dto';
@@ -550,11 +551,9 @@ export class AdminTournamentsService {
     }
 
     // Bot API умеет getChat(@username), если пользователь доступен боту.
-    const chat = await this.telegramService.getChatProfile(
-      username.startsWith('@') ? username : `@${username}`,
-    );
-    if (chat?.telegramId && /^\d{5,20}$/.test(chat.telegramId)) {
-      return this.usersService.findOrCreateByTelegramId(chat.telegramId);
+    // Если ещё не жал /start — заводим временного игрока, telegramId подтянется позже.
+    if (isTelegramUsername(username)) {
+      return this.usersService.findOrCreateByUsername(username);
     }
 
     throw new NotFoundException(
