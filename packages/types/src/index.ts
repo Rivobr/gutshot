@@ -244,6 +244,8 @@ export interface RatingEntry {
   showcaseAchievements?: ShowcaseAchievement[];
   /** Сколько недель игрок проходил в топ-7 (для финала месяца). */
   qualifiedWeeks?: number;
+  /** Какие недели месяца: 1 = открытие, 2 = следующая закрытая и т.д. */
+  qualifiedWeekNumbers?: number[];
   /** Место в топ-7 текущей/закрытой недели. */
   weekPlace?: number;
 }
@@ -269,6 +271,7 @@ export interface WeeklyCloseResultDto {
   weekKey: string;
   monthKey: string;
   alreadyClosed: boolean;
+  rebuilt?: boolean;
   topN: number;
   qualified: RatingEntry[];
 }
@@ -735,10 +738,7 @@ export interface ApiErrorResponse {
 
 export type BroadcastStatus = 'DRAFT' | 'SENDING' | 'SENT' | 'FAILED';
 export type BroadcastSegment =
-  | 'ALL_ACTIVE'
-  | 'TOURNAMENT_REGISTERED'
-  | 'TOURNAMENT_RSVP_PENDING'
-  | 'SINGLE_PLAYER';
+  'ALL_ACTIVE' | 'TOURNAMENT_REGISTERED' | 'TOURNAMENT_RSVP_PENDING' | 'SINGLE_PLAYER';
 export type BroadcastButtons = 'NONE' | 'OPEN_APP' | 'RSVP' | 'CUSTOM';
 export type BroadcastDeliveryStatus = 'PENDING' | 'SENT' | 'FAILED' | 'SKIPPED';
 

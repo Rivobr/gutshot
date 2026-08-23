@@ -201,3 +201,19 @@ export function clubWeekday(date = new Date()): number {
 export function isClubSaturday(date = new Date()): boolean {
   return clubWeekday(date) === 5;
 }
+
+/**
+ * Порядок рейтинговых недель месяца:
+ * удлинённая неделя открытия (…E) первая, дальше ISO-ключи.
+ * W32E → 1-я, W34 → 2-я.
+ */
+export function sortClubWeekKeys(weekKeys: string[]): string[] {
+  return [...new Set(weekKeys)].sort((a, b) => {
+    const aOpening = a.endsWith('E');
+    const bOpening = b.endsWith('E');
+    if (aOpening !== bOpening) {
+      return aOpening ? -1 : 1;
+    }
+    return a.localeCompare(b);
+  });
+}

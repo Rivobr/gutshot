@@ -16,6 +16,7 @@ import {
   getPreviousClubWeekBounds,
   resolveWeeklyDisplayWeeks,
   selectWeeklyRatingPeriod,
+  sortClubWeekKeys,
   type ClubPeriodBounds,
 } from './rating-period';
 
@@ -39,6 +40,8 @@ export interface RatingRow {
   level?: number;
   showcaseAchievements?: ShowcaseAchievementDto[];
   qualifiedWeeks?: number;
+  /** Номера недель месяца, где игрок был в топ-7: [2] = только 2-я неделя. */
+  qualifiedWeekNumbers?: number[];
   weekPlace?: number;
 }
 
@@ -158,6 +161,8 @@ export class RatingService implements OnModuleInit {
       include: { user: true },
     });
 
+    const weekOrder = sortClubWeekKeys(qualifications.map((row) => row.weekKey));
+
     const byUser = new Map<
       string,
       {
@@ -169,6 +174,7 @@ export class RatingService implements OnModuleInit {
         username?: string | null;
         points: number;
         qualifiedWeeks: number;
+        qualifiedWeekNumbers: number[];
       }
     >();
 
@@ -176,10 +182,15 @@ export class RatingService implements OnModuleInit {
       if (this.isHiddenFromRating(row.user)) {
         continue;
       }
+      const weekNumber = weekOrder.indexOf(row.weekKey) + 1;
       const current = byUser.get(row.userId);
       if (current) {
         current.points += row.weekPoints;
         current.qualifiedWeeks += 1;
+        if (weekNumber > 0 && !current.qualifiedWeekNumbers.includes(weekNumber)) {
+          current.qualifiedWeekNumbers.push(weekNumber);
+          current.qualifiedWeekNumbers.sort((a, b) => a - b);
+        }
       } else {
         byUser.set(row.userId, {
           userId: row.userId,
@@ -190,6 +201,7 @@ export class RatingService implements OnModuleInit {
           username: row.user.username,
           points: row.weekPoints,
           qualifiedWeeks: 1,
+          qualifiedWeekNumbers: weekNumber > 0 ? [weekNumber] : [],
         });
       }
     }
@@ -207,6 +219,7 @@ export class RatingService implements OnModuleInit {
         points: entry.points,
         weeklyXp: entry.points,
         qualifiedWeeks: entry.qualifiedWeeks,
+        qualifiedWeekNumbers: entry.qualifiedWeekNumbers,
       }));
 
     return this.attachLevelAndShowcase(ranked);
@@ -254,16 +267,19 @@ export class RatingService implements OnModuleInit {
   /**
    * Закрыть неделю: топ-7 переносят свои недельные очки в финал месяца.
    * По умолчанию — предыдущая завершённая неделя. Идемпотентно.
+   * rebuild — пересобрать топ-7, если неделю уже закрыли до финиша субботнего турнира.
    * Текущую (ещё идущую) неделю без force закрыть нельзя.
    */
   async closeWeek(options?: {
     weekKey?: string;
     target?: 'previous' | 'current';
     force?: boolean;
+    rebuild?: boolean;
   }): Promise<{
     weekKey: string;
     monthKey: string;
     alreadyClosed: boolean;
+    rebuilt: boolean;
     qualified: RatingRow[];
   }> {
     const week = this.resolveWeekBounds(options);
@@ -279,16 +295,28 @@ export class RatingService implements OnModuleInit {
       where: { weekKey: week.weekKey },
     });
 
-    if (existing > 0) {
+    if (existing > 0 && !options?.rebuild) {
       const qualified = await this.listWeekQualifiers(week.weekKey);
       return {
         weekKey: week.weekKey,
         monthKey: week.monthKey,
         alreadyClosed: true,
+        rebuilt: false,
         qualified,
       };
     }
 
+    const qualified = await this.replaceWeekQualifications(week);
+    return {
+      weekKey: week.weekKey,
+      monthKey: week.monthKey,
+      alreadyClosed: existing > 0,
+      rebuilt: existing > 0,
+      qualified,
+    };
+  }
+
+  private async replaceWeekQualifications(week: ClubPeriodBounds): Promise<RatingRow[]> {
     const leaderboard = await this.getPointsLeaderboard(week.start, week.end);
     const top = leaderboard.slice(0, WEEKLY_FINAL_TOP).filter((row) => row.points > 0);
 
@@ -298,23 +326,20 @@ export class RatingService implements OnModuleInit {
       );
     }
 
-    await this.prisma.weeklyFinalQualification.createMany({
-      data: top.map((row, index) => ({
-        weekKey: week.weekKey,
-        monthKey: week.monthKey,
-        userId: row.userId,
-        weekPlace: index + 1,
-        weekPoints: row.points,
-      })),
+    await this.prisma.$transaction(async (tx) => {
+      await tx.weeklyFinalQualification.deleteMany({ where: { weekKey: week.weekKey } });
+      await tx.weeklyFinalQualification.createMany({
+        data: top.map((row, index) => ({
+          weekKey: week.weekKey,
+          monthKey: week.monthKey,
+          userId: row.userId,
+          weekPlace: index + 1,
+          weekPoints: row.points,
+        })),
+      });
     });
 
-    const qualified = await this.listWeekQualifiers(week.weekKey);
-    return {
-      weekKey: week.weekKey,
-      monthKey: week.monthKey,
-      alreadyClosed: false,
-      qualified,
-    };
+    return this.listWeekQualifiers(week.weekKey);
   }
 
   async listWeekQualifiers(weekKey: string): Promise<RatingRow[]> {
