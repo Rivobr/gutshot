@@ -75,7 +75,12 @@ export class RatingRewardsService {
    * По умолчанию — предыдущая завершённая неделя.
    */
   async closeWeek(
-    options?: { weekKey?: string; target?: 'previous' | 'current'; force?: boolean },
+    options?: {
+      weekKey?: string;
+      target?: 'previous' | 'current';
+      force?: boolean;
+      rebuild?: boolean;
+    },
     adminId?: string | null,
   ) {
     const result = await this.ratingService.closeWeek(options);
@@ -86,6 +91,10 @@ export class RatingRewardsService {
       }
       this.logger.log(
         `Неделя ${result.weekKey} закрыта админом ${adminId ?? 'system'}: ${result.qualified.length} финалистов`,
+      );
+    } else if (result.rebuilt) {
+      this.logger.log(
+        `Неделя ${result.weekKey} пересобрана админом ${adminId ?? 'system'}: ${result.qualified.length} финалистов`,
       );
     }
 
@@ -127,6 +136,7 @@ export class RatingRewardsService {
         {
           weekKey: week.weekKey,
           force: week.weekKey === current.weekKey,
+          rebuild: true,
         },
         adminId,
       );
@@ -151,7 +161,7 @@ export class RatingRewardsService {
       return null;
     }
 
-    return this.closeWeek({ target: 'current', force: true }, adminId);
+    return this.closeWeek({ target: 'current', force: true, rebuild: true }, adminId);
   }
 
   async payoutWeekly(adminId?: string | null) {

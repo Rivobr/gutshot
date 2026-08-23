@@ -10,6 +10,10 @@ import { SectionLabel } from '../../shared/ui/figma';
 import { PlayerAvatar } from '../../shared/ui/PlayerAvatar';
 import { PlayerLevelBadge, PlayerShowcaseMedals } from '../../shared/ui/PlayerShowcase';
 import { displayNameOf } from '../../shared/lib/display-name';
+import {
+  formatFinalistWeekLine,
+  formatFinalistWeekSubtitle,
+} from '../../shared/lib/finalist-weeks';
 
 type Tab = 'weekly' | 'final';
 type WeekMode = 'current' | 'previous';
@@ -138,13 +142,12 @@ export function RatingPage(): JSX.Element {
     }
 
     if (tab === 'final') {
-      const weeks = me.qualifiedWeeks ?? 1;
       return {
         rank: myRank ?? null,
         points: myPoints,
         highlight: true,
         title: myRank === 1 ? 'Вы лидируете в финале' : `Вы в финале · ${myRank} место`,
-        subtitle: `Сумма очков за ${weeks} ${weeks === 1 ? 'неделю' : weeks < 5 ? 'недели' : 'недель'} в топ-7`,
+        subtitle: formatFinalistWeekSubtitle(me.qualifiedWeekNumbers, me.qualifiedWeeks ?? 1),
       };
     }
 
@@ -424,17 +427,19 @@ export function RatingPage(): JSX.Element {
                       </p>
                       <PlayerLevelBadge level={p.level} size="xs" />
                     </div>
-                    {tab === 'final' && p.qualifiedWeeks != null && (
-                      <p className="sans" style={{ fontSize: 10, color: '#6B614E' }}>
-                        {p.qualifiedWeeks}{' '}
-                        {p.qualifiedWeeks === 1
-                          ? 'неделя'
-                          : p.qualifiedWeeks < 5
-                            ? 'недели'
-                            : 'недель'}{' '}
-                        в топ-7
-                      </p>
-                    )}
+                    {tab === 'final' &&
+                      (p.qualifiedWeekNumbers?.length || p.qualifiedWeeks != null) && (
+                        <p className="sans" style={{ fontSize: 10, color: '#6B614E' }}>
+                          {formatFinalistWeekLine(p.qualifiedWeekNumbers) ||
+                            `${p.qualifiedWeeks} ${
+                              (p.qualifiedWeeks ?? 1) === 1
+                                ? 'неделя'
+                                : (p.qualifiedWeeks ?? 1) < 5
+                                  ? 'недели'
+                                  : 'недель'
+                            } в топ-7`}
+                        </p>
+                      )}
                   </div>
                   {p.showcaseAchievements && p.showcaseAchievements.length > 0 && (
                     <PlayerShowcaseMedals items={p.showcaseAchievements} size={32} />
