@@ -8,14 +8,12 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ApiExcludeController } from '@nestjs/swagger';
+import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import { Public } from '../../common/decorators/public.decorator';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TelegramService } from './telegram.service';
-import {
-  TelegramCallbackQuery,
-  TelegramRsvpService,
-} from './telegram-rsvp.service';
+import { TelegramCallbackQuery, TelegramRsvpService } from './telegram-rsvp.service';
 import { claimPendingTelegramUser } from '../../common/utils/pending-telegram-user';
 
 interface TelegramPhotoSize {
@@ -57,6 +55,7 @@ export class TelegramWebhookController {
     private readonly telegramService: TelegramService,
     private readonly telegramRsvpService: TelegramRsvpService,
     private readonly prisma: PrismaService,
+    private readonly jwtService: JwtService,
   ) {}
 
   @Public()
@@ -142,7 +141,61 @@ export class TelegramWebhookController {
       });
     }
 
+    // /link <код> — привязка Telegram к аккаунту с сайта (один игрок, второй не создаётся).
+    const linkMatch = chatId ? text.match(/^\/link(?:@\w+)?\s+([A-Za-z0-9._-]+)$/) : null;
+    if (linkMatch) {
+      void this.handleTelegramLink(linkMatch[1], String(chatId), fromUser ?? null);
+    }
+
     return { ok: true };
+  }
+
+  private async handleTelegramLink(
+    code: string,
+    chatId: string,
+    username: string | null,
+  ): Promise<void> {
+    try {
+      let payload: { typ?: string; sub?: string };
+      try {
+        payload = this.jwtService.verify(code) as { typ?: string; sub?: string };
+      } catch {
+        await this.telegramService.sendMessage(
+          chatId,
+          '⚠️ Код привязки неверен или устарел. Получите новый на сайте: Профиль → Привязать Telegram.',
+        );
+        return;
+      }
+
+      if (payload.typ !== 'tg_link' || !payload.sub) {
+        await this.telegramService.sendMessage(chatId, '⚠️ Код привязки неверен.');
+        return;
+      }
+
+      const existing = await this.prisma.user.findUnique({ where: { telegramId: chatId } });
+      if (existing && existing.id !== payload.sub) {
+        await this.telegramService.sendMessage(
+          chatId,
+          'Этот Telegram уже привязан к другому игроку. Если это ошибка — напишите @gutshot_suport.',
+        );
+        return;
+      }
+
+      await this.prisma.user.update({
+        where: { id: payload.sub },
+        data: { telegramId: chatId, username: username ?? undefined },
+      });
+      this.logger.log(`Telegram ${chatId} привязан к игроку ${payload.sub}`);
+      await this.telegramService.sendMessage(
+        chatId,
+        '✅ Telegram привязан! Теперь вы можете входить на сайт одной кнопкой.',
+      );
+    } catch (error) {
+      this.logger.error(`handleTelegramLink failed: ${(error as Error).message}`, error as Error);
+      await this.telegramService
+        .sendMessage(chatId, 'Не удалось привязать Telegram. Попробуйте ещё раз чуть позже.')
+        .catch(() => undefined);
+    }
   }
 
   private claimPendingFromInbound(from?: {
@@ -163,9 +216,7 @@ export class TelegramWebhookController {
     })
       .then((claimed) => {
         if (claimed && claimed.telegramId === String(from.id)) {
-          this.logger.log(
-            `Синхронизирован временный игрок @${from.username} → ${from.id}`,
-          );
+          this.logger.log(`Синхронизирован временный игрок @${from.username} → ${from.id}`);
         }
       })
       .catch((error) => {

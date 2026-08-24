@@ -1,0 +1,344 @@
+import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
+import { publicApi } from '@/shared/api/public.api';
+import { Logo } from '@/shared/ui/Logo';
+import { formatDateShort, formatTime } from '@/shared/lib/format';
+import { useAuth } from '@/app/providers/auth-provider';
+
+export function LandingPage() {
+  const { user } = useAuth();
+  const { data } = useQuery({ queryKey: ['public-landing'], queryFn: publicApi.landing });
+  const nearest = data?.nearestTournament ?? null;
+  const club = data?.club;
+  const taken = nearest?._count?.registrations ?? 0;
+  const max = nearest?.maxPlayers ?? 40;
+
+  return (
+    <>
+      <div className="glow-bg" />
+
+      <header className="pub-head">
+        <Logo small />
+        <nav className="pub-nav">
+          <a href="#week">Расписание</a>
+          <a href="#rating">Рейтинг</a>
+          <a href="#about">О клубе</a>
+        </nav>
+        {user ? (
+          <Link className="btn btn-gold btn-sm" to="/app">
+            В клуб ↗
+          </Link>
+        ) : (
+          <Link className="btn btn-gold btn-sm" to="/login">
+            Войти
+          </Link>
+        )}
+      </header>
+
+      <div className="ticker" aria-hidden="true">
+        <div className="ticker-in">
+          <span>
+            ♠ Спортивный покер · <b>Миллионная, 19</b>
+          </span>
+          <span>
+            ◆ Сетка недели: <b>СР · ПТ · СБ</b>
+          </span>
+          <span>
+            ✦ Топ-7 недели → <b>финал месяца</b>
+          </span>
+          <span>
+            18+ · Только игра, <b>без ставок</b>
+          </span>
+          <span>
+            ♠ Спортивный покер · <b>Миллионная, 19</b>
+          </span>
+          <span>
+            ◆ Сетка недели: <b>СР · ПТ · СБ</b>
+          </span>
+          <span>
+            ✦ Топ-7 недели → <b>финал месяца</b>
+          </span>
+          <span>
+            18+ · Только игра, <b>без ставок</b>
+          </span>
+        </div>
+      </div>
+
+      <section className="hero-split">
+        <div className="stack-16">
+          <span className="eyebrow">Клуб спортивного покера · Санкт-Петербург</span>
+          <h1 className="serif hero-title">
+            Игра
+            <br />
+            без <em>компромиссов</em>
+          </h1>
+          <p className="muted-strong" style={{ maxWidth: 420, fontSize: 15 }}>
+            Спортивный покер в центре города: Миллионная, 19. Регулярные турниры, рейтинг сезона,
+            финал месяца. Только игра — никаких ставок.
+          </p>
+          <div className="row wrap mt-8">
+            <Link className="btn btn-gold" to={user ? '/app' : '/login'}>
+              {user ? 'Войти в кабинет' : 'Войти в клуб'}
+            </Link>
+            <a className="btn btn-ghost" href="#about">
+              Как найти
+            </a>
+          </div>
+          <div className="row wrap muted" style={{ fontSize: 11.5, gap: 18, marginTop: 6 }}>
+            <span>♠ Техасский холдем</span>
+            <span>♦ Спортивный рейтинг</span>
+            <span>♣ Финал месяца</span>
+          </div>
+        </div>
+
+        <article className="vip-card" style={{ padding: 26 }}>
+          <span className="suit-wm">♠</span>
+          <div className="row between wrap mb-16">
+            <span className="chip chip-live">● СКОРО</span>
+            {nearest && (
+              <span className="chip">
+                🕐 {formatDateShort(nearest.date)} / {formatTime(nearest.date)}
+              </span>
+            )}
+          </div>
+          <p className="eyebrow">Ближайший турнир</p>
+          <h2
+            className="serif"
+            style={{ fontSize: 30, lineHeight: 1.05, marginTop: 6, textTransform: 'uppercase' }}
+          >
+            {nearest?.title ?? 'Скоро в клубе'}
+          </h2>
+          <div className="mt-16 stack-16">
+            <div className="row between">
+              <span className="muted">Взнос</span>
+              <b>{nearest?.buyIn ? `${nearest.buyIn} ₽` : 'Free · вход свободный'}</b>
+            </div>
+            <div className="row between">
+              <span className="muted">Место</span>
+              <b>Миллионная, 19</b>
+            </div>
+            <div>
+              <div className="row between mb-8">
+                <span className="muted">Записались</span>
+                <b className="num">
+                  {taken} / {max}
+                </b>
+              </div>
+              <div className="xp-bar">
+                <i style={{ width: `${Math.min(100, Math.round((taken / max) * 100))}%` }} />
+              </div>
+            </div>
+          </div>
+          <Link className="btn btn-gold btn-block mt-24" to={user ? '/app' : '/register'}>
+            Записаться
+          </Link>
+          <p className="center hint mt-12">Запись и личный QR — после входа</p>
+        </article>
+      </section>
+
+      <section className="section" id="week" style={{ paddingTop: 0 }}>
+        <span className="eyebrow">Сетка недели</span>
+        <h2 className="serif">Играем три раза в неделю</h2>
+        <div className="week-grid mt-24" style={{ gap: 14 }}>
+          <div className="day">
+            <b>СР</b>
+            <span>19:00 · рейтинговый</span>
+          </div>
+          <div className="day hot">
+            <b>ПТ</b>
+            <span>19:00 · фриролл</span>
+          </div>
+          <div className="day hot">
+            <b>СБ</b>
+            <span>17:00 · рейтинговый</span>
+          </div>
+        </div>
+        <p className="hint mt-12">
+          Двери открываются за час до начала. Регистрация заранее гарантирует место.
+        </p>
+      </section>
+
+      <section className="section" id="rating" style={{ paddingTop: 0 }}>
+        <span className="eyebrow">Витрина рейтинга</span>
+        <h2 className="serif">Неделя и финал месяца</h2>
+        <div className="cols-2 mt-24">
+          <WeeklyVitrine />
+          <FinalVitrine />
+        </div>
+        <p className="note gold mt-16" style={{ maxWidth: 720 }}>
+          Очки рейтинга ≠ XP. Баунти = 50 очков. XP — только опыт игрока.
+        </p>
+      </section>
+
+      <section className="section" id="about" style={{ paddingTop: 0 }}>
+        <span className="eyebrow">Клуб</span>
+        <h2 className="serif">О клубе и как найти</h2>
+        <div className="cols-2 mt-24">
+          <div className="card stack-16">
+            <p className="muted-strong" style={{ fontSize: 13.5 }}>
+              GUTSHOT — клуб спортивного покера в историческом центре Петербурга. Комфортные столы,
+              профессиональные дилеры, живая атмосфера соревнования. Мы играем ради игры: спорт,
+              тактика и сообщество.
+            </p>
+            <div className="row wrap">
+              <a
+                className="btn btn-ghost btn-sm"
+                href="https://yandex.ru/maps/?text=Санкт-Петербург, Миллионная 19"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Маршрут и парковка
+              </a>
+              <Link className="btn btn-dark btn-sm" to="/install">
+                Поставить приложение
+              </Link>
+            </div>
+            <div className="divider">Документы</div>
+            <div className="row wrap" style={{ gap: 10 }}>
+              <span className="chip">📄 Оферта (скан)</span>
+              <span className="chip">📄 Политика ПДн (скан)</span>
+              <span className="chip">📷 Согласие на фото/видео</span>
+            </div>
+          </div>
+          <div
+            className="card center"
+            style={{ display: 'grid', placeItems: 'center', minHeight: 260 }}
+          >
+            <div>
+              <div style={{ fontSize: 44 }} aria-hidden="true">
+                🗺️
+              </div>
+              <p className="serif" style={{ fontSize: 20, margin: '10px 0 4px' }}>
+                Миллионная, 19
+              </p>
+              <p className="muted">Набережная Мойки · вход со двора</p>
+              <a
+                className="btn btn-gold btn-sm mt-16"
+                href="https://yandex.ru/maps/?text=Санкт-Петербург, Миллионная 19"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Открыть маршрут
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer className="pub-footer">
+        <div className="logo logo--sm mb-12">
+          <img className="logo-img" src="/gutshot-logo.png" alt="GUTSHOT" />
+        </div>
+        {club ? (
+          <>
+            {club.legalName} · ИНН {club.inn}
+            <br />
+            {club.address} ·{' '}
+            <a
+              href={`tel:${club.phone.replace(/\s/g, '')}`}
+              style={{ color: 'var(--gold)', textDecoration: 'none' }}
+            >
+              {club.phone}
+            </a>
+          </>
+        ) : (
+          <>
+            ИП Миронов Михаил Александрович · ИНН 781140907760
+            <br />
+            Санкт-Петербург, Миллионная ул., 19 · +7 999 009-11-99
+          </>
+        )}
+        <br />
+        <span className="muted">
+          Спортивный покер. 18+. Не является азартной игрой на деньги. Оферта · Политика ПДн
+        </span>
+      </footer>
+    </>
+  );
+}
+
+function WeeklyVitrine() {
+  const { data } = useQuery({
+    queryKey: ['public-weekly'],
+    queryFn: () => publicApi.weeklyRating('current'),
+  });
+  const entries = data?.entries?.slice(0, 5) ?? [];
+
+  return (
+    <div className="card">
+      <div className="row between mb-16">
+        <b className="serif" style={{ fontSize: 17 }}>
+          Неделя{' '}
+          <span style={{ color: 'var(--gold)' }}>
+            {data ? `${formatDateShort(data.start)}–${formatDateShort(data.end)}` : ''}
+          </span>
+        </b>
+        <span className="chip">до сб 23:59</span>
+      </div>
+      {entries.length === 0 ? (
+        <p className="muted" style={{ fontSize: 13 }}>
+          На этой неделе пока нет очков
+        </p>
+      ) : (
+        <table className="tbl">
+          <tbody>
+            {entries.map((e, i) => (
+              <tr key={e.userId}>
+                <td className="rank">{i + 1}</td>
+                <td>
+                  {e.nickname ?? [e.firstName, e.lastName].filter(Boolean).join(' ') ?? 'Игрок'}
+                </td>
+                <td className="r num">
+                  <b>{e.points ?? e.weeklyXp ?? 0}</b> очк.
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
+function FinalVitrine() {
+  const { data } = useQuery({ queryKey: ['public-final'], queryFn: publicApi.finalRating });
+  const entries = data?.entries?.slice(0, 5) ?? [];
+
+  return (
+    <div className="card">
+      <div className="row between mb-16">
+        <b className="serif" style={{ fontSize: 17 }}>
+          Финал месяца
+        </b>
+        <span className="chip chip-ruby">финалисты недель</span>
+      </div>
+      {entries.length === 0 ? (
+        <p className="muted" style={{ fontSize: 13 }}>
+          Финал месяца ещё формируется
+        </p>
+      ) : (
+        <table className="tbl">
+          <tbody>
+            {entries.map((e, i) => (
+              <tr key={e.userId}>
+                <td className="rank">{i + 1}</td>
+                <td>
+                  {e.nickname ?? [e.firstName, e.lastName].filter(Boolean).join(' ') ?? 'Игрок'}
+                  {e.qualifiedWeekNumbers && e.qualifiedWeekNumbers.length > 0 && (
+                    <span className="muted" style={{ fontSize: 11 }}>
+                      {' '}
+                      · финалист {e.qualifiedWeekNumbers.join('-й и ')}-й недели
+                    </span>
+                  )}
+                </td>
+                <td className="r num">
+                  <b>{(e.points ?? 0).toLocaleString('ru-RU')}</b>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}

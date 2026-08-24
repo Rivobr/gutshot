@@ -11,6 +11,7 @@
     "dev:api": "pnpm --filter @gutshot/api dev",
     "dev:mini-app": "pnpm --filter @gutshot/mini-app dev",
     "dev:admin": "pnpm --filter @gutshot/admin dev",
+    "dev:web": "pnpm --filter @gutshot/web dev",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",

@@ -12,6 +12,9 @@ import { TelegramAuthGuard } from './guards/telegram-auth.guard';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { TokenBlacklistService } from './token-blacklist.service';
+import { OtpService } from './otp.service';
+import { SmsService } from './sms.service';
+import { MailerService } from './mailer.service';
 
 @Module({
   imports: [
@@ -30,6 +33,9 @@ import { TokenBlacklistService } from './token-blacklist.service';
   providers: [
     AuthService,
     TokenBlacklistService,
+    OtpService,
+    SmsService,
+    MailerService,
     JwtStrategy,
     AdminJwtStrategy,
     JwtAuthGuard,

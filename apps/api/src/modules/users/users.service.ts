@@ -5,11 +5,13 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { Prisma, User } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TelegramInitDataUser } from '../../common/utils/telegram-init-data.util';
 import { generatePlayerQrCode } from '../../common/utils/player-qr.util';
 import { isRatingExcludedUsername } from '../../common/constants/rating-exclusions';
+import { normalizeRussianPhone } from '../../common/utils/phone.util';
 import {
   claimPendingTelegramUser,
   isRealTelegramId,
@@ -461,5 +463,136 @@ export class UsersService {
       where: { id: userId },
       data: { consentAcceptedAt: null },
     });
+  }
+
+  // ── Web auth (сайт клуба) ──────────────────────────────────
+
+  /** Поиск по нику / почте / телефону — единая точка входа по логину. */
+  async findByLogin(login: string): Promise<User | null> {
+    const raw = login.trim();
+    if (!raw) {
+      return null;
+    }
+
+    const byEmail = await this.prisma.user.findUnique({ where: { email: raw.toLowerCase() } });
+    if (byEmail) {
+      return byEmail;
+    }
+
+    const normalizedPhone = normalizeRussianPhone(raw);
+    if (normalizedPhone) {
+      const byPhone = await this.prisma.user.findUnique({ where: { phone: normalizedPhone } });
+      if (byPhone) {
+        return byPhone;
+      }
+    }
+
+    return this.prisma.user.findFirst({
+      where: { nickname: { equals: raw, mode: 'insensitive' } },
+    });
+  }
+
+  async findByEmail(email: string): Promise<User | null> {
+    return this.prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
+  }
+
+  async findByPhone(phone: string): Promise<User | null> {
+    return this.prisma.user.findUnique({ where: { phone } });
+  }
+
+  /** Создаёт игрока с сайта: synthetic telegramId `web:` (по образцу tmp:), source=WEB. */
+  async createWebPlayer(input: {
+    nickname?: string;
+    email?: string;
+    passwordHash?: string;
+    phone?: string;
+    phoneVerified?: boolean;
+  }): Promise<User> {
+    const nickname = input.nickname
+      ? await this.allocateUniqueNickname(input.nickname)
+      : await this.allocateUniqueNickname(`Игрок ${Math.floor(100 + Math.random() * 900)}`);
+
+    const created = await this.prisma.user.create({
+      data: {
+        telegramId: `web:${randomUUID()}`,
+        nickname,
+        email: input.email,
+        passwordHash: input.passwordHash,
+        phone: input.phone,
+        phoneVerifiedAt: input.phone && input.phoneVerified ? new Date() : null,
+        source: 'WEB',
+        qrCode: generatePlayerQrCode(),
+        playerProfile: { create: { xp: 0 } },
+      },
+    });
+
+    this.logger.log(`Создан игрок с сайта ${created.nickname} (${created.id})`);
+    return created;
+  }
+
+  async setPasswordHash(userId: string, passwordHash: string): Promise<void> {
+    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+  }
+
+  async hasPassword(userId: string): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { passwordHash: true },
+    });
+    return Boolean(user?.passwordHash);
+  }
+
+  async setEmail(userId: string, email: string, verified = false): Promise<User> {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        email: email.trim().toLowerCase(),
+        emailVerifiedAt: verified ? new Date() : null,
+      },
+    });
+  }
+
+  async setPhone(userId: string, phone: string): Promise<User> {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { phone, phoneVerifiedAt: new Date() },
+    });
+  }
+
+  /**
+   * Привязка Telegram к аккаунту (код /link из бота). Второй игрок не создаётся:
+   * если этот Telegram уже у другого аккаунта — ошибка.
+   */
+  async linkTelegram(userId: string, telegramId: string, username?: string | null): Promise<User> {
+    const existing = await this.findByTelegramId(telegramId);
+    if (existing && existing.id !== userId) {
+      throw new ConflictException('Этот Telegram уже привязан к другому игроку');
+    }
+
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        telegramId,
+        username: username ?? undefined,
+        source: 'WEB',
+      },
+    });
+  }
+
+  /**
+   * Вход по подтверждённому телефону: игрок есть — возвращаем, нет — создаём
+   * с автоником (попросят сменить в профиле). Один номер — один игрок.
+   */
+  async findOrCreateByPhone(phone: string): Promise<{ user: User; created: boolean }> {
+    const existing = await this.findByPhone(phone);
+    if (existing) {
+      return {
+        user: existing.qrCode ? existing : await this.ensureQrCode(existing.id),
+        created: false,
+      };
+    }
+
+    const created = await this.createWebPlayer({ phone, phoneVerified: true });
+    return { user: created, created: true };
   }
 }

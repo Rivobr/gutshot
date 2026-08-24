@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#090909" />
+<title>Войти в клуб · GUTSHOT</title>
+<link rel="stylesheet" href="assets/mockups.css" />
+</head>
+<body>
+<div class="glow-bg"></div>
+
+<div class="auth-wrap">
+  <!-- Бренд-панель: только ПК -->
+  <aside class="auth-brand">
+    <div class="deco-lines"></div>
+    <div class="auth-hero">
+      <a class="logo" href="landing.html">
+        <img class="logo-img" src="assets/gutshot-logo.png" alt="GUTSHOT" />
+      </a>
+      <div class="mid">
+        <h1 class="serif hero-title" style="font-size:52px;">Твой стол<br /><em>ждёт</em></h1>
+        <p class="muted-strong mt-16" style="font-size:15px;">
+          Один аккаунт — один рейтинг и один QR.
+          Ник + пароль + телефон + Telegram + почта = один игрок GUTSHOT.
+        </p>
+        <p class="muted mt-24" style="font-size:12px;">Миллионная, 19 · Санкт-Петербург</p>
+      </div>
+      <p class="auth-foot">18+ · Спортивный покер · Оферта · ПДн</p>
+    </div>
+  </aside>
+
+  <!-- Форма -->
+  <main class="auth-main">
+    <a class="logo logo--sm auth-logo-m" href="landing.html">
+      <img class="logo-img" src="assets/gutshot-logo.png" alt="GUTSHOT" />
+    </a>
+
+    <div style="width:100%; max-width:440px;" class="stack-24">
+      <div class="center mb-8">
+        <h2 class="serif" style="font-size:30px; text-transform:uppercase; letter-spacing:.03em;">Войти в клуб</h2>
+        <p class="muted mt-8" style="font-size:13px;">Три способа — выберите любой</p>
+      </div>
+
+      <div class="vip-card" style="padding:26px 22px;">
+        <span class="suit-wm" style="width:110px;height:110px;font-size:110px;">♠</span>
+
+        <!-- A) НИК + ПАРОЛЬ -->
+        <form>
+          <p class="eyebrow">A · Ник и пароль</p>
+          <label class="field mt-12"><span>Ник</span>
+            <input class="input" type="text" placeholder="Mila_Ace" autocomplete="username" />
+          </label>
+          <label class="field"><span>Пароль</span>
+            <input class="input" type="password" placeholder="••••••••" autocomplete="current-password" />
+          </label>
+          <div class="row between mb-16" style="font-size:12.5px;">
+            <a href="forgot.html" style="color:var(--gold); text-decoration:none;">Забыли пароль?</a>
+            <a href="register.html" style="color:var(--muted-strong); text-decoration:none;">Регистрация</a>
+          </div>
+          <button class="btn btn-gold btn-block" type="button">Войти</button>
+        </form>
+
+        <div class="divider">или</div>
+
+        <!-- B) ТЕЛЕФОН + КОД -->
+        <div>
+          <p class="eyebrow">B · Телефон + код</p>
+          <div class="row mt-12" style="gap:8px;">
+            <span class="chip" style="height:52px; border-radius:14px;">RU +7</span>
+            <input class="input" type="tel" placeholder="999 000-00-00" style="flex:1;" />
+          </div>
+          <button class="btn btn-ghost btn-block mt-12" type="button">Получить код</button>
+          <p class="hint">Код из 4–6 цифр придёт в SMS · действует 5 минут · повтор — раз в 60 секунд.<br />Нет аккаунта? Создадим и попросим ник. Один номер — один игрок.</p>
+          <!-- Состояние после отправки кода (превью):
+          <div class="row mt-12" style="gap:8px;">
+            <input class="input center num" placeholder="• • • •" maxlength="6" style="letter-spacing:.5em;" />
+          </div>
+          <button class="btn btn-gold btn-block mt-12">Подтвердить</button>
+          <p class="hint center">Отправили на +7 999 •••-11-99 · повтор через 42 с</p>
+          -->
+        </div>
+
+        <div class="divider">или</div>
+
+        <!-- C) TELEGRAM -->
+        <div>
+          <p class="eyebrow">C · Через Telegram</p>
+          <button class="btn btn-tg btn-block mt-12" type="button">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.04 15.31l-.37 4.02c.53 0 .76-.23 1.04-.5l2.5-2.39 5.18 3.79c.95.53 1.63.25 1.88-.87L23.9 3.86c.31-1.4-.51-1.95-1.44-1.6L2.4 9.72c-1.36.53-1.34 1.29-.23 1.63l4.69 1.46L17.62 5.7c.51-.34.98-.15.6.19L9.04 15.31z"/></svg>
+            Продолжить с Telegram
+          </button>
+          <p class="hint">Работает, если Telegram уже привязан к игроку.<br />
+          Не привязан? Войдите ником или телефоном и привяжите Telegram в профиле — второй игрок не создаётся.</p>
+        </div>
+      </div>
+
+      <p class="center muted" style="font-size:11.5px;">
+        Регистрируясь, вы принимаете оферту, правила клуба,<br />политику ПДн и согласие на фото- и видеосъёмку.
+      </p>
+    </div>
+  </main>
+</div>
+
+</body>
+</html>

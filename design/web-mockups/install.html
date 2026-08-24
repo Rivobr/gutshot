@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#090909" />
+<title>Добавить на экран · GUTSHOT</title>
+<link rel="stylesheet" href="assets/mockups.css" />
+</head>
+<body>
+<div class="glow-bg"></div>
+
+<main style="min-height:100dvh; padding:26px 18px 60px; max-width:1100px; margin:0 auto;">
+  <header class="row between wrap mb-24">
+    <a class="logo logo--sm" href="landing.html">
+      <img class="logo-img" src="assets/gutshot-logo.png" alt="GUTSHOT" />
+    </a>
+    <a href="#" style="color:var(--muted-strong); font-size:13px; text-decoration:none;">Закрыть ✕</a>
+  </header>
+
+  <div class="center mb-24">
+    <h1 class="serif" style="font-size:clamp(24px,5vw,34px); text-transform:uppercase;">Поставить GUTSHOT<br />на экран Домой</h1>
+    <p class="muted-strong mt-8" style="font-size:13.5px;">Приложение откроется на весь экран — без адресной строки.</p>
+  </div>
+
+  <div class="inst-grid">
+
+    <!-- ANDROID -->
+    <section class="card stack-16" id="android">
+      <div class="row"><span class="chip chip-live">ANDROID</span><span class="chip">Chrome · Яндекс · Samsung Internet</span></div>
+      <b style="font-size:16px;" class="serif">Один тап</b>
+
+      <div class="step">
+        <div class="step-n">1</div>
+        <p style="margin:4px 0 0; font-size:13.5px;" class="muted-strong">Нажмите кнопку ниже. Браузер покажет <b style="color:var(--fg)">системный диалог «Установить приложение»</b>.</p>
+      </div>
+      <div class="step">
+        <div class="step-n">2</div>
+        <p style="margin:4px 0 0; font-size:13.5px;" class="muted-strong">Подтвердите «Установить» — иконка появится на экране Домой.</p>
+      </div>
+
+      <!-- Превью системного диалога -->
+      <div style="max-width:280px; margin:6px auto 0;">
+        <div class="phone-frame" style="padding-bottom:10px;">
+          <div class="phone-screen" style="height:300px; justify-content:flex-end;">
+            <div class="statusbar"><span>21:04</span><span>▮▮▮ ⌁ 87%</span></div>
+            <div style="flex:1; display:grid; place-items:center;">
+              <img src="assets/gutshot-logo.png" alt="" style="height:64px; mix-blend-mode:screen;" />
+            </div>
+            <div style="background:#1e1e22; border-radius:16px 16px 20px 20px; padding:14px 16px; margin:0 -2px -4px;">
+              <div class="row" style="gap:12px;">
+                <div style="width:44px;height:44px;border-radius:12px;background:#000;display:grid;place-items:center;border:1px solid #333;">
+                  <img src="assets/gutshot-logo.png" alt="" style="height:26px; mix-blend-mode:screen;" />
+                </div>
+                <div style="flex:1;">
+                  <b style="color:#fff; font-size:13px;">GUTSHOT</b>
+                  <div style="color:#9aa; font-size:10.5px;">gutshot.club</div>
+                </div>
+              </div>
+              <button style="width:100%; margin-top:12px; height:38px; border:none; border-radius:999px; background:var(--gold); color:#111; font-weight:700; font-family:inherit; font-size:12.5px;">Установить</button>
+              <div style="text-align:center; color:#888; font-size:11px; padding-top:8px;">Отмена</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-gold btn-block">＋ Установить приложение</button>
+    </section>
+
+    <!-- IPHONE -->
+    <section class="card stack-16" id="iphone">
+      <div class="row"><span class="chip chip-ruby">IPHONE / IPAD</span><span class="chip">Safari</span></div>
+      <b style="font-size:16px;" class="serif">Три шага вручную</b>
+      <div class="note" style="font-size:12px;">В iOS нет системной кнопки установки — Safari ставит сайт через меню «Поделиться». Это нормально для всех PWA на iPhone.</div>
+
+      <div class="step">
+        <div class="step-n">1</div>
+        <p style="margin:4px 0 0; font-size:13.5px;" class="muted-strong">Откройте сайт в <b style="color:var(--fg)">Safari</b> и нажмите <b style="color:var(--fg)">«Поделиться»</b> <span class="muted">(квадрат со стрелкой ↑ внизу экрана)</span>.</p>
+      </div>
+      <div class="share-demo" aria-hidden="true">
+        <div class="phone-frame">
+          <div class="phone-screen">
+            <div class="statusbar"><span>21:04</span><span>▮▮▮ ⌁ 87%</span></div>
+            <div style="flex:1;"></div>
+            <div class="share-pop">
+              <div class="row hl"><b style="font-size:14px;">↑</b> На экран «Домой»</div>
+              <div class="row">✉ Почта</div>
+              <div class="row">🔗 Копировать</div>
+            </div>
+            <div style="padding:10px 14px 14px; border-top:1px solid #222; display:flex; justify-content:space-between; color:#bbb; font-size:15px;">
+              <span>☰</span><span style="border:1px solid #555; border-radius:6px; padding:0 10px;">Aa</span><b style="color:var(--gold)">↑</b><span>⧉</span><span>⌂</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-n">2</div>
+        <p style="margin:4px 0 0; font-size:13.5px;" class="muted-strong">В списке выберите <b style="color:var(--fg)">«На экран „Домой“»</b>.</p>
+      </div>
+      <div class="step">
+        <div class="step-n">3</div>
+        <p style="margin:4px 0 0; font-size:13.5px;" class="muted-strong">Имя <b style="color:var(--fg)">GUTSHOT</b> уже подставлено — нажмите «Добавить». Готово.</p>
+      </div>
+
+      <p class="hint center">После установки иконка откроет кабинет сразу, если сессия ещё жива.</p>
+    </section>
+  </div>
+</main>
+
+<style>
+.inst-grid { display:grid; gap:18px; }
+@media (min-width:1024px){ .inst-grid { grid-template-columns:1fr 1fr; gap:28px; align-items:start; } }
+.share-demo { display:flex; justify-content:center; }
+</style>
+</body>
+</html>

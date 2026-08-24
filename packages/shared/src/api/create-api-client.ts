@@ -14,7 +14,16 @@ function isAuthLoginRequest(url?: string): boolean {
     return false;
   }
 
-  return url.includes('/auth/telegram') || url.includes('/auth/admin/login');
+  return (
+    url.includes('/auth/telegram') ||
+    url.includes('/auth/admin/login') ||
+    url.includes('/auth/login') ||
+    url.includes('/auth/register') ||
+    url.includes('/auth/phone/') ||
+    url.includes('/auth/forgot') ||
+    url.includes('/auth/reset') ||
+    url.includes('/auth/password/change')
+  );
 }
 
 export function createApiClient(options: CreateApiClientOptions): AxiosInstance {

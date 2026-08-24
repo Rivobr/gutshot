@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#090909" />
+<title>Рейтинг клуба · GUTSHOT</title>
+<link rel="stylesheet" href="assets/mockups.css" />
+</head>
+<body>
+<div class="glow-bg"></div>
+
+<div class="shell shell-app">
+  <aside class="sidebar">
+    <a class="logo logo--sm mb-24" href="landing.html">
+      <img class="logo-img" src="assets/gutshot-logo.png" alt="GUTSHOT" />
+    </a>
+    <nav class="side-nav stack-16">
+      <a href="app-home.html"><span class="ic">⌂</span> Главная</a>
+      <a href="tournament.html"><span class="ic">♠</span> Турниры</a>
+      <a class="active" href="rating.html"><span class="ic">✦</span> Рейтинг</a>
+      <a href="#"><span class="ic">▦</span> Мои результаты</a>
+      <a href="#"><span class="ic">◈</span> Достижения</a>
+      <a href="#"><span class="ic">⌖</span> Мой QR</a>
+      <a href="#"><span class="ic">↗</span> Как найти</a>
+      <a href="#"><span class="ic">§</span> Правила</a>
+      <a href="#"><span class="ic">?</span> FAQ и поддержка</a>
+    </nav>
+    <div class="side-foot">Миллионная, 19 · СПб<br />+7 999 009-11-99</div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h1 class="serif" style="font-size:26px;">Рейтинг клуба</h1>
+        <p class="muted" style="font-size:12px; margin-top:2px;">Топ-7 недели → финал месяца · неделя пн–сб</p>
+      </div>
+      <div class="who"><div class="avatar">M</div><span>Mila_Ace</span></div>
+    </header>
+
+    <div class="cols-r mt-16">
+      <!-- ═══ ВКЛАДКА «НЕДЕЛЬНЫЙ» (как в боте) ═══ -->
+      <section class="stack-16">
+        <div class="seg">
+          <button class="on" type="button">Недельный</button>
+          <button type="button">Финал месяца</button>
+        </div>
+
+        <div class="seg seg--sm">
+          <button class="on" type="button">Актуальная</button>
+          <button type="button">Прошлая</button>
+        </div>
+        <p class="muted" style="font-size:11px; color:#8a7e68; margin-top:-6px;">Текущая неделя · 17 авг – 22 авг</p>
+
+        <!-- «Вы здесь» -->
+        <div class="youhere">
+          <div class="deco-lines" style="opacity:.3;"></div>
+          <div class="yh-rank">2</div>
+          <div style="flex:1; min-width:0; position:relative;">
+            <p class="eyebrow" style="letter-spacing:.16em; font-size:8.5px;">Вы здесь</p>
+            <p class="yh-title">Вы в топ-7</p>
+            <p class="yh-sub">До 1 места: 40 очков · квалификация в финал</p>
+          </div>
+          <div style="text-align:right; flex:none;">
+            <b class="num" style="font-size:15px; color:var(--gold-hi);">270</b>
+            <p class="muted" style="font-size:9px;">очков</p>
+          </div>
+        </div>
+
+        <!-- Пьедестал: порядок 2 — 1 — 3 -->
+        <div class="vip-card" style="padding:24px 16px 0;">
+          <div class="deco-lines" style="opacity:.4;"></div>
+          <div class="podium" style="position:relative;">
+            <div class="pod pod--silver">
+              <div class="pod-ava pod--me" style="margin:0 auto 8px;">M<span class="pod-you">ВЫ</span></div>
+              <p class="pod-name">Вы</p>
+              <span class="lvl">12 ур.</span>
+              <p class="pod-pts num">270</p>
+              <div class="pod-col pod--silver" style="height:84px;">2</div>
+            </div>
+            <div class="pod pod--gold pod--1">
+              <div class="pod-ava" style="margin:0 auto 8px;">K</div>
+              <p class="pod-name">Kirill__K</p>
+              <span class="lvl">15 ур.</span>
+              <p class="pod-pts num">310</p>
+              <div class="pod-col pod--gold" style="height:108px;">1</div>
+            </div>
+            <div class="pod pod--bronze">
+              <div class="pod-ava" style="margin:0 auto 8px;">G</div>
+              <p class="pod-name">Geosablin</p>
+              <span class="lvl">11 ур.</span>
+              <p class="pod-pts num">240</p>
+              <div class="pod-col pod--bronze" style="height:64px;">3</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Полная таблица -->
+        <div>
+          <p class="eyebrow mb-12">Полная таблица</p>
+          <div class="rrow">
+            <span class="rk num">4</span><div class="ava">N</div>
+            <div><p class="nm">NordWind</p></div>
+            <div class="pts"><b class="num">180</b><span>очков</span></div>
+          </div>
+          <div class="rrow">
+            <span class="rk num">5</span><div class="ava">V</div>
+            <div><p class="nm">Vega_77</p></div>
+            <div class="pts"><b class="num">150</b><span>очков</span></div>
+          </div>
+          <div class="rrow">
+            <span class="rk num">6</span><div class="ava">O</div>
+            <div><p class="nm">OldCaptain</p></div>
+            <div class="pts"><b class="num">120</b><span>очков</span></div>
+          </div>
+          <div class="rrow">
+            <span class="rk num">7</span><div class="ava">D</div>
+            <div><p class="nm">DarkHorse <span class="lvl">9 ур.</span></p></div>
+            <div class="pts"><b class="num">90</b><span>очков</span></div>
+          </div>
+          <div class="rrow">
+            <span class="rk num">8</span><div class="ava">S</div>
+            <div><p class="nm">SpbShark</p></div>
+            <div class="pts"><b class="num">80</b><span>очков</span></div>
+          </div>
+          <p class="hint center mt-12">Топ-7 недели переходит в финал месяца</p>
+        </div>
+      </section>
+
+      <!-- ═══ ВКЛАДКА «ФИНАЛ МЕСЯЦА» (как в боте) ═══ -->
+      <section class="stack-16">
+        <div class="seg">
+          <button type="button">Недельный</button>
+          <button class="on" type="button">Финал месяца</button>
+        </div>
+
+        <div class="youhere">
+          <div class="deco-lines" style="opacity:.3;"></div>
+          <div class="yh-rank">1</div>
+          <div style="flex:1; min-width:0; position:relative;">
+            <p class="eyebrow" style="letter-spacing:.16em; font-size:8.5px;">Вы здесь</p>
+            <p class="yh-title">Вы лидируете в финале</p>
+            <p class="yh-sub">Очки за 2-ю неделю в топ-7</p>
+          </div>
+          <div style="text-align:right; flex:none;">
+            <b class="num" style="font-size:15px; color:var(--gold-hi);">1 240</b>
+            <p class="muted" style="font-size:9px;">очков</p>
+          </div>
+        </div>
+
+        <div class="vip-card" style="padding:24px 16px 0;">
+          <div class="deco-lines" style="opacity:.4;"></div>
+          <div class="podium" style="position:relative;">
+            <div class="pod pod--silver">
+              <div class="pod-ava" style="margin:0 auto 8px;">K</div>
+              <p class="pod-name">Kirill__K</p>
+              <p class="fl muted" style="font-size:10px;">финалист 3-й недели</p>
+              <p class="pod-pts num">1 130</p>
+              <div class="pod-col pod--silver" style="height:84px;">2</div>
+            </div>
+            <div class="pod pod--gold pod--1 pod--me">
+              <div class="pod-ava" style="margin:0 auto 8px;">M<span class="pod-you">ВЫ</span></div>
+              <p class="pod-name">Вы</p>
+              <p class="fl muted" style="font-size:10px;">финалист 2-й недели</p>
+              <p class="pod-pts num">1 240</p>
+              <div class="pod-col pod--gold" style="height:108px;">1</div>
+            </div>
+            <div class="pod pod--bronze">
+              <div class="pod-ava" style="margin:0 auto 8px;">O</div>
+              <p class="pod-name">OldCaptain</p>
+              <p class="fl muted" style="font-size:10px;">финалист 1-й недели</p>
+              <p class="pod-pts num">980</p>
+              <div class="pod-col pod--bronze" style="height:64px;">3</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p class="eyebrow mb-12">Полная таблица</p>
+          <div class="rrow me">
+            <span class="rk num">1</span><div class="ava">M</div>
+            <div><p class="nm">Вы</p><p class="fl">финалист 2-й недели</p></div>
+            <div class="pts"><b class="num">1 240</b><span>очков</span></div>
+          </div>
+          <div class="rrow">
+            <span class="rk num">4</span><div class="ava">V</div>
+            <div><p class="nm">Vega_77</p><p class="fl">финалист 1-й и 2-й недели</p></div>
+            <div class="pts"><b class="num">860</b><span>очков</span></div>
+          </div>
+          <div class="rrow">
+            <span class="rk num">5</span><div class="ava">N</div>
+            <div><p class="nm">NordWind</p><p class="fl">финалист 3-й недели</p></div>
+            <div class="pts"><b class="num">720</b><span>очков</span></div>
+          </div>
+          <div class="note mt-16" style="font-size:11.5px;">
+            Новые игроки сайта появляются в финале месяца только после первой сыгранной игры в клубе.
+            Итог таблицы — после закрытия последней недели (ночь с субботы).
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <p class="note gold mt-24" style="font-size:11.5px;">
+      Очки рейтинга ≠ XP. Баунти = 50 очков рейтинга. XP — опыт игрока и уровни, считается отдельно.
+    </p>
+  </main>
+</div>
+
+<nav class="bottom-nav">
+  <a href="app-home.html"><span class="ic">⌂</span> Главная</a>
+  <a href="tournament.html"><span class="ic">♠</span> Турниры</a>
+  <a class="active" href="rating.html"><span class="ic">✦</span> Рейтинг</a>
+  <a href="#"><span class="ic">▦</span> QR</a>
+  <a href="profile.html"><span class="ic">◉</span> Профиль</a>
+</nav>
+
+<style>
+.cols-r { display:grid; gap:24px; }
+@media (min-width:1024px){ .cols-r { grid-template-columns:1fr 1fr; gap:28px; align-items:start; } }
+</style>
+</body>
+</html>
