@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#090909" />
+<title>GUTSHOT WEB · Макеты 390 / 1440</title>
+<link rel="stylesheet" href="assets/mockups.css" />
+<style>
+  .gal { max-width:1240px; margin:0 auto; padding:40px 18px 70px; }
+  .gal-grid { display:grid; gap:14px; }
+  @media (min-width:760px){ .gal-grid { grid-template-columns:repeat(3,1fr); } }
+  .gal a.card { display:block; text-decoration:none; color:inherit; transition:border-color .15s, transform .15s; min-height:120px; }
+  .gal a.card:hover { border-color: var(--line-strong); transform: translateY(-2px); }
+  .gal a.card b { font-family:var(--serif); font-size:17px; display:block; margin-bottom:6px; }
+  .tag-m, .tag-d { font-size:10px; letter-spacing:.12em; border-radius:6px; padding:3px 8px; border:1px solid var(--line-strong); color:var(--gold); }
+</style>
+</head>
+<body>
+<div class="glow-bg"></div>
+
+<div class="gal">
+  <a class="logo mb-24" href="landing.html">
+    <img class="logo-img" src="assets/gutshot-logo.png" alt="GUTSHOT" />
+  </a>
+
+  <h1 class="serif" style="font-size:30px; text-transform:uppercase;">Веб-версия клуба — макеты</h1>
+  <p class="muted-strong mt-8 mb-24" style="max-width:640px;">
+    Каждый экран адаптивен: сузь окно до ~390px для мобильной версии (нижняя навигация),
+    расширь до ≥1024px для десктопа (левое меню + широкие таблицы). Палитра бота:
+    фон <b>#090909</b>, крем <b>#F5EDD6</b>, золото <b>#C89A3D</b>, кнопка <b>#9C6A1F→#C89A3D</b>.
+  </p>
+
+  <div class="gal-grid">
+    <a class="card" href="landing.html"><span class="tag-m">390</span> <span class="tag-d">1440</span><b>Публичный лендинг</b><span class="muted">Ближайший турнир, сетка недели, витрина рейтинга, о клубе, реквизиты.</span></a>
+    <a class="card" href="login.html"><span class="tag-m">390</span> <span class="tag-d">1440</span><b>Вход · 3 способа</b><span class="muted">Ник+пароль, телефон+код (4–6 цифр, 5 мин), Telegram (если привязан).</span></a>
+    <a class="card" href="register.html"><span class="tag-m">390</span> <span class="tag-d">1440</span><b>Регистрация</b><span class="muted">Ник, обязательная почта, пароль, согласия: оферта, правила, ПДн, фото/видео.</span></a>
+    <a class="card" href="forgot.html"><span class="tag-m">390</span> <span class="tag-d">1440</span><b>Забыли пароль</b><span class="muted">Письмо со ссылкой, 30 минут, один раз. Нет почты → @gutshot_suport.</span></a>
+    <a class="card" href="app-home.html"><span class="tag-m">390</span> <span class="tag-d">1440</span><b>Кабинет · Главная</b><span class="muted">Ближайший турнир, XP, сетка недели, «Мои результаты». Сайдбар на ПК.</span></a>
+    <a class="card" href="tournament.html"><span class="tag-m">390</span> <span class="tag-d">1440</span><b>Турнир</b><span class="muted">VIP-карточка, регламент, live-блок, список участников, QR входа.</span></a>
+    <a class="card" href="rating.html"><span class="tag-m">390</span> <span class="tag-d">1440</span><b>Рейтинг</b><span class="muted">Неделя / финал месяца / сезон. Очки ≠ XP, баунти = 50 очков.</span></a>
+    <a class="card" href="profile.html"><span class="tag-m">390</span> <span class="tag-d">1440</span><b>Профиль + привязки</b><span class="muted">Телефон, Telegram, почта, пароль, PWA «Добавить на экран», выход.</span></a>
+    <a class="card" href="install.html"><span class="tag-m">390</span> <span class="tag-d">1440</span><b>Добавить на экран</b><span class="muted">Android — системный prompt. iPhone — честные шаги Safari «Поделиться».</span></a>
+  </div>
+
+  <p class="hint mt-32">
+    Открыть как сайт локально: <code style="color:var(--gold)">python -m http.server 8080</code> из папки
+    <code>design/web-mockups</code> → http://localhost:8080
+  </p>
+</div>
+</body>
+</html>

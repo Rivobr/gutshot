@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#090909" />
+<title>Восстановление пароля · GUTSHOT</title>
+<link rel="stylesheet" href="assets/mockups.css" />
+</head>
+<body>
+<div class="glow-bg"></div>
+
+<main style="min-height:100dvh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:28px 20px 48px;">
+  <a class="logo mb-24" href="landing.html">
+    <img class="logo-img" src="assets/gutshot-logo.png" alt="GUTSHOT" style="height:110px;" />
+  </a>
+
+  <div style="width:100%; max-width:430px;" class="stack-24">
+    <!-- Шаг 1: ввод почты -->
+    <div class="vip-card" style="padding:26px 22px;">
+      <h2 class="serif" style="font-size:24px; text-transform:uppercase; letter-spacing:.03em;">Забыли пароль?</h2>
+      <p class="muted mt-8 mb-16" style="font-size:13px;">Пришлём ссылку для сброса. Она работает 30 минут и одноразовая.</p>
+      <form>
+        <label class="field"><span>Почта аккаунта</span>
+          <input class="input" type="email" placeholder="you@mail.ru" />
+        </label>
+        <button class="btn btn-gold btn-block" type="button">Отправить письмо</button>
+        <a class="btn btn-dark btn-block mt-12" href="login.html">Назад ко входу</a>
+      </form>
+    </div>
+
+    <!-- Шаг 2 (превью состояния после отправки) -->
+    <div class="card-flat" style="padding:18px 20px;">
+      <b style="font-size:13.5px;">✉ Письмо отправлено — you@mail.ru</b>
+      <p class="hint mt-8">Проверьте почту: ссылка действует 30 минут и срабатывает один раз.</p>
+    </div>
+
+    <div class="note">
+      Нет почты в аккаунте? Добавьте её в профиле или напишите нам в Telegram:
+      <a href="#" style="color:var(--gold); text-decoration:none;">@gutshot_suport</a> — поможем восстановить доступ.
+    </div>
+  </div>
+</main>
+</body>
+</html>

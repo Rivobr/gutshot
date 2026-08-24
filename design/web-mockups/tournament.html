@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#090909" />
+<title>Турнир · GUTSHOT</title>
+<link rel="stylesheet" href="assets/mockups.css" />
+</head>
+<body>
+<div class="glow-bg"></div>
+
+<div class="shell shell-app">
+  <aside class="sidebar">
+    <a class="logo logo--sm mb-24" href="landing.html">
+      <img class="logo-img" src="assets/gutshot-logo.png" alt="GUTSHOT" />
+    </a>
+    <nav class="side-nav stack-16">
+      <a href="app-home.html"><span class="ic">⌂</span> Главная</a>
+      <a class="active" href="tournament.html"><span class="ic">♠</span> Турниры</a>
+      <a href="rating.html"><span class="ic">✦</span> Рейтинг</a>
+      <a href="#"><span class="ic">▦</span> Мои результаты</a>
+      <a href="#"><span class="ic">◈</span> Достижения</a>
+      <a href="#"><span class="ic">⌖</span> Мой QR</a>
+      <a href="#"><span class="ic">↗</span> Как найти</a>
+      <a href="#"><span class="ic">§</span> Правила</a>
+      <a href="#"><span class="ic">?</span> FAQ и поддержка</a>
+    </nav>
+    <div class="side-foot">Миллионная, 19 · СПb<br />+7 999 009-11-99</div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <a href="#" style="color:var(--muted-strong); text-decoration:none; font-size:13px;">← Турниры</a>
+      <div class="who"><div class="avatar">M</div><span>Mila_Ace</span></div>
+    </header>
+
+    <!-- VIP-шапка турнира -->
+    <article class="vip-card" style="padding:24px;">
+      <span class="suit-wm">♦</span>
+      <div class="row between wrap mb-16">
+        <span class="chip chip-live">● СКОРО</span>
+        <span class="chip">🕐 СБ / 23 авг / 17:00</span>
+      </div>
+      <p class="eyebrow">Рейтинговый турнир</p>
+      <h1 class="serif uppercase" style="font-size:clamp(26px,6vw,40px); margin-top:6px;">Субботний рейтинговый</h1>
+      <div class="row wrap mt-16" style="gap:10px;">
+        <span class="chip">👥 31 / 40</span>
+        <span class="chip">🏆 Призовой — топ 20%</span>
+        <span class="chip">✦ Очки недели</span>
+      </div>
+      <div class="row wrap mt-24">
+        <button class="btn btn-gold">✓ Вы записаны</button>
+        <button class="btn btn-ghost">Отменить запись</button>
+        <a class="btn btn-dark" href="#">Показать QR входа</a>
+      </div>
+      <p class="hint mt-12">QR на мобилке откроется на весь экран. На ПК — «покажите с телефона».</p>
+    </article>
+
+    <div class="cols-t mt-16">
+      <!-- Инфо -->
+      <div class="stack-16">
+        <div class="card stack-16">
+          <p class="eyebrow">Регламент</p>
+          <div class="row between"><span class="muted">Взнос</span><b>2 000 ₽</b></div>
+          <div class="row between"><span class="muted">Стек</span><b>15 000 фишек</b></div>
+          <div class="row between"><span class="muted">Баунти</span><b>50 очков рейтинга за выбивание</b></div>
+          <div class="row between"><span class="muted">Уровни</span><b>20 минут</b></div>
+          <div class="row between"><span class="muted">Поздняя регистрация</span><b>до 5 уровня</b></div>
+          <p class="note gold" style="font-size:11.5px;">Очки рейтинга ≠ XP. XP начисляется отдельно по занятому месту.</p>
+        </div>
+        <!-- Live (если идёт) -->
+        <div class="card-flat" style="padding:18px 20px;">
+          <div class="row between">
+            <b style="font-size:13px;">● LIVE</b>
+            <span class="chip">уровень 8 · BB 1 200</span>
+          </div>
+          <div class="row between mt-12"><span class="muted">Осталось в игре</span><b class="num">18</b></div>
+          <div class="row between"><span class="muted">Средний стек</span><b class="num">25 000</b></div>
+        </div>
+      </div>
+
+      <!-- Список игроков -->
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div class="row between" style="padding:18px 22px 0;">
+          <b class="serif" style="font-size:16px;">Участники · 31</b>
+          <span class="chip">запись до начала</span>
+        </div>
+        <table class="tbl mt-12">
+          <tr><th>#</th><th>Игрок</th><th class="r">Статус</th></tr>
+          <tr class="me-row"><td class="rank">4</td><td>Mila_Ace <span class="pos-up">вы</span></td><td class="r muted">оплачен</td></tr>
+          <tr><td class="rank">5</td><td>Kirill__K</td><td class="r muted">оплачен</td></tr>
+          <tr><td class="rank">6</td><td>NordWind</td><td class="r muted">ожидает</td></tr>
+          <tr><td class="rank">7</td><td>OldCaptain</td><td class="r muted">оплачен</td></tr>
+          <tr><td class="rank">8</td><td>Vega_77</td><td class="r muted">оплачен</td></tr>
+          <tr><td colspan="3" class="center muted" style="font-size:12px;">…и ещё 26 игроков</td></tr>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<nav class="bottom-nav">
+  <a href="app-home.html"><span class="ic">⌂</span> Главная</a>
+  <a class="active" href="tournament.html"><span class="ic">♠</span> Турниры</a>
+  <a href="rating.html"><span class="ic">✦</span> Рейтинг</a>
+  <a href="#"><span class="ic">▦</span> QR</a>
+  <a href="profile.html"><span class="ic">◉</span> Профиль</a>
+</nav>
+
+<style>
+.cols-t { display:grid; gap:14px; }
+@media (min-width:1024px){ .cols-t { grid-template-columns: 340px 1fr; gap:22px; } }
+@media (max-width:1023px){ .cols-t > .card:first-child { order:-1; } }
+</style>
+</body>
+</html>

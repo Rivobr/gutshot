@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#090909" />
+<title>Кабинет · GUTSHOT</title>
+<link rel="stylesheet" href="assets/mockups.css" />
+</head>
+<body>
+<div class="glow-bg"></div>
+
+<div class="shell shell-app">
+  <!-- ═══ САЙДБАР (ПК ≥1024) ═══ -->
+  <aside class="sidebar">
+    <a class="logo logo--sm mb-24" href="landing.html">
+      <img class="logo-img" src="assets/gutshot-logo.png" alt="GUTSHOT" />
+    </a>
+    <nav class="side-nav stack-16">
+      <a class="active" href="app-home.html"><span class="ic">⌂</span> Главная</a>
+      <a href="tournament.html"><span class="ic">♠</span> Турниры</a>
+      <a href="rating.html"><span class="ic">✦</span> Рейтинг</a>
+      <a href="#"><span class="ic">▦</span> Мои результаты</a>
+      <a href="#"><span class="ic">◈</span> Достижения</a>
+      <a href="#"><span class="ic">⌖</span> Мой QR</a>
+      <a href="#"><span class="ic">↗</span> Как найти</a>
+      <a href="#"><span class="ic">§</span> Правила</a>
+      <a href="#"><span class="ic">?</span> FAQ и поддержка</a>
+    </nav>
+    <div class="side-foot">
+      Миллионная, 19 · СПб<br />+7 999 009-11-99<br /><br />
+      Очки рейтинга ≠ XP
+    </div>
+  </aside>
+
+  <!-- ═══ КОНТЕНТ ═══ -->
+  <main class="main">
+    <header class="topbar">
+      <div class="who">
+        <div class="avatar">M</div>
+        <div>Mila_Ace<br /><span class="muted">Уровень 12 · 4 820 XP</span></div>
+      </div>
+      <div class="row">
+        <a class="btn btn-dark btn-sm" href="profile.html">Профиль</a>
+        <a class="btn btn-gold btn-sm" href="#">В клуб ↗</a>
+      </div>
+    </header>
+    <h1 class="serif topbar-m" style="font-size:26px; text-transform:uppercase;">Главная</h1>
+
+    <div class="grid-cab mt-16">
+      <!-- Ближайший турнир -->
+      <article class="vip-card span-2" style="padding:24px;">
+        <span class="suit-wm">♠</span>
+        <div class="row between wrap mb-16">
+          <span class="chip chip-live">● СКОРО</span>
+          <span class="chip">🕐 СБ / 17:00</span>
+          <span class="chip">Миллионная, 19</span>
+        </div>
+        <p class="eyebrow">Ближайший турнир</p>
+        <h2 class="serif uppercase" style="font-size:26px; margin-top:6px;">Субботний рейтинговый</h2>
+        <div class="mt-16" style="max-width:420px;">
+          <div class="row between mb-8"><span class="muted">Мест занято</span><b class="num">31 / 40</b></div>
+          <div class="xp-bar"><i style="width:78%"></i></div>
+        </div>
+        <div class="row wrap mt-24">
+          <button class="btn btn-gold">✓ Вы записаны — отмена</button>
+          <a class="btn btn-ghost" href="tournament.html">Детали турнира</a>
+          <a class="btn btn-dark" href="#">Мой QR на вход</a>
+        </div>
+      </article>
+
+      <!-- XP / рейтинг игрока -->
+      <div class="card stack-16">
+        <p class="eyebrow">Ваш прогресс</p>
+        <div class="row between">
+          <div><b class="serif" style="font-size:30px;">12</b><br /><span class="muted" style="font-size:11px;">уровень</span></div>
+          <div style="text-align:right;"><b class="num" style="font-size:22px; color:var(--gold);">4 820</b> <span class="muted" style="font-size:11px;">XP</span></div>
+        </div>
+        <div class="xp-bar"><i style="width:64%"></i></div>
+        <p class="hint">До 13 уровня: 380 XP</p>
+        <div class="divider" style="margin:14px 0;"></div>
+        <div class="row between"><span class="muted">Очки недели</span><b class="num" style="color:var(--gold-hi)">270 · 2 место</b></div>
+        <div class="row between"><span class="muted">Финал месяца</span><b class="num">финалист 2-й недели</b></div>
+        <p class="hint">Очки рейтинга ≠ XP. Баунти = 50 очков.</p>
+      </div>
+
+      <!-- Сетка недели -->
+      <div class="card span-2">
+        <div class="row between mb-16">
+          <b class="serif" style="font-size:16px;">Сетка недели</b>
+          <span class="chip">неделя · 17–22 авг</span>
+        </div>
+        <div class="week-grid" style="gap:10px;">
+          <div class="day"><b>СР</b><span>19:00 · рейтинг</span></div>
+          <div class="day hot"><b>ПТ</b><span>19:00 · фриролл</span></div>
+          <div class="day hot"><b>СБ</b><span>17:00 · рейтинг</span></div>
+        </div>
+      </div>
+
+      <!-- Мои результаты -->
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div class="row between" style="padding:18px 22px 0;"><b class="serif" style="font-size:16px;">Мои результаты</b><a href="#" style="color:var(--gold); font-size:12px; text-decoration:none;">все →</a></div>
+        <table class="tbl mt-12">
+          <tr><td class="rank">3</td><td>ПТ фриролл<div class="muted" style="font-size:11px;">15 авг · 38 игроков</div></td><td class="r num">+120 XP</td></tr>
+          <tr><td class="rank">7</td><td>СБ рейтинговый<div class="muted" style="font-size:11px;">10 авг · 41 игрок</div></td><td class="r num">+60 XP</td></tr>
+          <tr><td class="rank">2</td><td>СР рейтинговый<div class="muted" style="font-size:11px;">7 авг · 29 игроков</div></td><td class="r num">+150 XP</td></tr>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ═══ НИЖНЯЯ НАВИГАЦИЯ (мобилка) ═══ -->
+<nav class="bottom-nav">
+  <a class="active" href="app-home.html"><span class="ic">⌂</span> Главная</a>
+  <a href="tournament.html"><span class="ic">♠</span> Турниры</a>
+  <a href="rating.html"><span class="ic">✦</span> Рейтинг</a>
+  <a href="#"><span class="ic">▦</span> QR</a>
+  <a href="profile.html"><span class="ic">◉</span> Профиль</a>
+</nav>
+</body>
+</html>

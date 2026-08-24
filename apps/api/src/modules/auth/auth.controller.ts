@@ -1,11 +1,19 @@
-import { Body, Controller, Headers, HttpCode, Post } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Headers, HttpCode, Post, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../common/decorators/public.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AuthService } from './auth.service';
 import { TelegramLoginDto } from './dto/telegram-login.dto';
 import { TelegramTicketLoginDto } from './dto/telegram-ticket-login.dto';
 import { AdminLoginDto } from './dto/admin-login.dto';
+import { WebRegisterDto } from './dto/web-register.dto';
+import { WebLoginDto } from './dto/web-login.dto';
+import { PhoneRequestCodeDto, PhoneVerifyDto } from './dto/phone-code.dto';
+import { ChangePasswordDto, ForgotPasswordDto, ResetPasswordDto } from './dto/password.dto';
+import { TelegramWidgetDto } from './dto/telegram-widget.dto';
 import { TokenBlacklistService } from './token-blacklist.service';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { JwtPayload } from '../../common/interfaces/jwt-payload.interface';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -44,5 +52,70 @@ export class AuthController {
     if (token) {
       await this.tokenBlacklistService.revoke(token);
     }
+  }
+
+  // ── Web auth (сайт клуба) ─────────────────────────────────
+
+  @Public()
+  @Post('register')
+  registerWeb(@Body() dto: WebRegisterDto) {
+    return this.authService.registerWeb({
+      nickname: dto.nickname,
+      email: dto.email,
+      password: dto.password,
+      consents: dto.consents,
+    });
+  }
+
+  @Public()
+  @Post('login')
+  loginWithPassword(@Body() dto: WebLoginDto) {
+    return this.authService.loginWithPassword(dto.login, dto.password);
+  }
+
+  @Public()
+  @Post('phone/request-code')
+  requestPhoneCode(@Body() dto: PhoneRequestCodeDto) {
+    return this.authService.requestPhoneCode(dto.phone);
+  }
+
+  @Public()
+  @Post('phone/verify')
+  verifyPhoneCode(@Body() dto: PhoneVerifyDto) {
+    return this.authService.verifyPhoneCode(dto.phone, dto.code);
+  }
+
+  @Public()
+  @Post('telegram/widget')
+  loginWithTelegramWidget(@Body() dto: TelegramWidgetDto) {
+    return this.authService.loginWithTelegramWidget({ ...dto } as Record<string, string>);
+  }
+
+  @Public()
+  @Post('forgot')
+  @HttpCode(200)
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto.email);
+  }
+
+  @Public()
+  @Post('reset')
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto.token, dto.password);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('password/change')
+  changePassword(@CurrentUser() user: JwtPayload, @Body() dto: ChangePasswordDto) {
+    return this.authService.changePassword(user.sub, dto.currentPassword, dto.newPassword);
+  }
+
+  /** Код для команды /link <код> в боте — привязка Telegram к аккаунту. */
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('telegram/link-code')
+  createTelegramLinkCode(@CurrentUser() user: JwtPayload) {
+    return { code: this.authService.createTelegramLinkCode(user.sub) };
   }
 }

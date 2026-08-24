@@ -1,0 +1,17 @@
+{
+  "name": "GUTSHOT",
+  "short_name": "GUTSHOT",
+  "description": "Клуб спортивного покера GUTSHOT — Санкт-Петербург, Миллионная 19",
+  "lang": "ru",
+  "display": "standalone",
+  "orientation": "portrait",
+  "start_url": "/app",
+  "scope": "/",
+  "background_color": "#090909",
+  "theme_color": "#090909",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

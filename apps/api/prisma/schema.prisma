@@ -221,6 +221,21 @@ model User {
   /// Принятие пользовательских соглашений при первом входе в Mini App.
   consentAcceptedAt DateTime?
 
+  // ── Web-аккаунт (сайт клуба) ─────────────────────────────
+  /// bcrypt-хэш пароля. null — вход только через Telegram.
+  passwordHash String?
+  /// Почта для восстановления доступа. Уникальна, если задана.
+  email String? @unique
+  /// Телефон для входа по коду, формат +7XXXXXXXXXX. Один номер — один игрок.
+  phone String? @unique
+  emailVerifiedAt DateTime?
+  phoneVerifiedAt DateTime?
+  /// Откуда создан аккаунт: бот или сайт.
+  source Source @default(TELEGRAM)
+
+  passwordResetTokens PasswordResetToken[]
+  consentLogs         ConsentLog[]
+
   /// Витрина достижений: id из клиентского каталога, которые игрок закрепил
   /// в профиле. Видны другим игрокам в списке участников турнира.
   pinnedAchievements String[] @default([])
@@ -620,4 +635,61 @@ model BroadcastDelivery {
   @@index([campaignId])
   @@index([userId])
   @@index([status])
+}
+
+// ---------------------------------
+// WEB AUTH (сайт клуба)
+// ---------------------------------
+
+/// Откуда создан аккаунт игрока.
+enum Source {
+  TELEGRAM
+  WEB
+}
+
+/// Зачем выдан одноразовый SMS-код.
+enum OtpPurpose {
+  LOGIN
+  LINK_PHONE
+}
+
+/// Одноразовый код подтверждения телефона (вход или привязка).
+model PhoneOtpCode {
+  id         String     @id @default(cuid())
+  phone      String
+  codeHash   String
+  purpose    OtpPurpose @default(LOGIN)
+  attempts   Int        @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime   @default(now())
+
+  @@index([phone, purpose, createdAt])
+}
+
+/// Одноразовый токен ссылки «восстановить пароль» (30 минут).
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Журнал согласий (оферта, правила, ПДн, фото/видео) с версией документа.
+model ConsentLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  kind      String
+  version   String
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
 }

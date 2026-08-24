@@ -792,3 +792,55 @@ export interface BroadcastSegmentPreviewDto {
   count: number;
   sample: Array<{ userId: string; telegramId: string; name: string }>;
 }
+
+// ── Web auth (сайт клуба) ──────────────────────────────────
+
+export interface WebAuthUser {
+  id: string;
+  telegramId: string;
+  username?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  nickname?: string | null;
+  photoUrl?: string | null;
+}
+
+export interface WebAuthResponse {
+  accessToken: string;
+  user: WebAuthUser;
+  /** true — аккаунт создан по телефону, ник автогенерирован: попросить сменить. */
+  needsNickname?: boolean;
+}
+
+export interface OtpRequestResponse {
+  resendAfterSeconds: number;
+}
+
+export interface PublicScheduleDay {
+  day: string;
+  time: string;
+  kind: string;
+}
+
+export interface PublicClubInfo {
+  name: string;
+  address: string;
+  phone: string;
+  legalName: string;
+  inn: string;
+  support: string;
+}
+
+export interface PublicLandingResponse {
+  nearestTournament: Tournament | null;
+  schedule: PublicScheduleDay[];
+  club: PublicClubInfo;
+}
+
+export interface PublicWeeklyRatingResponse {
+  weekKey: string;
+  start: string;
+  end: string;
+  period: 'current' | 'previous';
+  entries: RatingEntry[];
+}

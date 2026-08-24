@@ -12,6 +12,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { ProgressionModule } from './modules/progression/progression.module';
 import { LegalModule } from './modules/legal/legal.module';
 import { RemindersModule } from './modules/reminders/reminders.module';
+import { PublicModule } from './modules/public/public.module';
 import { TelegramModule } from './modules/telegram/telegram.module';
 import { CommonModule } from './modules/common/common.module';
 import { ConfigurationModule } from './modules/config/config.module';
@@ -39,6 +40,7 @@ import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
     AdminModule,
     RemindersModule,
     TelegramModule,
+    PublicModule,
   ],
   providers: [
     {
