@@ -85,6 +85,23 @@ services:
     networks:
       - gutshot-network
 
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      network: host
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api/v1}
+        VITE_TG_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
+    container_name: gutshot-web
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:8082:80'
+    depends_on:
+      - api
+    networks:
+      - gutshot-network
+
   nginx:
     image: nginx:1.27-alpine
     container_name: gutshot-nginx
@@ -100,6 +117,7 @@ services:
       - api
       - mini-app
       - admin
+      - web
     networks:
       - gutshot-network
 
