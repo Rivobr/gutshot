@@ -24,6 +24,7 @@
     { isBreak: false, level: 15, sb: 5000, bb: 10000, ante: 10000, minutes: 8 },
     { isBreak: false, level: 16, sb: 6000, bb: 12000, ante: 12000, minutes: 8 },
     { isBreak: false, level: 17, sb: 8000, bb: 16000, ante: 16000, minutes: 6 },
+    { isBreak: true, minutes: 5 },
     { isBreak: false, level: 18, sb: 10000, bb: 20000, ante: 20000, minutes: 6 },
     { isBreak: false, level: 19, sb: 12500, bb: 25000, ante: 25000, minutes: 6 },
     { isBreak: false, level: 20, sb: 15000, bb: 30000, ante: 30000, minutes: 6 },
@@ -38,7 +39,7 @@
     { isBreak: false, level: 29, sb: 200000, bb: 400000, ante: 400000, minutes: 6 },
   ];
 
-  var STORAGE_KEY = 'gutshot.tv.offline.v4';
+  var STORAGE_KEY = 'gutshot.tv.offline.v5';
 
   var state = {
     mode: 'menu', // menu | waiting | running | finished

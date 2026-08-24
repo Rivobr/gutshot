@@ -252,7 +252,7 @@ export function defaultBlindStructure(): BlindStructureLevel[] {
 /**
  * Клубный шаблон с офлайн-теликов (BB-ante).
  * До late reg — как на TV. После 15-мин перерыва — плавный рост (~×1.25),
- * но короткие часы, чтобы вечер не растянулся.
+ * короткие часы и 5-мин перерыв примерно через час (после 8k/16k).
  */
 export function clubBlindStructure(): BlindStructureLevel[] {
   return buildLevels([
@@ -276,6 +276,7 @@ export function clubBlindStructure(): BlindStructureLevel[] {
     { smallBlind: 5000, bigBlind: 10000, ante: 10000, minutes: 8 },
     { smallBlind: 6000, bigBlind: 12000, ante: 12000, minutes: 8 },
     { smallBlind: 8000, bigBlind: 16000, ante: 16000, minutes: 6 },
+    { isBreak: true, minutes: 5 },
     { smallBlind: 10000, bigBlind: 20000, ante: 20000, minutes: 6 },
     { smallBlind: 12500, bigBlind: 25000, ante: 25000, minutes: 6 },
     { smallBlind: 15000, bigBlind: 30000, ante: 30000, minutes: 6 },

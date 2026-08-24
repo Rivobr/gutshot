@@ -23,6 +23,19 @@ describe('clubBlindStructure after late registration', () => {
     }
   });
 
+  it('puts a 5-minute break about an hour after late reg (after 8k/16k)', () => {
+    const after = levels.slice(lateRegBreak + 1);
+    const breakIdx = after.findIndex((row) => row.isBreak && row.durationSec === 5 * 60);
+    expect(breakIdx).toBeGreaterThan(0);
+    expect(after[breakIdx - 1]?.bigBlind).toBe(16_000);
+
+    const minutesBeforeBreak = after
+      .slice(0, breakIdx)
+      .reduce((sum, row) => sum + row.durationSec / 60, 0);
+    expect(minutesBeforeBreak).toBeGreaterThanOrEqual(50);
+    expect(minutesBeforeBreak).toBeLessThanOrEqual(65);
+  });
+
   it('does not make the post-late-reg clock much longer than before (~134 min)', () => {
     const after = levels.slice(lateRegBreak + 1);
     const minutes = after.reduce((sum, row) => sum + row.durationSec / 60, 0);
