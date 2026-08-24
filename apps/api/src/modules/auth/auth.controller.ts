@@ -88,7 +88,18 @@ export class AuthController {
   @Public()
   @Post('telegram/widget')
   loginWithTelegramWidget(@Body() dto: TelegramWidgetDto) {
-    return this.authService.loginWithTelegramWidget({ ...dto } as Record<string, string>);
+    // Виджет присылает id и auth_date числами — подпись считается по строкам.
+    const fields: Record<string, string> = {
+      id: String(dto.id),
+      auth_date: String(dto.auth_date),
+      hash: dto.hash,
+    };
+    if (dto.first_name) fields.first_name = dto.first_name;
+    if (dto.last_name) fields.last_name = dto.last_name;
+    if (dto.username) fields.username = dto.username;
+    if (dto.photo_url) fields.photo_url = dto.photo_url;
+
+    return this.authService.loginWithTelegramWidget(fields);
   }
 
   @Public()
