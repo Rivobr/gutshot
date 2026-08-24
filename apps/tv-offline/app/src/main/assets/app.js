@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  /** Клубный шаблон APK (ante = BB), перерывы 10/10/15. */
+  /** Клубный шаблон: до late reg как раньше; после — плавный рост, короткие часы. */
   var STRUCTURE = [
     { isBreak: false, level: 1, sb: 100, bb: 100, ante: 100, minutes: 12 },
     { isBreak: false, level: 2, sb: 100, bb: 200, ante: 200, minutes: 12 },
@@ -18,21 +18,28 @@
     { isBreak: false, level: 10, sb: 1500, bb: 3000, ante: 3000, minutes: 20 },
     { isBreak: true, minutes: 15 }, // конец поздней регистрации
     { isBreak: false, level: 11, sb: 2000, bb: 4000, ante: 4000, minutes: 12 },
-    { isBreak: false, level: 12, sb: 3000, bb: 6000, ante: 6000, minutes: 12 },
-    { isBreak: false, level: 13, sb: 5000, bb: 10000, ante: 10000, minutes: 10 },
-    { isBreak: false, level: 14, sb: 7000, bb: 15000, ante: 15000, minutes: 10 },
-    { isBreak: false, level: 15, sb: 10000, bb: 20000, ante: 20000, minutes: 10 },
-    { isBreak: false, level: 16, sb: 15000, bb: 30000, ante: 30000, minutes: 10 },
-    { isBreak: false, level: 17, sb: 20000, bb: 40000, ante: 40000, minutes: 10 },
-    { isBreak: false, level: 18, sb: 30000, bb: 60000, ante: 60000, minutes: 10 },
-    { isBreak: false, level: 19, sb: 50000, bb: 100000, ante: 100000, minutes: 10 },
-    { isBreak: false, level: 20, sb: 75000, bb: 150000, ante: 150000, minutes: 8 },
-    { isBreak: false, level: 21, sb: 100000, bb: 200000, ante: 200000, minutes: 8 },
-    { isBreak: false, level: 22, sb: 150000, bb: 300000, ante: 300000, minutes: 8 },
-    { isBreak: false, level: 23, sb: 200000, bb: 400000, ante: 400000, minutes: 8 },
+    { isBreak: false, level: 12, sb: 2500, bb: 5000, ante: 5000, minutes: 8 },
+    { isBreak: false, level: 13, sb: 3000, bb: 6000, ante: 6000, minutes: 8 },
+    { isBreak: false, level: 14, sb: 4000, bb: 8000, ante: 8000, minutes: 8 },
+    { isBreak: false, level: 15, sb: 5000, bb: 10000, ante: 10000, minutes: 8 },
+    { isBreak: false, level: 16, sb: 6000, bb: 12000, ante: 12000, minutes: 8 },
+    { isBreak: false, level: 17, sb: 8000, bb: 16000, ante: 16000, minutes: 6 },
+    { isBreak: true, minutes: 5 },
+    { isBreak: false, level: 18, sb: 10000, bb: 20000, ante: 20000, minutes: 6 },
+    { isBreak: false, level: 19, sb: 12500, bb: 25000, ante: 25000, minutes: 6 },
+    { isBreak: false, level: 20, sb: 15000, bb: 30000, ante: 30000, minutes: 6 },
+    { isBreak: false, level: 21, sb: 20000, bb: 40000, ante: 40000, minutes: 6 },
+    { isBreak: false, level: 22, sb: 25000, bb: 50000, ante: 50000, minutes: 6 },
+    { isBreak: false, level: 23, sb: 30000, bb: 60000, ante: 60000, minutes: 6 },
+    { isBreak: false, level: 24, sb: 40000, bb: 80000, ante: 80000, minutes: 6 },
+    { isBreak: false, level: 25, sb: 50000, bb: 100000, ante: 100000, minutes: 6 },
+    { isBreak: false, level: 26, sb: 75000, bb: 150000, ante: 150000, minutes: 6 },
+    { isBreak: false, level: 27, sb: 100000, bb: 200000, ante: 200000, minutes: 6 },
+    { isBreak: false, level: 28, sb: 150000, bb: 300000, ante: 300000, minutes: 6 },
+    { isBreak: false, level: 29, sb: 200000, bb: 400000, ante: 400000, minutes: 6 },
   ];
 
-  var STORAGE_KEY = 'gutshot.tv.offline.v3';
+  var STORAGE_KEY = 'gutshot.tv.offline.v5';
 
   var state = {
     mode: 'menu', // menu | waiting | running | finished

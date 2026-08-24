@@ -250,8 +250,9 @@ export function defaultBlindStructure(): BlindStructureLevel[] {
 }
 
 /**
- * Клубный шаблон GUTSHOT (BB-ante): как в «Закрытый тест» / скрине админки.
- * Перерывы 10 мин после уровней 5, 8 и 10.
+ * Клубный шаблон с офлайн-теликов (BB-ante).
+ * До late reg — как на TV. После 15-мин перерыва — плавный рост (~×1.25),
+ * короткие часы и 5-мин перерыв примерно через час (после 8k/16k).
  */
 export function clubBlindStructure(): BlindStructureLevel[] {
   return buildLevels([
@@ -259,28 +260,35 @@ export function clubBlindStructure(): BlindStructureLevel[] {
     { smallBlind: 100, bigBlind: 200, ante: 200, minutes: 12 },
     { smallBlind: 200, bigBlind: 400, ante: 400, minutes: 15 },
     { smallBlind: 300, bigBlind: 600, ante: 600, minutes: 20 },
+    { isBreak: true, minutes: 10 },
     { smallBlind: 400, bigBlind: 800, ante: 800, minutes: 25 },
-    { isBreak: true, minutes: 10 },
-    { smallBlind: 500, bigBlind: 1000, ante: 1000, minutes: 25 },
+    { smallBlind: 500, bigBlind: 1000, ante: 1000, minutes: 30 },
     { smallBlind: 600, bigBlind: 1200, ante: 1200, minutes: 20 },
-    { smallBlind: 800, bigBlind: 1600, ante: 1600, minutes: 20 },
     { isBreak: true, minutes: 10 },
-    { smallBlind: 1000, bigBlind: 2000, ante: 2000, minutes: 25 },
-    { smallBlind: 1500, bigBlind: 3000, ante: 3000, minutes: 25 },
-    { isBreak: true, minutes: 10 },
+    { smallBlind: 800, bigBlind: 1600, ante: 1600, minutes: 23 },
+    { smallBlind: 1000, bigBlind: 2000, ante: 2000, minutes: 23 },
+    { smallBlind: 1500, bigBlind: 3000, ante: 3000, minutes: 20 },
+    { isBreak: true, minutes: 15 },
     { smallBlind: 2000, bigBlind: 4000, ante: 4000, minutes: 12 },
-    { smallBlind: 3000, bigBlind: 6000, ante: 6000, minutes: 12 },
-    { smallBlind: 5000, bigBlind: 10000, ante: 10000, minutes: 10 },
-    { smallBlind: 7000, bigBlind: 15000, ante: 15000, minutes: 10 },
-    { smallBlind: 10000, bigBlind: 20000, ante: 20000, minutes: 10 },
-    { smallBlind: 15000, bigBlind: 30000, ante: 30000, minutes: 10 },
-    { smallBlind: 20000, bigBlind: 40000, ante: 40000, minutes: 10 },
-    { smallBlind: 30000, bigBlind: 60000, ante: 60000, minutes: 10 },
-    { smallBlind: 50000, bigBlind: 100000, ante: 100000, minutes: 10 },
-    { smallBlind: 75000, bigBlind: 150000, ante: 150000, minutes: 8 },
-    { smallBlind: 100000, bigBlind: 200000, ante: 200000, minutes: 8 },
-    { smallBlind: 150000, bigBlind: 300000, ante: 300000, minutes: 8 },
-    { smallBlind: 200000, bigBlind: 400000, ante: 400000, minutes: 8 },
+    { smallBlind: 2500, bigBlind: 5000, ante: 5000, minutes: 8 },
+    { smallBlind: 3000, bigBlind: 6000, ante: 6000, minutes: 8 },
+    { smallBlind: 4000, bigBlind: 8000, ante: 8000, minutes: 8 },
+    { smallBlind: 5000, bigBlind: 10000, ante: 10000, minutes: 8 },
+    { smallBlind: 6000, bigBlind: 12000, ante: 12000, minutes: 8 },
+    { smallBlind: 8000, bigBlind: 16000, ante: 16000, minutes: 6 },
+    { isBreak: true, minutes: 5 },
+    { smallBlind: 10000, bigBlind: 20000, ante: 20000, minutes: 6 },
+    { smallBlind: 12500, bigBlind: 25000, ante: 25000, minutes: 6 },
+    { smallBlind: 15000, bigBlind: 30000, ante: 30000, minutes: 6 },
+    { smallBlind: 20000, bigBlind: 40000, ante: 40000, minutes: 6 },
+    { smallBlind: 25000, bigBlind: 50000, ante: 50000, minutes: 6 },
+    { smallBlind: 30000, bigBlind: 60000, ante: 60000, minutes: 6 },
+    { smallBlind: 40000, bigBlind: 80000, ante: 80000, minutes: 6 },
+    { smallBlind: 50000, bigBlind: 100000, ante: 100000, minutes: 6 },
+    { smallBlind: 75000, bigBlind: 150000, ante: 150000, minutes: 6 },
+    { smallBlind: 100000, bigBlind: 200000, ante: 200000, minutes: 6 },
+    { smallBlind: 150000, bigBlind: 300000, ante: 300000, minutes: 6 },
+    { smallBlind: 200000, bigBlind: 400000, ante: 400000, minutes: 6 },
   ]);
 }
 
