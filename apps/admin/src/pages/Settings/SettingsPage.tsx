@@ -57,74 +57,48 @@ export function SettingsPage(): JSX.Element {
         </Card>
 
         <Card className="gap-3 lg:col-span-2">
-          <p className="text-sm font-medium">Печать таблички GUTSHOT</p>
+          <p className="text-sm font-medium">Печать ценника</p>
           <p className="text-sm text-muted-foreground">
-            Золотая рамка с цифрой — как наклейка 40×40 мм (тот же принтер, что QR) или лист 40×40
-            см.
+            Макет мерча GUTSHOT — наклейка 40×40 мм (тот же принтер, что QR) или лист 40×40 см. Цена
+            подставляется поверх макета.
           </p>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
             <div
-              className="relative mx-auto shrink-0 overflow-hidden sm:mx-0"
-              style={{
-                width: 148,
-                height: 148,
-                background: 'radial-gradient(ellipse at 50% 40%, #1c160e 0%, #090909 72%)',
-                border: '3px solid #c89a3d',
-                boxShadow:
-                  'inset 0 0 0 2px #7d5417, inset 0 0 0 5px #090909, inset 0 0 0 6px #f7d98a',
-                fontFamily: "Georgia, 'Times New Roman', serif",
-              }}
+              className="relative mx-auto shrink-0 overflow-hidden bg-white sm:mx-0"
+              style={{ width: 148, height: 148 }}
             >
+              <img
+                src="/merch-price-tag.jpg"
+                alt="Ценник GUTSHOT мерч"
+                className="absolute inset-0 h-full w-full object-cover"
+              />
               <div
-                className="absolute inset-x-0 flex flex-col items-center"
-                style={{ top: 14, gap: 2 }}
+                className="absolute flex items-center justify-center bg-[#fefefe]"
+                style={{ left: '14%', right: '14%', top: '77.6%', bottom: '4.4%' }}
               >
-                <span className="flex items-end" style={{ height: 8, gap: 2 }}>
-                  {[0, 1, 2, 3, 4].map((index) => (
-                    <i
-                      key={index}
-                      className="block"
-                      style={{
-                        width: 3,
-                        height: 8,
-                        borderRadius: 2,
-                        background:
-                          index === 2
-                            ? 'linear-gradient(180deg, #7a0b2c 0%, #e0115f 45%, #ff4d7d 60%, #a10d3d 100%)'
-                            : 'linear-gradient(180deg, #7d5417 0%, #c89a3d 42%, #f7d98a 58%, #8a5c1c 100%)',
-                      }}
-                    />
-                  ))}
-                </span>
-                <p
-                  className="text-center"
+                <span
+                  className="whitespace-nowrap text-black"
                   style={{
-                    fontSize: 8,
-                    letterSpacing: '0.22em',
-                    color: '#f7d98a',
-                    fontWeight: 700,
+                    fontFamily: "Oswald, 'Arial Narrow', Arial, sans-serif",
+                    fontWeight: 600,
+                    fontSize:
+                      (plateNumber.trim() || '4999').length <= 4
+                        ? 19
+                        : (plateNumber.trim() || '4999').length === 5
+                          ? 16
+                          : 13,
+                    letterSpacing: '0.01em',
+                    lineHeight: 1,
+                    transform: 'scaleY(1.18)',
                   }}
                 >
-                  GUTSHOT
-                </p>
+                  {plateNumber.trim() || '4999'}&nbsp;₽
+                </span>
               </div>
-              <p
-                className="absolute inset-x-0 text-center font-semibold"
-                style={{
-                  top: 52,
-                  fontSize: 36,
-                  lineHeight: 1,
-                  background: 'linear-gradient(180deg, #9c6a1f 0%, #f7d98a 45%, #c89a3d 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
-              >
-                {plateNumber.trim() || '4999'}
-              </p>
             </div>
             <div className="flex min-w-0 flex-1 flex-col gap-3">
               <label className="text-sm">
-                <span className="mb-1 block text-muted-foreground">Цифра</span>
+                <span className="mb-1 block text-muted-foreground">Цена, ₽</span>
                 <input
                   value={plateNumber}
                   onChange={(event) =>
