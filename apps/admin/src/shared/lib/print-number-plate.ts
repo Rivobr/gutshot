@@ -8,9 +8,38 @@ function escapeHtml(value: string): string {
     .replace(/"/g, '&quot;');
 }
 
+function oswaldFontFace(origin: string): string {
+  const base = `${origin}/fonts`;
+  return `
+@font-face {
+  font-family: 'Oswald';
+  font-style: normal;
+  font-weight: 600;
+  font-display: block;
+  src: url('${base}/oswald-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Oswald';
+  font-style: normal;
+  font-weight: 600;
+  font-display: block;
+  src: url('${base}/oswald-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oswald';
+  font-style: normal;
+  font-weight: 600;
+  font-display: block;
+  src: url('${base}/oswald-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}`;
+}
+
 /**
- * Печать квадратной таблички GUTSHOT с цифрой.
- * 40mm — наклейка как QR (XP-365B). 40cm — лист в типографию / большой принтер.
+ * Печать ценника мерча 40×40: макет с фото + цена из поля.
+ * 40mm — наклейка XP-365B. 40cm — лист в типографию.
  */
 export function printNumberPlate(rawNumber: string, size: PlatePrintSize): void {
   const number = rawNumber.trim() || '4999';
@@ -22,22 +51,24 @@ export function printNumberPlate(rawNumber: string, size: PlatePrintSize): void 
 
   const safe = escapeHtml(number);
   const page = size === '40cm' ? '40cm 40cm' : '40mm 40mm';
-  const title = size === '40cm' ? `GUTSHOT ${safe} · 40×40 см` : `GUTSHOT ${safe} · 40×40 мм`;
-
+  const title = size === '40cm' ? `Ценник ${safe} ₽ · 40×40 см` : `Ценник ${safe} ₽ · 40×40 мм`;
   const printScale = size === '40cm' ? 10 : 1;
-  const u = (n: number): string => `calc(${n}mm * var(--s))`;
+  const origin = window.location.origin;
+  const art = `${origin}/merch-price-tag.jpg`;
+  const fontMm = number.length <= 4 ? 5.2 : number.length === 5 ? 4.3 : 3.5;
 
   win.document.write(`<!doctype html>
 <html lang="ru"><head><meta charset="utf-8" /><title>${title}</title>
 <style>
+  ${oswaldFontFace(origin)}
   * { box-sizing: border-box; }
   :root { --s: 1; }
   html, body {
     margin: 0;
     padding: 0;
-    background: #090909;
-    color: #f5edd6;
-    font-family: Georgia, 'Times New Roman', serif;
+    background: #fefefe;
+    color: #111;
+    font-family: 'Oswald', 'Arial Narrow', Arial, sans-serif;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -67,134 +98,69 @@ export function printNumberPlate(rawNumber: string, size: PlatePrintSize): void 
 
   @media print {
     :root { --s: ${printScale}; }
-    html, body { width: 100%; height: 100%; background: #090909; }
+    html, body { width: 100%; height: 100%; background: #fefefe; }
     .hint { display: none !important; }
   }
 
   .plate {
     position: relative;
-    width: ${u(40)};
-    height: ${u(40)};
+    width: calc(40mm * var(--s));
+    height: calc(40mm * var(--s));
     overflow: hidden;
-    background: radial-gradient(ellipse at 50% 40%, #1c160e 0%, #090909 72%);
-    border: ${u(0.64)} solid #c89a3d;
-    box-shadow:
-      inset 0 0 0 ${u(0.24)} #7d5417,
-      inset 0 0 0 ${u(0.88)} #090909,
-      inset 0 0 0 ${u(1.08)} #f7d98a;
+    background: #fefefe;
   }
-  .plate::before {
-    content: '';
+  .plate img {
     position: absolute;
-    inset: ${u(2.4)};
-    border: ${u(0.12)} solid rgba(247,217,138,0.35);
-    pointer-events: none;
-  }
-  .corners span {
-    position: absolute;
-    width: ${u(3.2)};
-    height: ${u(3.2)};
-    border: ${u(0.16)} solid #f7d98a;
-  }
-  .corners .tl { top: ${u(2.8)}; left: ${u(2.8)}; border-right: 0; border-bottom: 0; }
-  .corners .tr { top: ${u(2.8)}; right: ${u(2.8)}; border-left: 0; border-bottom: 0; }
-  .corners .bl { bottom: ${u(2.8)}; left: ${u(2.8)}; border-right: 0; border-top: 0; }
-  .corners .br { bottom: ${u(2.8)}; right: ${u(2.8)}; border-left: 0; border-top: 0; }
-
-  .brand {
-    position: absolute;
-    top: ${u(4.4)};
-    left: 0;
-    right: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: ${u(0.28)};
-  }
-  .bars { display: flex; align-items: flex-end; gap: ${u(0.36)}; height: ${u(2.6)}; }
-  .bars i {
-    display: block;
-    width: ${u(0.72)};
+    inset: 0;
+    width: 100%;
     height: 100%;
-    border-radius: 20%;
-    background: linear-gradient(180deg, #7d5417 0%, #c89a3d 42%, #f7d98a 58%, #8a5c1c 100%);
+    object-fit: cover;
+    display: block;
   }
-  .bars i.ruby {
-    background: linear-gradient(180deg, #7a0b2c 0%, #e0115f 45%, #ff4d7d 60%, #a10d3d 100%);
-  }
-  .word {
-    font-size: ${u(2.7)};
-    font-weight: 700;
-    letter-spacing: 0.18em;
-    color: #f7d98a;
-    line-height: 1;
-  }
-  .sub {
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: ${u(1.05)};
-    letter-spacing: 0.34em;
-    color: rgba(199,154,61,0.7);
-  }
-  .num {
+  .price-mask {
     position: absolute;
-    inset: 34% 4% 20%;
+    left: 14%;
+    right: 14%;
+    top: 77.6%;
+    bottom: 4.4%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: ${u(12.4)};
-    font-weight: 700;
-    letter-spacing: 0.02em;
+    background: #fefefe;
+  }
+  .price {
+    font-size: calc(${fontMm}mm * var(--s));
+    font-weight: 600;
+    letter-spacing: 0.01em;
     line-height: 1;
-    background: linear-gradient(180deg, #9c6a1f 0%, #f7d98a 45%, #c89a3d 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    color: #f7d98a;
-  }
-  .foot {
-    position: absolute;
-    left: ${u(5.6)};
-    right: ${u(5.6)};
-    bottom: ${u(3.4)};
-    text-align: center;
-    font-family: Arial, Helvetica, sans-serif;
-  }
-  .foot hr {
-    border: 0;
-    border-top: ${u(0.1)} solid #c89a3d;
-    margin: 0 0 ${u(0.7)};
-  }
-  .foot .city {
-    font-size: ${u(1.28)};
-    letter-spacing: 0.16em;
-    color: #8a7a55;
-  }
-  .foot .addr {
-    margin-top: ${u(0.28)};
-    font-size: ${u(0.98)};
-    letter-spacing: 0.12em;
-    color: #6b614e;
+    color: #111;
+    white-space: nowrap;
+    transform: scaleY(1.18);
   }
 </style></head>
 <body>
-  <div class="hint">Превью таблички ${safe}. В диалоге печати выберите размер ${size === '40cm' ? '40×40 см' : '40×40 мм'} без полей.</div>
+  <div class="hint">Превью ценника ${safe} ₽. В диалоге печати выберите размер ${size === '40cm' ? '40×40 см' : '40×40 мм'} без полей.</div>
   <div class="plate">
-    <div class="corners" aria-hidden="true">
-      <span class="tl"></span><span class="tr"></span><span class="bl"></span><span class="br"></span>
-    </div>
-    <div class="brand">
-      <div class="bars" aria-hidden="true"><i></i><i></i><i class="ruby"></i><i></i><i></i></div>
-      <div class="word">GUTSHOT</div>
-      <div class="sub">POKER CLUB</div>
-    </div>
-    <div class="num">${safe}</div>
-    <div class="foot">
-      <hr />
-      <div class="city">САНКТ-ПЕТЕРБУРГ</div>
-      <div class="addr">МИЛЛИОННАЯ, 19</div>
-    </div>
+    <img src="${art}" alt="" />
+    <div class="price-mask"><span class="price">${safe}&nbsp;₽</span></div>
   </div>
-  <script>window.onload = function () { window.focus(); window.print(); };</script>
+  <script>
+    var printed = false;
+    function goPrint() {
+      if (printed) return;
+      printed = true;
+      window.focus();
+      window.print();
+    }
+    window.onload = function () {
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(goPrint).catch(goPrint);
+        setTimeout(goPrint, 1800);
+      } else {
+        goPrint();
+      }
+    };
+  </script>
 </body></html>`);
   win.document.close();
 }

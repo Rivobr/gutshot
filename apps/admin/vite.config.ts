@@ -8,7 +8,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['gutshot-logo.png'],
+      includeAssets: ['gutshot-logo.png', 'merch-price-tag.jpg'],
       manifest: {
         name: 'GUTSHOT CRM',
         short_name: 'GUTSHOT',
@@ -34,7 +34,7 @@ export default defineConfig({
       workbox: {
         // API всегда из сети: в CRM неприемлемы устаревшие данные из кеша.
         navigateFallbackDenylist: [/^\/api\//],
-        globPatterns: ['**/*.{js,css,html,png,svg,woff2}'],
+        globPatterns: ['**/*.{js,css,html,png,jpg,svg,woff2}'],
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true,
