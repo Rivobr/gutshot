@@ -80,6 +80,20 @@ export type PlannedScheduleSlot = {
   date: Date;
 };
 
+export type ScheduleTemplateSlotDto = {
+  weekday: ScheduleTemplateSlotDef['weekday'];
+  title: string;
+  description: string;
+  date: string;
+  exists: boolean;
+  existingId: string | null;
+};
+
+export type ScheduleTemplatePlanDto = {
+  weekStart: string;
+  slots: ScheduleTemplateSlotDto[];
+};
+
 /** Понедельник недели + N календарных дней (MSK). */
 export function clubMondayPlusDays(
   weekStart: Date,

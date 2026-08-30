@@ -36,6 +36,8 @@ import {
   SCHEDULE_TEMPLATE_MAX_PLAYERS,
   planScheduleTemplateWeek,
   resolveScheduleTemplateWeekStart,
+  type ScheduleTemplatePlanDto,
+  type ScheduleTemplateSlotDto,
 } from './schedule-template';
 
 /** Статусы регистраций, которые учитываются в итоговых местах турнира. */
@@ -92,7 +94,7 @@ export class AdminTournamentsService {
       throw new BadRequestException('Шаблон на ближайшие недели уже стоит');
     }
 
-    const created = [];
+    const created: { id: string; title: string; date: string }[] = [];
     for (const slot of toCreate) {
       const tournament = await this.prisma.tournament.create({
         data: {
@@ -118,12 +120,12 @@ export class AdminTournamentsService {
     };
   }
 
-  private async resolveScheduleTemplatePlan() {
+  private async resolveScheduleTemplatePlan(): Promise<ScheduleTemplatePlanDto> {
     let weekStart = resolveScheduleTemplateWeekStart();
 
     for (let week = 0; week < 8; week += 1) {
       const planned = planScheduleTemplateWeek(weekStart);
-      const slots = [];
+      const slots: ScheduleTemplateSlotDto[] = [];
 
       for (const slot of planned) {
         const existing = await this.findScheduleTemplateCollision(slot.date);
