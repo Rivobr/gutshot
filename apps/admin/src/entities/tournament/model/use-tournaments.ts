@@ -80,6 +80,14 @@ export function useEliminatePlayer(tournamentId: string) {
   });
 }
 
+export function useApplyScheduleTemplate() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => adminTournamentsApi.applyScheduleTemplate(),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'tournaments'] }),
+  });
+}
+
 export function useCreateTournament() {
   const queryClient = useQueryClient();
   return useMutation({

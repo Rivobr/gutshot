@@ -31,6 +31,12 @@ import { TournamentResultEntryDto } from './dto/finish-tournament.dto';
 import { ClockActionDto, UpdateBlindStructureDto } from './dto/blind-structure.dto';
 import { serializeClock, serializeTournament } from '../../tournaments/tournament.serializer';
 import { resolveBlindStructureTemplate } from '../../tournaments/tournament-clock';
+import {
+  SCHEDULE_TEMPLATE_BUY_IN,
+  SCHEDULE_TEMPLATE_MAX_PLAYERS,
+  planScheduleTemplateWeek,
+  resolveScheduleTemplateWeekStart,
+} from './schedule-template';
 
 /** Статусы регистраций, которые учитываются в итоговых местах турнира. */
 const RESULT_ELIGIBLE_STATUSES: RegistrationStatus[] = [
@@ -69,6 +75,93 @@ export class AdminTournamentsService {
       include: { blindLevels: true, _count: { select: { registrations: true } } },
     });
     return rows.map(serializeTournament);
+  }
+
+  async previewScheduleTemplate() {
+    return this.resolveScheduleTemplatePlan();
+  }
+
+  /**
+   * Ставит шаблонное расписание клуба (ср 19:00 / пт 19:00 / сб 18:00)
+   * на ближайшую неделю, где этих турниров ещё нет.
+   */
+  async applyScheduleTemplate() {
+    const plan = await this.resolveScheduleTemplatePlan();
+    const toCreate = plan.slots.filter((slot) => !slot.exists);
+    if (toCreate.length === 0) {
+      throw new BadRequestException('Шаблон на ближайшие недели уже стоит');
+    }
+
+    const created = [];
+    for (const slot of toCreate) {
+      const tournament = await this.prisma.tournament.create({
+        data: {
+          title: slot.title,
+          description: slot.description,
+          date: new Date(slot.date),
+          buyIn: SCHEDULE_TEMPLATE_BUY_IN,
+          maxPlayers: SCHEDULE_TEMPLATE_MAX_PLAYERS,
+          status: TournamentStatus.REGISTRATION_OPEN,
+        },
+      });
+      await this.applyDefaultStructure(tournament.id, 'club');
+      created.push({
+        id: tournament.id,
+        title: tournament.title,
+        date: tournament.date.toISOString(),
+      });
+    }
+
+    return {
+      ...plan,
+      created,
+    };
+  }
+
+  private async resolveScheduleTemplatePlan() {
+    let weekStart = resolveScheduleTemplateWeekStart();
+
+    for (let week = 0; week < 8; week += 1) {
+      const planned = planScheduleTemplateWeek(weekStart);
+      const slots = [];
+
+      for (const slot of planned) {
+        const existing = await this.findScheduleTemplateCollision(slot.date);
+        slots.push({
+          weekday: slot.weekday,
+          title: slot.title,
+          description: slot.description,
+          date: slot.date.toISOString(),
+          exists: Boolean(existing),
+          existingId: existing?.id ?? null,
+        });
+      }
+
+      if (slots.some((slot) => !slot.exists)) {
+        return {
+          weekStart: weekStart.toISOString(),
+          slots,
+        };
+      }
+
+      weekStart = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+    }
+
+    throw new BadRequestException('Шаблон уже стоит на ближайшие 8 недель');
+  }
+
+  private async findScheduleTemplateCollision(date: Date) {
+    const windowMs = 30 * 60 * 1000;
+    return this.prisma.tournament.findFirst({
+      where: {
+        date: {
+          gte: new Date(date.getTime() - windowMs),
+          lte: new Date(date.getTime() + windowMs),
+        },
+        status: { not: TournamentStatus.ARCHIVED },
+      },
+      select: { id: true },
+    });
   }
 
   async findById(id: string) {
