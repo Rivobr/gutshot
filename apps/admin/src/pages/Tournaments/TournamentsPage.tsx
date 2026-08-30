@@ -2,7 +2,11 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Badge, Button, Card, Loader } from '@gutshot/ui';
 import type { AdminTournament } from '../../entities/tournament';
-import { useAdminTournaments } from '../../entities/tournament';
+import {
+  adminTournamentsApi,
+  useAdminTournaments,
+  useApplyScheduleTemplate,
+} from '../../entities/tournament';
 import { tournamentStatusLabel } from '../../shared/lib/tournament-status';
 import { TournamentFormModal } from './TournamentFormModal';
 import { TournamentActions } from './TournamentActions';
@@ -22,9 +26,53 @@ function isActiveStatus(status: string): boolean {
 export function TournamentsPage(): JSX.Element {
   const navigate = useNavigate();
   const { data: tournaments, isLoading } = useAdminTournaments();
+  const applyTemplate = useApplyScheduleTemplate();
   const [filter, setFilter] = useState<FilterTab>('active');
   const [isFormOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<AdminTournament | null>(null);
+  const [templateMessage, setTemplateMessage] = useState<string | null>(null);
+
+  const applyScheduleTemplate = async () => {
+    setTemplateMessage(null);
+    try {
+      const preview = await adminTournamentsApi.previewScheduleTemplate();
+      const pending = preview.slots.filter((slot) => !slot.exists);
+      if (pending.length === 0) {
+        setTemplateMessage('Шаблон на ближайшие недели уже стоит');
+        return;
+      }
+      const lines = pending
+        .map(
+          (slot) =>
+            `• ${slot.title} — ${new Date(slot.date).toLocaleString('ru-RU', {
+              weekday: 'short',
+              day: 'numeric',
+              month: 'long',
+              hour: '2-digit',
+              minute: '2-digit',
+            })}`,
+        )
+        .join('\n');
+      const confirmed = window.confirm(
+        `Создать шаблонное расписание?\n\nСр 19:00 · Пт 19:00 · Сб 18:00\nФриролл, вход бесплатно, стек 25 000, 27 мест\n\n${lines}`,
+      );
+      if (!confirmed) {
+        return;
+      }
+      const result = await applyTemplate.mutateAsync();
+      const created = result.created?.length ?? pending.length;
+      setTemplateMessage(`Создано турниров: ${created}`);
+    } catch (error) {
+      const message =
+        error && typeof error === 'object' && 'response' in error
+          ? String(
+              (error as { response?: { data?: { message?: string } } }).response?.data?.message ??
+                'Не удалось создать расписание',
+            )
+          : 'Не удалось создать расписание';
+      setTemplateMessage(message);
+    }
+  };
 
   const filtered = useMemo(() => {
     const list = tournaments ?? [];
@@ -50,15 +98,28 @@ export function TournamentsPage(): JSX.Element {
             Создание, статусы, завершение и удаление турниров
           </p>
         </div>
-        <Button
-          onClick={() => {
-            setEditing(null);
-            setFormOpen(true);
-          }}
-        >
-          + Создать турнир
-        </Button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button
+            variant="secondary"
+            isLoading={applyTemplate.isPending}
+            onClick={() => {
+              void applyScheduleTemplate();
+            }}
+          >
+            Шаблон расписания
+          </Button>
+          <Button
+            onClick={() => {
+              setEditing(null);
+              setFormOpen(true);
+            }}
+          >
+            + Создать турнир
+          </Button>
+        </div>
       </div>
+
+      {templateMessage ? <p className="text-sm text-muted-foreground">{templateMessage}</p> : null}
 
       <div className="flex flex-wrap gap-2">
         {FILTERS.map((item) => (
@@ -69,7 +130,8 @@ export function TournamentsPage(): JSX.Element {
             className="rounded-full px-3 py-1.5 text-sm transition-colors"
             style={{
               background: filter === item.id ? 'var(--primary)' : 'var(--secondary)',
-              color: filter === item.id ? 'var(--primary-foreground)' : 'var(--secondary-foreground)',
+              color:
+                filter === item.id ? 'var(--primary-foreground)' : 'var(--secondary-foreground)',
             }}
           >
             {item.label}

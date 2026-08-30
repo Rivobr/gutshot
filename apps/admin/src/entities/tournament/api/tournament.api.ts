@@ -14,6 +14,21 @@ export interface CreateTournamentPayload {
   imageUrl?: string;
 }
 
+export interface ScheduleTemplateSlot {
+  weekday: 'wednesday' | 'friday' | 'saturday';
+  title: string;
+  description: string;
+  date: string;
+  exists: boolean;
+  existingId?: string | null;
+}
+
+export interface ScheduleTemplatePreview {
+  weekStart: string;
+  slots: ScheduleTemplateSlot[];
+  created?: { id: string; title: string; date: string }[];
+}
+
 export const adminTournamentsApi = {
   async getAll(): Promise<AdminTournament[]> {
     const { data } = await apiClient.get('/admin/tournaments');
@@ -25,6 +40,14 @@ export const adminTournamentsApi = {
   },
   async create(payload: CreateTournamentPayload) {
     const { data } = await apiClient.post('/admin/tournaments', payload);
+    return data.data;
+  },
+  async previewScheduleTemplate(): Promise<ScheduleTemplatePreview> {
+    const { data } = await apiClient.get('/admin/tournaments/schedule-template');
+    return data.data;
+  },
+  async applyScheduleTemplate(): Promise<ScheduleTemplatePreview> {
+    const { data } = await apiClient.post('/admin/tournaments/schedule-template');
     return data.data;
   },
   async update(id: string, payload: Partial<CreateTournamentPayload>) {
