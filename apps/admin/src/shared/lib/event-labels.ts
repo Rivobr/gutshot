@@ -77,7 +77,7 @@ export const XP_PLACE_SETTING_ORDER: XpSettingKey[] = [...PLACE_RATING_KEYS];
 /** Диапазоны мест ниже топ-30. */
 export const XP_PLACE_BAND_ORDER: XpSettingKey[] = ['PLACE_31_40', 'PLACE_41_50', 'PLACE_51_PLUS'];
 
-/** Награды за неделю и финал месяца. */
+/** Награды по итогам месяца. */
 export const XP_REWARD_SETTING_ORDER: XpSettingKey[] = [...RATING_REWARD_KEYS];
 
 /** Полный порядок для сохранения всех ключей. */

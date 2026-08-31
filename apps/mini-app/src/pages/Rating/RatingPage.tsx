@@ -3,48 +3,36 @@ import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Loader } from '@gutshot/ui';
-import type { RatingEntry, WeeklyRatingResponse } from '@gutshot/types';
+import type { MonthFinalistsResponse, MonthlyRatingResponse, RatingEntry } from '@gutshot/types';
 import { apiClient } from '../../shared/api/client';
 import { useProfile } from '../../entities/player';
 import { SectionLabel } from '../../shared/ui/figma';
 import { PlayerAvatar } from '../../shared/ui/PlayerAvatar';
 import { PlayerLevelBadge, PlayerShowcaseMedals } from '../../shared/ui/PlayerShowcase';
 import { displayNameOf } from '../../shared/lib/display-name';
-import {
-  formatFinalistWeekLine,
-  formatFinalistWeekSubtitle,
-} from '../../shared/lib/finalist-weeks';
 
-type Tab = 'weekly' | 'final';
-type WeekMode = 'current' | 'previous';
+type Tab = 'monthly' | 'final';
 
-async function fetchFinalRating(): Promise<RatingEntry[]> {
-  const { data } = await apiClient.get('/ratings/final');
+const FINALIST_TOP = 27;
+
+async function fetchMonthlyRating(): Promise<MonthlyRatingResponse> {
+  const { data } = await apiClient.get('/ratings/monthly');
   const payload = data?.data ?? data;
-  return Array.isArray(payload) ? payload : [];
-}
-
-async function fetchWeeklyRating(week: WeekMode): Promise<WeeklyRatingResponse> {
-  const { data } = await apiClient.get('/ratings/weekly', { params: { week } });
-  const payload = data?.data ?? data;
-  if (Array.isArray(payload)) {
-    return {
-      weekKey: '',
-      monthKey: '',
-      period: week === 'previous' ? 'previous' : 'current',
-      fallbackFromEmptyCurrent: false,
-      start: '',
-      end: '',
-      entries: payload,
-    };
-  }
   return {
-    weekKey: String(payload?.weekKey ?? ''),
     monthKey: String(payload?.monthKey ?? ''),
-    period: payload?.period === 'previous' ? 'previous' : 'current',
-    fallbackFromEmptyCurrent: Boolean(payload?.fallbackFromEmptyCurrent),
+    finalistTop: Number(payload?.finalistTop ?? FINALIST_TOP),
     start: String(payload?.start ?? ''),
     end: String(payload?.end ?? ''),
+    entries: Array.isArray(payload?.entries) ? payload.entries : [],
+  };
+}
+
+async function fetchFinalRating(): Promise<MonthFinalistsResponse> {
+  const { data } = await apiClient.get('/ratings/final');
+  const payload = data?.data ?? data;
+  return {
+    monthKey: String(payload?.monthKey ?? ''),
+    finalistTop: Number(payload?.finalistTop ?? FINALIST_TOP),
     entries: Array.isArray(payload?.entries) ? payload.entries : [],
   };
 }
@@ -57,36 +45,28 @@ function formatPoints(value: number): string {
   return value.toLocaleString('ru-RU');
 }
 
-function formatWeekRange(startIso: string, endIso: string): string {
-  if (!startIso || !endIso) return '';
-  const start = new Date(startIso);
-  // Окно в БД до следующего пн 00:00; на экране неделя пн–сб.
-  const end = new Date(new Date(endIso).getTime() - 24 * 60 * 60 * 1000 - 1000);
-  const fmt = new Intl.DateTimeFormat('ru-RU', {
-    day: 'numeric',
-    month: 'short',
-    timeZone: 'Europe/Moscow',
-  });
-  return `${fmt.format(start)} – ${fmt.format(end)}`;
+function monthLabelFromKey(monthKey: string): string {
+  if (!monthKey) return '';
+  const [year, month] = monthKey.split('-').map(Number);
+  return new Intl.DateTimeFormat('ru-RU', { month: 'long', year: 'numeric' }).format(
+    new Date(Date.UTC(year, (month || 1) - 1, 1)),
+  );
 }
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: 'weekly', label: 'Недельный' },
+  { id: 'monthly', label: 'Месяц' },
   { id: 'final', label: 'Финал месяца' },
 ];
 
-const WEEKLY_TOP = 7;
-
 export function RatingPage(): JSX.Element {
   const navigate = useNavigate();
-  const [tab, setTab] = useState<Tab>('weekly');
-  const [weekMode, setWeekMode] = useState<WeekMode>('current');
+  const [tab, setTab] = useState<Tab>('monthly');
   const { data: profile } = useProfile();
 
-  const weeklyQuery = useQuery({
-    queryKey: ['ratings', 'weekly', weekMode],
-    queryFn: () => fetchWeeklyRating(weekMode),
-    enabled: tab === 'weekly',
+  const monthlyQuery = useQuery({
+    queryKey: ['ratings', 'monthly'],
+    queryFn: fetchMonthlyRating,
+    enabled: tab === 'monthly',
   });
 
   const finalQuery = useQuery({
@@ -95,17 +75,19 @@ export function RatingPage(): JSX.Element {
     enabled: tab === 'final',
   });
 
-  const weekly = weeklyQuery.data;
-  const rating =
-    tab === 'weekly'
-      ? (weekly?.entries ?? [])
-      : Array.isArray(finalQuery.data)
-        ? finalQuery.data
+  const monthly = monthlyQuery.data;
+  const rating: RatingEntry[] =
+    tab === 'monthly'
+      ? (monthly?.entries ?? [])
+      : Array.isArray(finalQuery.data?.entries)
+        ? finalQuery.data.entries
         : [];
-  const ratingQuery = tab === 'weekly' ? weeklyQuery : finalQuery;
+  const ratingQuery = tab === 'monthly' ? monthlyQuery : finalQuery;
   const myUserId = profile?.id;
-  const weekRangeLabel = weekly ? formatWeekRange(weekly.start, weekly.end) : '';
-  const showingPrevious = weekly?.period === 'previous';
+  const monthLabel =
+    tab === 'monthly'
+      ? monthLabelFromKey(monthly?.monthKey ?? '')
+      : monthLabelFromKey(finalQuery.data?.monthKey ?? '');
 
   const openPlayer = (userId: string) => {
     navigate(userId === myUserId ? '/profile' : `/players/${userId}`);
@@ -123,7 +105,7 @@ export function RatingPage(): JSX.Element {
 
     const myPoints = me ? pointsOf(me) : 0;
     const myRank = me?.rank;
-    const cut = rating[WEEKLY_TOP - 1];
+    const cut = rating[FINALIST_TOP - 1];
     const first = rating[0];
     const cutPoints = cut ? pointsOf(cut) : 0;
     const firstPoints = first ? pointsOf(first) : 0;
@@ -135,9 +117,9 @@ export function RatingPage(): JSX.Element {
         highlight: false,
         title: 'Вас пока нет в таблице',
         subtitle:
-          tab === 'weekly'
-            ? 'Сыграйте турнир на этой неделе — топ-7 переходит в финал месяца'
-            : 'Попадите в топ-7 недели — и ваши очки перейдут в финал',
+          tab === 'monthly'
+            ? 'Каждый турнир месяца влияет на позицию — играйте и набирайте очки'
+            : 'Попадите в топ-27 месяца — и вы в Финале месяца',
       };
     }
 
@@ -147,23 +129,23 @@ export function RatingPage(): JSX.Element {
         points: myPoints,
         highlight: true,
         title: myRank === 1 ? 'Вы лидируете в финале' : `Вы в финале · ${myRank} место`,
-        subtitle: formatFinalistWeekSubtitle(me.qualifiedWeekNumbers, me.qualifiedWeeks ?? 1),
+        subtitle: `Итоги месяца ${monthLabel}`.trim(),
       };
     }
 
-    if (myRank != null && myRank <= WEEKLY_TOP) {
+    if (myRank != null && myRank <= FINALIST_TOP) {
       const toFirst = Math.max(0, firstPoints - myPoints);
       return {
         rank: myRank,
         points: myPoints,
         highlight: true,
-        title: myRank === 1 ? 'Вы лидируете' : `Вы в топ-${WEEKLY_TOP}`,
+        title: myRank === 1 ? 'Вы лидируете' : `Вы в топ-${FINALIST_TOP}`,
         subtitle:
           myRank === 1
-            ? 'Ваши очки перейдут в финал месяца'
+            ? 'Место в Финале месяца у вас'
             : toFirst > 0
-              ? `До 1 места: ${formatPoints(toFirst)} очков · квалификация в финал`
-              : 'Квалификация в финал месяца',
+              ? `До 1 места: ${formatPoints(toFirst)} очков · зона Финала месяца`
+              : 'Зона Финала месяца',
       };
     }
 
@@ -175,10 +157,10 @@ export function RatingPage(): JSX.Element {
       title: `Вы на ${myRank} месте`,
       subtitle:
         toTop > 0
-          ? `До топ-${WEEKLY_TOP}: ${formatPoints(toTop)} очков`
-          : `Ещё немного — и вы в топ-${WEEKLY_TOP}`,
+          ? `До топ-${FINALIST_TOP}: ${formatPoints(toTop)} очков`
+          : `Ещё немного — и вы в топ-${FINALIST_TOP}`,
     };
-  }, [me, myUserId, rating, tab]);
+  }, [me, myUserId, rating, tab, monthLabel]);
 
   const top3 = rating.slice(0, 3);
   const rest = rating.slice(3);
@@ -195,7 +177,8 @@ export function RatingPage(): JSX.Element {
           Рейтинг клуба
         </h2>
         <p className="sans mt-1" style={{ fontSize: 12, color: '#6B614E' }}>
-          Топ-7 недели → финал месяца · неделя пн–сб
+          Рейтинг за весь месяц · топ-27 → Финал месяца
+          {monthLabel ? ` · ${monthLabel}` : ''}
         </p>
 
         <div
@@ -221,45 +204,6 @@ export function RatingPage(): JSX.Element {
             </button>
           ))}
         </div>
-
-        {tab === 'weekly' && (
-          <div className="mt-3 flex flex-col gap-2">
-            <div
-              className="flex rounded-[12px] p-1 gap-1"
-              style={{ background: '#0F0D09', border: '1px solid rgba(199,154,61,0.1)' }}
-            >
-              {(
-                [
-                  { id: 'current' as const, label: 'Актуальная' },
-                  { id: 'previous' as const, label: 'Прошлая' },
-                ] as const
-              ).map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => setWeekMode(option.id)}
-                  className="flex-1 py-2 rounded-[9px] sans font-medium"
-                  style={{
-                    fontSize: 11,
-                    cursor: 'pointer',
-                    border: 'none',
-                    background: weekMode === option.id ? 'rgba(199,154,61,0.18)' : 'transparent',
-                    color: weekMode === option.id ? '#F5EDD6' : '#6B614E',
-                  }}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-            {(weekRangeLabel || showingPrevious) && (
-              <p className="sans" style={{ fontSize: 11, color: '#8A7E68' }}>
-                {showingPrevious ? 'Прошлая неделя' : 'Текущая неделя'}
-                {weekRangeLabel ? ` · ${weekRangeLabel}` : ''}
-                {weekly?.fallbackFromEmptyCurrent ? ' · эта неделя ещё без очков' : ''}
-              </p>
-            )}
-          </div>
-        )}
       </div>
 
       {ratingQuery.isLoading ? (
@@ -387,6 +331,7 @@ export function RatingPage(): JSX.Element {
             </div>
             {rest.map((p, i) => {
               const isMe = p.userId === myUserId;
+              const isFinalist = tab === 'monthly' && p.finalist;
               return (
                 <motion.button
                   type="button"
@@ -427,19 +372,11 @@ export function RatingPage(): JSX.Element {
                       </p>
                       <PlayerLevelBadge level={p.level} size="xs" />
                     </div>
-                    {tab === 'final' &&
-                      (p.qualifiedWeekNumbers?.length || p.qualifiedWeeks != null) && (
-                        <p className="sans" style={{ fontSize: 10, color: '#6B614E' }}>
-                          {formatFinalistWeekLine(p.qualifiedWeekNumbers) ||
-                            `${p.qualifiedWeeks} ${
-                              (p.qualifiedWeeks ?? 1) === 1
-                                ? 'неделя'
-                                : (p.qualifiedWeeks ?? 1) < 5
-                                  ? 'недели'
-                                  : 'недель'
-                            } в топ-7`}
-                        </p>
-                      )}
+                    {isFinalist && (
+                      <p className="sans" style={{ fontSize: 10, color: '#C89A3D' }}>
+                        👑 Финалист месяца
+                      </p>
+                    )}
                   </div>
                   {p.showcaseAchievements && p.showcaseAchievements.length > 0 && (
                     <PlayerShowcaseMedals items={p.showcaseAchievements} size={32} />
@@ -459,24 +396,10 @@ export function RatingPage(): JSX.Element {
               <div className="flex flex-col items-center justify-center py-16 gap-3">
                 <span style={{ fontSize: 32, opacity: 0.25 }}>♠</span>
                 <p className="serif" style={{ fontSize: 16, color: '#6B614E' }}>
-                  {tab === 'weekly' ? 'На этой неделе пока нет очков' : 'Рейтинг пуст'}
+                  {tab === 'monthly'
+                    ? 'В этом месяце пока нет очков'
+                    : 'Финалисты ещё не определены'}
                 </p>
-                {tab === 'weekly' && weekMode === 'current' && (
-                  <button
-                    type="button"
-                    onClick={() => setWeekMode('previous')}
-                    className="sans px-3 py-2 rounded-[10px]"
-                    style={{
-                      fontSize: 12,
-                      color: '#C89A3D',
-                      background: 'rgba(199,154,61,0.12)',
-                      border: '1px solid rgba(199,154,61,0.25)',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Смотреть прошлую неделю
-                  </button>
-                )}
               </div>
             )}
           </div>

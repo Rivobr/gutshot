@@ -7,7 +7,10 @@
  * Закрытие — сразу после субботнего турнира, запасной cron в вс 06:00 МСК.
  */
 export const CLUB_TZ_OFFSET_HOURS = 3;
+/** Топ-7 недельного рейтинга (исторический формат, до сентября 2026). */
 export const WEEKLY_FINAL_TOP = 7;
+/** Топ-27 месячного рейтинга получают место в Финале месяца. */
+export const MONTHLY_FINAL_TOP = 27;
 
 /**
  * Стартовая «длинная» неделя открытия клуба:
@@ -143,6 +146,16 @@ export function getClubMonthBounds(date = new Date()): {
   const nextYear = month === 12 ? year + 1 : year;
   const end = clubLocalToUtc(nextYear, nextMonth, 1, 0, 0, 0);
   return { start, end, monthKey: monthKeyFromClubYmd(year, month) };
+}
+
+/** Границы предыдущего календарного месяца клуба. */
+export function getPreviousClubMonthBounds(date = new Date()): {
+  start: Date;
+  end: Date;
+  monthKey: string;
+} {
+  const current = getClubMonthBounds(date);
+  return getClubMonthBounds(new Date(current.start.getTime() - 12 * 60 * 60 * 1000));
 }
 
 export function weekKey(date = new Date()): string {

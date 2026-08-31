@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { publicApi } from '@/shared/api/public.api';
+import { publicApi, type OverallRatingEntry } from '@/shared/api/public.api';
 import { Logo } from '@/shared/ui/Logo';
 import { formatDateShort, formatTime } from '@/shared/lib/format';
 import { useAuth } from '@/app/providers/auth-provider';
@@ -16,6 +16,8 @@ export function LandingPage() {
   return (
     <>
       <div className="glow-bg" />
+
+      <div className="head-spacer" aria-hidden="true" />
 
       <header className="pub-head">
         <Logo small />
@@ -64,85 +66,106 @@ export function LandingPage() {
         </div>
       </div>
 
-      <section className="hero-split">
-        <div className="stack-16">
-          <span className="eyebrow">Клуб спортивного покера · Санкт-Петербург</span>
-          <h1 className="serif hero-title">
-            Игра
-            <br />
-            без <em>компромиссов</em>
-          </h1>
-          <p className="muted-strong" style={{ maxWidth: 420, fontSize: 15 }}>
-            Спортивный покер в центре города: Миллионная, 19. Регулярные турниры, рейтинг сезона,
-            финал месяца. Только игра — никаких ставок.
-          </p>
-          <div className="row wrap mt-8">
-            <Link className="btn btn-gold" to={user ? '/app' : '/login'}>
-              {user ? 'Войти в кабинет' : 'Войти в клуб'}
-            </Link>
-            <a className="btn btn-ghost" href="#about">
-              Как найти
-            </a>
-          </div>
-          <div className="row wrap muted" style={{ fontSize: 11.5, gap: 18, marginTop: 6 }}>
-            <span>♠ Техасский холдем</span>
-            <span>♦ Спортивный рейтинг</span>
-            <span>♣ Финал месяца</span>
-          </div>
+      <section className="hero-wrap">
+        <div className="hero-photo-bg" aria-hidden="true">
+          <img src="/hero-bg.webp" alt="" decoding="async" />
+          <div className="hero-photo-shade" />
         </div>
 
-        <article className="vip-card" style={{ padding: 26 }}>
-          <span className="suit-wm">♠</span>
-          <div className="row between wrap mb-16">
-            <span className="chip chip-live">● СКОРО</span>
-            {nearest && (
-              <span className="chip">
-                🕐 {formatDateShort(nearest.date)} / {formatTime(nearest.date)}
+        <div className="hero-split">
+          <div className="stack-16">
+            <span className="eyebrow hero-line" style={{ animationDelay: '0.05s' }}>
+              Клуб спортивного покера · Санкт-Петербург
+            </span>
+            <h1 className="serif hero-title" style={{ animation: 'none' }}>
+              <span className="hero-line" style={{ animationDelay: '0.15s' }}>
+                Gutshot
               </span>
-            )}
+              <span className="hero-line" style={{ animationDelay: '0.3s' }}>
+                спортивный покер
+              </span>
+              <span className="hero-line gold" style={{ animationDelay: '0.45s' }}>
+                не на <em>деньги</em>
+              </span>
+            </h1>
+            <p
+              className="muted-strong hero-line"
+              style={{ maxWidth: 420, fontSize: 15, animationDelay: '0.6s' }}
+            >
+              Спортивный покер в центре города: Миллионная, 19. Регулярные турниры, рейтинг сезона,
+              финал месяца. Только игра — никаких ставок.
+            </p>
+            <div className="row wrap mt-8 hero-line" style={{ animationDelay: '0.72s' }}>
+              <Link className="btn btn-gold" to={user ? '/app' : '/login'}>
+                {user ? 'Войти в кабинет' : 'Войти в клуб'}
+              </Link>
+              <a className="btn btn-ghost" href="#about">
+                Как найти
+              </a>
+            </div>
+            <div
+              className="row wrap muted hero-line"
+              style={{ fontSize: 11.5, gap: 18, marginTop: 6, animationDelay: '0.84s' }}
+            >
+              <span>♠ Техасский холдем</span>
+              <span>♦ Спортивный рейтинг</span>
+              <span>♣ Финал месяца</span>
+            </div>
           </div>
-          <p className="eyebrow">Ближайший турнир</p>
-          <h2
-            className="serif"
-            style={{ fontSize: 30, lineHeight: 1.05, marginTop: 6, textTransform: 'uppercase' }}
-          >
-            {nearest?.title ?? 'Скоро в клубе'}
-          </h2>
-          <div className="mt-16 stack-16">
-            <div className="row between">
-              <span className="muted">Взнос</span>
-              <b>{nearest?.buyIn ? `${nearest.buyIn} ₽` : 'Free · вход свободный'}</b>
+
+          <article className="vip-card" style={{ padding: 26 }}>
+            <span className="suit-wm">♠</span>
+            <div className="row between wrap mb-16">
+              <span className="chip chip-live">● СКОРО</span>
+              {nearest && (
+                <span className="chip">
+                  🕐 {formatDateShort(nearest.date)} / {formatTime(nearest.date)}
+                </span>
+              )}
             </div>
-            <div className="row between">
-              <span className="muted">Место</span>
-              <b>Миллионная, 19</b>
-            </div>
-            <div>
-              <div className="row between mb-8">
-                <span className="muted">Записались</span>
-                <b className="num">
-                  {taken} / {max}
-                </b>
+            <p className="eyebrow">Ближайший турнир</p>
+            <h2
+              className="serif"
+              style={{ fontSize: 30, lineHeight: 1.05, marginTop: 6, textTransform: 'uppercase' }}
+            >
+              {nearest?.title ?? 'Скоро в клубе'}
+            </h2>
+            <div className="mt-16 stack-16">
+              <div className="row between">
+                <span className="muted">Взнос</span>
+                <b>{nearest?.buyIn ? `${nearest.buyIn} ₽` : 'Free · вход свободный'}</b>
               </div>
-              <div className="xp-bar">
-                <i style={{ width: `${Math.min(100, Math.round((taken / max) * 100))}%` }} />
+              <div className="row between">
+                <span className="muted">Место</span>
+                <b>Миллионная, 19</b>
+              </div>
+              <div>
+                <div className="row between mb-8">
+                  <span className="muted">Записались</span>
+                  <b className="num">
+                    {taken} / {max}
+                  </b>
+                </div>
+                <div className="xp-bar">
+                  <i style={{ width: `${Math.min(100, Math.round((taken / max) * 100))}%` }} />
+                </div>
               </div>
             </div>
-          </div>
-          <Link className="btn btn-gold btn-block mt-24" to={user ? '/app' : '/register'}>
-            Записаться
-          </Link>
-          <p className="center hint mt-12">Запись и личный QR — после входа</p>
-        </article>
+            <Link className="btn btn-gold btn-block mt-24" to={user ? '/app' : '/register'}>
+              Записаться
+            </Link>
+            <p className="center hint mt-12">Запись и личный QR — после входа</p>
+          </article>
+        </div>
       </section>
 
       <section className="section" id="week" style={{ paddingTop: 0 }}>
         <span className="eyebrow">Сетка недели</span>
         <h2 className="serif">Играем три раза в неделю</h2>
         <div className="week-grid mt-24" style={{ gap: 14 }}>
-          <div className="day">
+          <div className="day hot">
             <b>СР</b>
-            <span>19:00 · рейтинговый</span>
+            <span>19:00 · фриролл</span>
           </div>
           <div className="day hot">
             <b>ПТ</b>
@@ -150,7 +173,7 @@ export function LandingPage() {
           </div>
           <div className="day hot">
             <b>СБ</b>
-            <span>17:00 · рейтинговый</span>
+            <span>17:00 · баунти фриролл</span>
           </div>
         </div>
         <p className="hint mt-12">
@@ -162,9 +185,10 @@ export function LandingPage() {
         <span className="eyebrow">Витрина рейтинга</span>
         <h2 className="serif">Неделя и финал месяца</h2>
         <div className="cols-2 mt-24">
-          <WeeklyVitrine />
+          <MonthlyVitrine />
           <FinalVitrine />
         </div>
+        <GlobalRatingVitrine />
         <p className="note gold mt-16" style={{ maxWidth: 720 }}>
           Очки рейтинга ≠ XP. Баунти = 50 очков. XP — только опыт игрока.
         </p>
@@ -195,8 +219,33 @@ export function LandingPage() {
             </div>
             <div className="divider">Документы</div>
             <div className="row wrap" style={{ gap: 10 }}>
-              <span className="chip">📄 Оферта (скан)</span>
-              <span className="chip">📄 Политика ПДн (скан)</span>
+              <a
+                className="chip"
+                href="/docs/oferta.pdf"
+                target="_blank"
+                rel="noreferrer"
+                style={{ textDecoration: 'none' }}
+              >
+                📄 Оферта (скан)
+              </a>
+              <a
+                className="chip"
+                href="/docs/policy-pdn.pdf"
+                target="_blank"
+                rel="noreferrer"
+                style={{ textDecoration: 'none' }}
+              >
+                📄 Политика ПДн (скан)
+              </a>
+              <a
+                className="chip"
+                href="/docs/club-rules.pdf"
+                target="_blank"
+                rel="noreferrer"
+                style={{ textDecoration: 'none' }}
+              >
+                📋 Правила клуба
+              </a>
               <span className="chip">📷 Согласие на фото/видео</span>
             </div>
           </div>
@@ -257,10 +306,53 @@ export function LandingPage() {
   );
 }
 
-function WeeklyVitrine() {
+function GlobalRatingVitrine() {
+  const { data } = useQuery({ queryKey: ['public-overall'], queryFn: publicApi.overallRating });
+  const entries = data?.entries ?? [];
+
+  return (
+    <div className="card mt-24">
+      <div className="row between wrap mb-16">
+        <b className="serif" style={{ fontSize: 17 }}>
+          Глобальный рейтинг
+        </b>
+        <span className="chip">топ по XP · весь клуб</span>
+      </div>
+      {entries.length === 0 ? (
+        <p className="muted" style={{ fontSize: 13 }}>
+          Рейтинг пока формируется
+        </p>
+      ) : (
+        <table className="tbl">
+          <tbody>
+            {entries.map((e: OverallRatingEntry) => (
+              <tr key={e.userId}>
+                <td className="rank">{e.rank}</td>
+                <td>
+                  {e.nickname ?? [e.firstName, e.lastName].filter(Boolean).join(' ') ?? 'Игрок'}
+                </td>
+                <td className="r muted" style={{ fontSize: 11 }}>
+                  Ур. {e.level ?? '—'}
+                </td>
+                <td className="r num">
+                  <b>{e.points.toLocaleString('ru-RU')}</b> XP
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      <p className="hint mt-12">
+        XP копится за каждую игру: явка, комбинации, уровни. Полный рейтинг — в приложении клуба.
+      </p>
+    </div>
+  );
+}
+
+function MonthlyVitrine() {
   const { data } = useQuery({
-    queryKey: ['public-weekly'],
-    queryFn: () => publicApi.weeklyRating('current'),
+    queryKey: ['public-monthly'],
+    queryFn: () => publicApi.monthlyRating('current'),
   });
   const entries = data?.entries?.slice(0, 5) ?? [];
 
@@ -268,16 +360,13 @@ function WeeklyVitrine() {
     <div className="card">
       <div className="row between mb-16">
         <b className="serif" style={{ fontSize: 17 }}>
-          Неделя{' '}
-          <span style={{ color: 'var(--gold)' }}>
-            {data ? `${formatDateShort(data.start)}–${formatDateShort(data.end)}` : ''}
-          </span>
+          Рейтинг месяца
         </b>
-        <span className="chip">до сб 23:59</span>
+        <span className="chip">топ-27 → финал</span>
       </div>
       {entries.length === 0 ? (
         <p className="muted" style={{ fontSize: 13 }}>
-          На этой неделе пока нет очков
+          В этом месяце пока нет очков
         </p>
       ) : (
         <table className="tbl">
@@ -310,7 +399,7 @@ function FinalVitrine() {
         <b className="serif" style={{ fontSize: 17 }}>
           Финал месяца
         </b>
-        <span className="chip chip-ruby">финалисты недель</span>
+        <span className="chip chip-ruby">топ-27 рейтинга</span>
       </div>
       {entries.length === 0 ? (
         <p className="muted" style={{ fontSize: 13 }}>
@@ -324,12 +413,6 @@ function FinalVitrine() {
                 <td className="rank">{i + 1}</td>
                 <td>
                   {e.nickname ?? [e.firstName, e.lastName].filter(Boolean).join(' ') ?? 'Игрок'}
-                  {e.qualifiedWeekNumbers && e.qualifiedWeekNumbers.length > 0 && (
-                    <span className="muted" style={{ fontSize: 11 }}>
-                      {' '}
-                      · финалист {e.qualifiedWeekNumbers.join('-й и ')}-й недели
-                    </span>
-                  )}
                 </td>
                 <td className="r num">
                   <b>{(e.points ?? 0).toLocaleString('ru-RU')}</b>

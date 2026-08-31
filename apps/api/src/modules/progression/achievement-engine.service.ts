@@ -53,7 +53,7 @@ export class AchievementEngineService {
   ): Promise<AchievementMetrics> {
     const db = client as PrismaService;
 
-    const [profile, results, eventCounts, ratingRewards] = await Promise.all([
+    const [profile, results, eventCounts, ratingRewards, monthQualifications] = await Promise.all([
       db.playerProfile.findUnique({ where: { userId } }),
       db.tournamentResult.findMany({
         where: { userId },
@@ -72,6 +72,10 @@ export class AchievementEngineService {
       db.ratingReward.findMany({
         where: { userId },
         select: { periodType: true, place: true },
+      }),
+      db.monthlyFinalQualification.findMany({
+        where: { userId },
+        select: { place: true },
       }),
     ]);
 
@@ -144,6 +148,7 @@ export class AchievementEngineService {
       monthlyEntries: monthlyRewards.length,
       monthlyPrizes: monthlyRewards.filter((row) => row.place <= 3).length,
       monthlyWins: monthlyRewards.filter((row) => row.place === 1).length,
+      monthlyTop10: monthQualifications.filter((row) => row.place <= 10).length,
       fourOfAKind: eventCount(PlayerEventType.FOUR_OF_A_KIND),
       straightFlush: eventCount(PlayerEventType.STRAIGHT_FLUSH),
       royalFlush: eventCount(PlayerEventType.ROYAL_FLUSH),

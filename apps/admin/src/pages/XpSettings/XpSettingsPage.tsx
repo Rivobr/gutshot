@@ -15,14 +15,13 @@ import {
   XP_SETTING_ORDER,
   formatPoints,
 } from '../../shared/lib/event-labels';
-import { useCloseRatingWeek, useRatingRewardPayout } from '../../entities/xp-config';
+import { useCloseRatingMonth, useRatingRewardPayout } from '../../entities/xp-config';
 
 export function XpSettingsPage(): JSX.Element {
   const { data, isLoading } = useXpConfig();
   const updateSettings = useUpdateXpSettings();
   const updateLevels = useUpdateLevels();
-  const closeWeek = useCloseRatingWeek();
-  const payoutWeekly = useRatingRewardPayout('weekly');
+  const closeMonth = useCloseRatingMonth();
   const payoutMonthly = useRatingRewardPayout('monthly');
 
   const [values, setValues] = useState<Record<string, number>>({});
@@ -172,30 +171,32 @@ export function XpSettingsPage(): JSX.Element {
 
       <Card className="gap-4">
         <div>
-          <h2 className="font-medium">Рейтинг: неделя → финал месяца</h2>
+          <h2 className="font-medium">Рейтинг: месяц → Финал месяца</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Неделя клуба: пн–сб. Закрывается сразу после субботнего турнира (запасной cron
-            вс 06:00 МСК). Стартовая неделя открытия: 03.08–16.08.2026. Топ-7 переносят очки
-            в финал месяца; в финале сумма очков всех недель, где игрок был в топ-7.
+            Рейтинг формируется весь календарный месяц: очки за места и баунти во всех турнирах
+            месяца. 1-го числа (06:00 МСК) итоги месяца фиксируются автоматически — топ-27 получают
+            место в Финале месяца. Здесь можно закрыть месяц вручную.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <Button
-            onClick={() => closeWeek.mutate({ target: 'previous' })}
-            isLoading={closeWeek.isPending}
-          >
-            Закрыть прошлую неделю (топ-7 → финал)
+          <Button onClick={() => closeMonth.mutate({})} isLoading={closeMonth.isPending}>
+            Закрыть прошлый месяц (топ-27 → финал)
           </Button>
-          {closeWeek.isSuccess && (
+          {closeMonth.isSuccess && (
             <span className="text-sm text-primary">
-              {closeWeek.data?.weekKey}: {closeWeek.data?.alreadyClosed ? 'уже закрыта' : 'закрыта'}
-              , финалистов {closeWeek.data?.qualified.length ?? 0}
+              {closeMonth.data?.monthKey}:{' '}
+              {closeMonth.data?.alreadyClosed
+                ? closeMonth.data?.rebuilt
+                  ? 'пересобран'
+                  : 'уже закрыт'
+                : 'закрыт'}
+              , финалистов {closeMonth.data?.qualified.length ?? 0}
             </span>
           )}
-          {closeWeek.isError && (
+          {closeMonth.isError && (
             <span className="text-sm text-destructive">
-              Не удалось закрыть неделю — дождитесь окончания недели
+              Не удалось закрыть месяц — за месяц нет очков рейтинга
             </span>
           )}
         </div>
@@ -203,7 +204,7 @@ export function XpSettingsPage(): JSX.Element {
         <div>
           <h3 className="font-medium">XP-награды топ-3</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Отдельно от квалификации: начисление XP за 1–3 место недели / финала. Повторный запуск
+            Отдельно от квалификации: начисление XP за 1–3 место по итогам месяца. Повторный запуск
             за тот же период ничего не задвоит.
           </p>
         </div>
@@ -228,27 +229,14 @@ export function XpSettingsPage(): JSX.Element {
         <div className="flex flex-wrap items-center gap-3">
           <Button
             variant="ghost"
-            onClick={() => payoutWeekly.mutate()}
-            isLoading={payoutWeekly.isPending}
-          >
-            Выплатить XP за неделю
-          </Button>
-          <Button
-            variant="ghost"
             onClick={() => payoutMonthly.mutate()}
             isLoading={payoutMonthly.isPending}
           >
-            Выплатить XP за финал месяца
+            Выплатить XP за месяц
           </Button>
-          {payoutWeekly.isSuccess && (
-            <span className="text-sm text-primary">
-              Неделя: начислено {payoutWeekly.data?.awarded.length ?? 0}, пропущено{' '}
-              {payoutWeekly.data?.skipped ?? 0}
-            </span>
-          )}
           {payoutMonthly.isSuccess && (
             <span className="text-sm text-primary">
-              Месяц: начислено {payoutMonthly.data?.awarded.length ?? 0}, пропущено{' '}
+              Итоги: начислено {payoutMonthly.data?.awarded.length ?? 0}, пропущено{' '}
               {payoutMonthly.data?.skipped ?? 0}
             </span>
           )}

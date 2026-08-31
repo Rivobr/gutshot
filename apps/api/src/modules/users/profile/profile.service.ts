@@ -269,6 +269,7 @@ export class ProfileService {
         monthlyEntries: metrics.monthlyEntries,
         monthlyPrizes: metrics.monthlyPrizes,
         monthlyWins: metrics.monthlyWins,
+        monthlyTop10: metrics.monthlyTop10,
         winNoReentry: metrics.winNoReentry,
         backToBackWins: metrics.backToBackWins,
         finalTableStreak: metrics.finalTableStreak,

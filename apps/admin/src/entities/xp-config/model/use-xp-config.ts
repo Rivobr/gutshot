@@ -27,12 +27,12 @@ export function useUpdateLevels() {
   });
 }
 
-/** Закрыть неделю: топ-7 переносят очки в финал месяца. */
-export function useCloseRatingWeek() {
+/** Закрыть месяц: топ-27 месячного рейтинга получают место в Финале месяца. */
+export function useCloseRatingMonth() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload?: { weekKey?: string; target?: 'previous' | 'current' }) =>
-      xpConfigApi.closeWeek(payload),
+    mutationFn: (payload?: { monthKey?: string; rebuild?: boolean }) =>
+      xpConfigApi.closeMonth(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'players'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'dashboard'] });
@@ -40,8 +40,8 @@ export function useCloseRatingWeek() {
   });
 }
 
-/** Выплата наград за недельный рейтинг / финал месяца. */
-export function useRatingRewardPayout(period: 'weekly' | 'monthly') {
+/** Выплата наград по итогам месяца. */
+export function useRatingRewardPayout(period: 'monthly') {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => xpConfigApi.payoutRatingRewards(period),

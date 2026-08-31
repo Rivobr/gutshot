@@ -84,6 +84,7 @@ export interface PlayerProfileDto {
     monthlyEntries: number;
     monthlyPrizes: number;
     monthlyWins: number;
+    monthlyTop10: number;
     /** Особые достижения. */
     winNoReentry: number;
     backToBackWins: number;
@@ -242,37 +243,52 @@ export interface RatingEntry {
   level?: number;
   /** До 3 витринных достижений (закреплённые или топ по редкости). */
   showcaseAchievements?: ShowcaseAchievement[];
-  /** Сколько недель игрок проходил в топ-7 (для финала месяца). */
+  /** Попадание в топ-27 месяца → место в Финале месяца. */
+  finalist?: boolean;
+  /** Место внутри топ-27 (1..27). */
+  finalistPlace?: number;
+  /** @deprecated старый недельный формат (до сентября 2026). */
   qualifiedWeeks?: number;
-  /** Какие недели месяца: 1 = открытие, 2 = следующая закрытая и т.д. */
+  /** @deprecated старый недельный формат (до сентября 2026). */
   qualifiedWeekNumbers?: number[];
-  /** Место в топ-7 текущей/закрытой недели. */
+  /** @deprecated старый недельный формат (до сентября 2026). */
   weekPlace?: number;
 }
 
-/** Ответ недельного рейтинга с метаданными периода. */
+/** Ответ месячного рейтинга с метаданными периода. */
+export interface MonthlyRatingResponse {
+  monthKey: string;
+  /** Топ-N месяца получают место в Финале месяца. */
+  finalistTop: number;
+  start: string;
+  end: string;
+  entries: RatingEntry[];
+}
+
+/** Ответ недельного рейтинга (исторический формат, до сентября 2026). */
 export interface WeeklyRatingResponse {
   weekKey: string;
   monthKey: string;
-  /** Какой период отдан клиенту. */
   period: 'current' | 'previous';
-  /**
-   * true, если текущая неделя ещё пустая и показана прошлая
-   * (чтобы в понедельник утром таблица не «пропадала»).
-   */
   fallbackFromEmptyCurrent: boolean;
   start: string;
   end: string;
   entries: RatingEntry[];
 }
 
-/** Результат закрытия недели: топ-7 переносят очки в финал месяца. */
-export interface WeeklyCloseResultDto {
-  weekKey: string;
+/** Ответ «Финал месяца»: зафиксированный топ-27 месячного рейтинга. */
+export interface MonthFinalistsResponse {
+  monthKey: string;
+  finalistTop: number;
+  entries: RatingEntry[];
+}
+
+/** Результат закрытия месяца: топ-27 получают место в Финале месяца. */
+export interface MonthCloseResultDto {
   monthKey: string;
   alreadyClosed: boolean;
   rebuilt?: boolean;
-  topN: number;
+  finalistTop: number;
   qualified: RatingEntry[];
 }
 
@@ -496,11 +512,8 @@ export const PLACE_RATING_KEY_BY_PLACE: Record<number, XpSettingKey> = {
   30: 'PLACE_30',
 };
 
-/** Награды за места в недельном рейтинге и финале месяца. */
+/** Награды за места в итогах месяца. */
 export const RATING_REWARD_KEYS: XpSettingKey[] = [
-  'WEEKLY_TOP_1',
-  'WEEKLY_TOP_2',
-  'WEEKLY_TOP_3',
   'MONTHLY_TOP_1',
   'MONTHLY_TOP_2',
   'MONTHLY_TOP_3',
@@ -737,27 +750,17 @@ export interface ApiErrorResponse {
 }
 
 export type BroadcastStatus = 'DRAFT' | 'SENDING' | 'SENT' | 'FAILED';
-export type BroadcastSegment =
-  'ALL_ACTIVE' | 'TOURNAMENT_REGISTERED' | 'TOURNAMENT_RSVP_PENDING' | 'SINGLE_PLAYER';
-export type BroadcastButtons = 'NONE' | 'OPEN_APP' | 'RSVP' | 'CUSTOM';
-export type BroadcastDeliveryStatus = 'PENDING' | 'SENT' | 'FAILED' | 'SKIPPED';
-
-export interface BroadcastCustomButton {
-  text: string;
-  type?: 'url' | 'open_app';
-  url?: string;
-}
+export type BroadcastSegment = 'ALL_ACTIVE' | 'SINGLE_PLAYER';
+export type BroadcastDeliveryStatus = 'PENDING' | 'SENT' | 'FAILED' | 'SKIPPED' | 'DELETED';
 
 export interface BroadcastCampaignDto {
   id: string;
   title: string;
   bodyHtml: string;
   segment: BroadcastSegment;
-  tournamentId: string | null;
-  targetUserId: string | null;
+  targetTelegramId: string | null;
+  photoPath: string | null;
   photoUrl: string | null;
-  buttons: BroadcastButtons;
-  customButtons: BroadcastCustomButton[];
   status: BroadcastStatus;
   recipientCount: number;
   sentCount: number;
@@ -765,13 +768,11 @@ export interface BroadcastCampaignDto {
   sentAt: string | null;
   createdAt: string;
   updatedAt: string;
-  tournament: { id: string; title: string; date: string } | null;
-  targetUser: { id: string; name: string; telegramId: string } | null;
 }
 
 export interface BroadcastDeliveryDto {
   id: string;
-  userId: string;
+  userId: string | null;
   telegramId: string;
   status: BroadcastDeliveryStatus;
   telegramMessageId: number | null;
@@ -787,10 +788,9 @@ export interface BroadcastCampaignDetailsDto extends BroadcastCampaignDto {
 
 export interface BroadcastSegmentPreviewDto {
   segment: BroadcastSegment;
-  tournamentId: string | null;
-  targetUserId: string | null;
+  targetTelegramId: string | null;
   count: number;
-  sample: Array<{ userId: string; telegramId: string; name: string }>;
+  sample: Array<{ userId: string | null; telegramId: string; name: string }>;
 }
 
 // ── Web auth (сайт клуба) ──────────────────────────────────
@@ -837,10 +837,15 @@ export interface PublicLandingResponse {
   club: PublicClubInfo;
 }
 
-export interface PublicWeeklyRatingResponse {
-  weekKey: string;
+export interface PublicMonthlyRatingResponse {
+  monthKey: string;
   start: string;
   end: string;
-  period: 'current' | 'previous';
+  finalistTop: number;
+  entries: RatingEntry[];
+}
+
+export interface PublicMonthFinalistsResponse {
+  monthKey: string;
   entries: RatingEntry[];
 }

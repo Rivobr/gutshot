@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { IsBoolean, IsIn, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsOptional, IsString } from 'class-validator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AdminAuthGuard } from '../auth/guards/admin-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -11,18 +11,14 @@ import { AdminJwtPayload } from '../../common/interfaces/jwt-payload.interface';
 import { RatingService } from './rating.service';
 import { RatingRewardsService } from './rating-rewards.service';
 
-class CloseWeekDto {
+class CloseMonthDto {
   @IsOptional()
   @IsString()
-  weekKey?: string;
-
-  @IsOptional()
-  @IsIn(['previous', 'current'])
-  target?: 'previous' | 'current';
+  monthKey?: string;
 
   @IsOptional()
   @IsBoolean()
-  force?: boolean;
+  rebuild?: boolean;
 }
 
 @ApiTags('Ratings')
@@ -42,15 +38,15 @@ export class RatingController {
     return this.ratingService.getOverallRating();
   }
 
-  @Get('weekly')
-  getWeekly(@Query('week') week?: string) {
-    const mode = week === 'previous' || week === 'current' || week === 'auto' ? week : 'auto';
-    return this.ratingService.getWeeklyRating(mode);
+  @Get('monthly')
+  getMonthly(@Query('month') month?: string) {
+    const mode = month === 'previous' ? 'previous' : 'current';
+    return this.ratingService.getMonthlyRating(mode);
   }
 
   @Get('final')
-  getFinal() {
-    return this.ratingService.getMonthlyFinalRating();
+  getFinal(@Query('month') month?: string) {
+    return this.ratingService.getMonthFinalists(month || undefined);
   }
 
   @Get('scale')
@@ -59,7 +55,7 @@ export class RatingController {
   }
 }
 
-/** Закрытие недели (топ-7 → финал) и выплата XP-наград. */
+/** Закрытие месяца (топ-27 → финал) и выплата XP-наград. */
 @ApiTags('Admin / Rating rewards')
 @ApiBearerAuth()
 @UseGuards(AdminAuthGuard, RolesGuard)
@@ -69,18 +65,12 @@ export class AdminRatingRewardsController {
   constructor(private readonly ratingRewardsService: RatingRewardsService) {}
 
   @Roles(AdminRole.OWNER, AdminRole.ADMIN)
-  @Post('close-week')
-  closeWeek(@Body() body: CloseWeekDto, @CurrentUser() admin: AdminJwtPayload) {
-    return this.ratingRewardsService.closeWeek(
-      { weekKey: body?.weekKey, target: body?.target, force: body?.force },
+  @Post('close-month')
+  closeMonth(@Body() body: CloseMonthDto, @CurrentUser() admin: AdminJwtPayload) {
+    return this.ratingRewardsService.closeMonth(
+      { monthKey: body?.monthKey, rebuild: body?.rebuild },
       admin.sub,
     );
-  }
-
-  @Roles(AdminRole.OWNER, AdminRole.ADMIN)
-  @Post('weekly')
-  payoutWeekly(@CurrentUser() admin: AdminJwtPayload) {
-    return this.ratingRewardsService.payoutWeekly(admin.sub);
   }
 
   @Roles(AdminRole.OWNER, AdminRole.ADMIN)

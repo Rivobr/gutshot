@@ -1,27 +1,44 @@
-import { apiGet } from '@/shared/api/client';
+import { apiGet, apiPost } from '@/shared/api/client';
 import type {
+  MonthFinalistsResponse,
   PublicLandingResponse,
-  PublicWeeklyRatingResponse,
-  RatingEntry,
+  PublicMonthFinalistsResponse,
+  PublicMonthlyRatingResponse,
+  Registration,
   Tournament,
-  WeeklyRatingResponse,
+  MonthlyRatingResponse,
 } from '@gutshot/types';
+
+export interface OverallRatingEntry {
+  rank: number;
+  userId: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  nickname?: string | null;
+  level?: number;
+  points: number;
+}
 
 export const publicApi = {
   landing: () => apiGet<PublicLandingResponse>('/public/landing'),
-  weeklyRating: (mode: 'current' | 'previous' = 'current') =>
-    apiGet<PublicWeeklyRatingResponse>(`/public/ratings/weekly?mode=${mode}`),
-  finalRating: () => apiGet<{ entries: RatingEntry[] }>('/public/ratings/final'),
+  monthlyRating: (mode: 'current' | 'previous' = 'current') =>
+    apiGet<PublicMonthlyRatingResponse>(`/public/ratings/monthly?mode=${mode}`),
+  finalRating: () => apiGet<PublicMonthFinalistsResponse>('/public/ratings/final'),
+  overallRating: () =>
+    apiGet<{ total: number; entries: OverallRatingEntry[] }>('/public/ratings/overall'),
 };
 
 export const tournamentsApi = {
   nearest: () => apiGet<Tournament | null>('/tournaments/nearest'),
   list: () => apiGet<Tournament[]>('/tournaments'),
   byId: (id: string) => apiGet<Tournament>(`/tournaments/${id}`),
+  register: (tournamentId: string) => apiPost<Registration>('/registrations', { tournamentId }),
 };
 
 export const ratingApi = {
-  weekly: (mode: 'current' | 'previous' = 'current') =>
-    apiGet<WeeklyRatingResponse>(`/ratings/weekly?week=${mode}`),
-  final: () => apiGet<RatingEntry[]>('/ratings/final'),
+  monthly: (mode: 'current' | 'previous' = 'current') =>
+    apiGet<MonthlyRatingResponse>(`/ratings/monthly?month=${mode}`),
+  final: (month?: string) =>
+    apiGet<MonthFinalistsResponse>(`/ratings/final${month ? `?month=${month}` : ''}`),
+  overall: () => apiGet<OverallRatingEntry[]>('/ratings'),
 };

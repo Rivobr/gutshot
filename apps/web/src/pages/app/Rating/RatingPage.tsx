@@ -3,81 +3,57 @@ import { useQuery } from '@tanstack/react-query';
 import type { RatingEntry } from '@gutshot/types';
 import { ratingApi } from '@/shared/api/public.api';
 import { useAuth } from '@/app/providers/auth-provider';
-import { displayName, formatPoints, formatWeekRange, initialsOf } from '@/shared/lib/format';
+import { displayName, formatPoints, initialsOf } from '@/shared/lib/format';
 
-type Tab = 'weekly' | 'final';
-type WeekMode = 'current' | 'previous';
+type Tab = 'monthly' | 'final';
 
-const WEEKLY_TOP = 7;
-const MEDAL = ['🥇', '🥈', '🥉'];
+const FINALIST_TOP = 27;
 
 function pointsOf(entry: RatingEntry): number {
   return entry.points ?? entry.weeklyXp ?? entry.xp ?? 0;
 }
 
-/** «финалист 2-й недели», «финалист 1-й и 2-й недели» — как в боте. */
-function finalistWeekLine(weekNumbers?: number[]): string {
-  const weeks = [...new Set(weekNumbers ?? [])].filter((n) => n > 0).sort((a, b) => a - b);
-  if (weeks.length === 0) return '';
-  if (weeks.length === 1) return `финалист ${weeks[0]}-й недели`;
-  const last = weeks[weeks.length - 1];
-  const head = weeks
-    .slice(0, -1)
-    .map((n) => `${n}-й`)
-    .join(', ');
-  return `финалист ${head} и ${last}-й недели`;
-}
-
-function finalistWeekSubtitle(weekNumbers?: number[], fallbackCount = 1): string {
-  const weeks = [...new Set(weekNumbers ?? [])].filter((n) => n > 0).sort((a, b) => a - b);
-  if (weeks.length === 1) return `Очки за ${weeks[0]}-ю неделю в топ-7`;
-  if (weeks.length > 1) {
-    const last = weeks[weeks.length - 1];
-    const head = weeks
-      .slice(0, -1)
-      .map((n) => `${n}-ю`)
-      .join(', ');
-    return `Сумма очков за ${head} и ${last}-ю недели в топ-7`;
-  }
-  const noun = fallbackCount === 1 ? 'неделю' : fallbackCount < 5 ? 'недели' : 'недель';
-  return `Сумма очков за ${fallbackCount} ${noun} в топ-7`;
+function monthLabelFromKey(monthKey?: string): string {
+  if (!monthKey) return '';
+  const [year, month] = monthKey.split('-').map(Number);
+  return new Intl.DateTimeFormat('ru-RU', { month: 'long', year: 'numeric' }).format(
+    new Date(Date.UTC(year, (month || 1) - 1, 1)),
+  );
 }
 
 export function RatingPage() {
-  const [tab, setTab] = useState<Tab>('weekly');
-  const [weekMode, setWeekMode] = useState<WeekMode>('current');
+  const [tab, setTab] = useState<Tab>('monthly');
   const { user } = useAuth();
   const myUserId = user?.id;
 
-  const weeklyQuery = useQuery({
-    queryKey: ['ratings', 'weekly', weekMode],
-    queryFn: () => ratingApi.weekly(weekMode),
-    enabled: tab === 'weekly',
+  const monthlyQuery = useQuery({
+    queryKey: ['ratings', 'monthly'],
+    queryFn: () => ratingApi.monthly('current'),
+    enabled: tab === 'monthly',
   });
   const finalQuery = useQuery({
     queryKey: ['ratings', 'final'],
-    queryFn: ratingApi.final,
+    queryFn: () => ratingApi.final(),
     enabled: tab === 'final',
   });
 
   const rating: RatingEntry[] =
-    tab === 'weekly' ? (weeklyQuery.data?.entries ?? []) : (finalQuery.data ?? []);
+    tab === 'monthly' ? (monthlyQuery.data?.entries ?? []) : (finalQuery.data?.entries ?? []);
+  const monthLabel =
+    tab === 'monthly'
+      ? monthLabelFromKey(monthlyQuery.data?.monthKey)
+      : monthLabelFromKey(finalQuery.data?.monthKey);
 
   const me = useMemo(
     () => (myUserId ? rating.find((entry) => entry.userId === myUserId) : undefined),
     [rating, myUserId],
   );
 
-  const weekRangeLabel = weeklyQuery.data
-    ? formatWeekRange(weeklyQuery.data.start, weeklyQuery.data.end)
-    : '';
-  const showingPrevious = weeklyQuery.data?.period === 'previous';
-
   const youHere = useMemo(() => {
     if (!myUserId) return null;
     const myPoints = me ? pointsOf(me) : 0;
     const myRank = me?.rank;
-    const cut = rating[WEEKLY_TOP - 1];
+    const cut = rating[FINALIST_TOP - 1];
     const first = rating[0];
     const cutPoints = cut ? pointsOf(cut) : 0;
     const firstPoints = first ? pointsOf(first) : 0;
@@ -89,9 +65,9 @@ export function RatingPage() {
         highlight: false,
         title: 'Вас пока нет в таблице',
         subtitle:
-          tab === 'weekly'
-            ? 'Сыграйте турнир на этой неделе — топ-7 переходит в финал месяца'
-            : 'Попадите в топ-7 недели — и ваши очки перейдут в финал',
+          tab === 'monthly'
+            ? 'Каждый турнир месяца влияет на позицию — играйте и набирайте очки'
+            : 'Попадите в топ-27 месяца — и вы в Финале месяца',
       };
     }
     if (tab === 'final') {
@@ -100,22 +76,22 @@ export function RatingPage() {
         points: myPoints,
         highlight: true,
         title: myRank === 1 ? 'Вы лидируете в финале' : `Вы в финале · ${myRank} место`,
-        subtitle: finalistWeekSubtitle(me.qualifiedWeekNumbers, me.qualifiedWeeks ?? 1),
+        subtitle: `Итоги месяца ${monthLabel}`.trim(),
       };
     }
-    if (myRank != null && myRank <= WEEKLY_TOP) {
+    if (myRank != null && myRank <= FINALIST_TOP) {
       const toFirst = Math.max(0, firstPoints - myPoints);
       return {
         rank: myRank,
         points: myPoints,
         highlight: true,
-        title: myRank === 1 ? 'Вы лидируете' : `Вы в топ-${WEEKLY_TOP}`,
+        title: myRank === 1 ? 'Вы лидируете' : `Вы в топ-${FINALIST_TOP}`,
         subtitle:
           myRank === 1
-            ? 'Ваши очки перейдут в финал месяца'
+            ? 'Место в Финале месяца у вас'
             : toFirst > 0
-              ? `До 1 места: ${formatPoints(toFirst)} очков · квалификация в финал`
-              : 'Квалификация в финал месяца',
+              ? `До 1 места: ${formatPoints(toFirst)} очков · зона Финала месяца`
+              : 'Зона Финала месяца',
       };
     }
     const toTop = Math.max(0, cutPoints - myPoints + 1);
@@ -126,10 +102,10 @@ export function RatingPage() {
       title: `Вы на ${myRank} месте`,
       subtitle:
         toTop > 0
-          ? `До топ-${WEEKLY_TOP}: ${formatPoints(toTop)} очков`
-          : `Ещё немного — и вы в топ-${WEEKLY_TOP}`,
+          ? `До топ-${FINALIST_TOP}: ${formatPoints(toTop)} очков`
+          : `Ещё немного — и вы в топ-${FINALIST_TOP}`,
     };
-  }, [me, myUserId, rating, tab]);
+  }, [me, myUserId, rating, tab, monthLabel]);
 
   const top3 = rating.slice(0, 3);
   const rest = rating.slice(3);
@@ -144,43 +120,19 @@ export function RatingPage() {
           Рейтинг клуба
         </h1>
         <p className="muted" style={{ fontSize: 12, marginTop: 2 }}>
-          Топ-7 недели → финал месяца · неделя пн–сб
+          Рейтинг за весь месяц · топ-27 → Финал месяца
+          {monthLabel ? ` · ${monthLabel}` : ''}
         </p>
       </header>
 
       <div className="seg" style={{ maxWidth: 480 }}>
-        <button className={tab === 'weekly' ? 'on' : ''} onClick={() => setTab('weekly')}>
-          Недельный
+        <button className={tab === 'monthly' ? 'on' : ''} onClick={() => setTab('monthly')}>
+          Месяц
         </button>
         <button className={tab === 'final' ? 'on' : ''} onClick={() => setTab('final')}>
           Финал месяца
         </button>
       </div>
-
-      {tab === 'weekly' && (
-        <div className="stack-16" style={{ maxWidth: 480 }}>
-          <div className="seg seg--sm">
-            <button
-              className={weekMode === 'current' ? 'on' : ''}
-              onClick={() => setWeekMode('current')}
-            >
-              Актуальная
-            </button>
-            <button
-              className={weekMode === 'previous' ? 'on' : ''}
-              onClick={() => setWeekMode('previous')}
-            >
-              Прошлая
-            </button>
-          </div>
-          {(weekRangeLabel || showingPrevious) && (
-            <p className="muted" style={{ fontSize: 11, color: '#8a7e68', marginTop: -6 }}>
-              {showingPrevious ? 'Прошлая неделя' : 'Текущая неделя'}
-              {weekRangeLabel ? ` · ${weekRangeLabel}` : ''}
-            </p>
-          )}
-        </div>
-      )}
 
       {youHere && (
         <div className={`youhere ${youHere.highlight ? '' : 'dim'}`} style={{ maxWidth: 640 }}>
@@ -224,11 +176,6 @@ export function RatingPage() {
                   </div>
                   <p className="pod-name">{nameOf(p)}</p>
                   {p.level != null && <span className="lvl">{p.level} ур.</span>}
-                  {tab === 'final' && (
-                    <p className="fl muted" style={{ fontSize: 10 }}>
-                      {finalistWeekLine(p.qualifiedWeekNumbers)}
-                    </p>
-                  )}
                   <p className="pod-pts num">{formatPoints(pointsOf(p))}</p>
                   <div className="pod-col" style={{ height }}>
                     {p.rank}
@@ -244,6 +191,7 @@ export function RatingPage() {
         <p className="eyebrow mb-12">Полная таблица</p>
         {rest.map((p, i) => {
           const isMe = p.userId === myUserId;
+          const isFinalist = tab === 'monthly' && p.finalist;
           return (
             <div
               key={p.userId}
@@ -254,9 +202,9 @@ export function RatingPage() {
               <div className="ava">{avatarOf(p)}</div>
               <div style={{ minWidth: 0 }}>
                 <p className="nm">{nameOf(p)}</p>
-                {tab === 'final' && (
-                  <p className="fl">
-                    {finalistWeekLine(p.qualifiedWeekNumbers) || `${p.qualifiedWeeks ?? 1} в топ-7`}
+                {isFinalist && (
+                  <p className="fl" style={{ color: 'var(--gold)' }}>
+                    👑 Финалист месяца
                   </p>
                 )}
               </div>
@@ -272,26 +220,18 @@ export function RatingPage() {
           <div className="center" style={{ padding: '48px 0' }}>
             <span style={{ fontSize: 32, opacity: 0.25 }}>♠</span>
             <p className="serif muted" style={{ fontSize: 16 }}>
-              {tab === 'weekly' ? 'На этой неделе пока нет очков' : 'Рейтинг пуст'}
+              {tab === 'monthly' ? 'В этом месяце пока нет очков' : 'Финалисты ещё не определены'}
             </p>
-            {tab === 'weekly' && weekMode === 'current' && (
-              <button
-                className="btn btn-ghost btn-sm mt-12"
-                onClick={() => setWeekMode('previous')}
-              >
-                Смотреть прошлую неделю
-              </button>
-            )}
           </div>
         )}
 
-        {tab === 'weekly' && rest.length > 0 && (
-          <p className="hint center mt-12">Топ-7 недели переходит в финал месяца</p>
+        {tab === 'monthly' && rest.length > 0 && (
+          <p className="hint center mt-12">Топ-27 месяца получает место в Финале месяца</p>
         )}
         {tab === 'final' && (
           <div className="note mt-16" style={{ fontSize: 11.5 }}>
-            Новые игроки сайта появляются в финале месяца только после первой сыгранной игры в
-            клубе. Итог таблицы — после закрытия последней недели (ночь с субботы).
+            Финалисты — топ-27 по очкам рейтинга за весь месяц. Каждый турнир влияет на итоговую
+            позицию: чем стабильнее результаты, тем выше место.
           </div>
         )}
       </div>

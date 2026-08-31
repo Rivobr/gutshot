@@ -1,11 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import {
-  NotificationType,
-  PlayerEventType,
-  RatingPeriodType,
-  TournamentStatus,
-  XPReason,
-} from '@prisma/client';
+import { NotificationType, PlayerEventType, RatingPeriodType, XPReason } from '@prisma/client';
 import type { XpSettingKey } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { XpService } from '../progression/xp.service';
@@ -13,21 +7,7 @@ import { XpSettingsService } from '../progression/xp-settings.service';
 import { AchievementEngineService } from '../progression/achievement-engine.service';
 import { NotificationsService } from '../telegram/notifications.service';
 import { RatingService, type RatingRow } from './rating.service';
-import {
-  WEEKLY_FINAL_TOP,
-  getClubMonthBounds,
-  getClubWeekBounds,
-  getPreviousClubWeekBounds,
-  isClubSaturday,
-  monthKey as clubMonthKey,
-  weekKey as clubWeekKey,
-} from './rating-period';
-
-const WEEKLY_KEYS: Record<number, XpSettingKey> = {
-  1: 'WEEKLY_TOP_1' as XpSettingKey,
-  2: 'WEEKLY_TOP_2' as XpSettingKey,
-  3: 'WEEKLY_TOP_3' as XpSettingKey,
-};
+import { getPreviousClubMonthBounds, monthKey as clubMonthKey } from './rating-period';
 
 const MONTHLY_KEYS: Record<number, XpSettingKey> = {
   1: 'MONTHLY_TOP_1' as XpSettingKey,
@@ -44,8 +24,9 @@ export interface RewardedPlayer {
 }
 
 /**
- * Награды за недельный рейтинг и финал месяца + закрытие недели (топ-7 → финал).
- * Выплата идемпотентна: повторный запуск за тот же период ничего не начислит.
+ * Итоги месяца: топ-27 месячного рейтинга → Финал месяца,
+ * XP-выплата топ-3. Закрытие месяца идемпотентно,
+ * повторная выплата за тот же период ничего не начислит.
  */
 @Injectable()
 export class RatingRewardsService {
@@ -60,126 +41,48 @@ export class RatingRewardsService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  /** Ключ ISO-недели клуба: 2026-W32. */
-  static weekKey(date = new Date()): string {
-    return clubWeekKey(date);
-  }
-
   /** Ключ месяца клуба: 2026-08. */
   static monthKey(date = new Date()): string {
     return clubMonthKey(date);
   }
 
   /**
-   * Закрыть неделю: топ-7 переносят очки в финал месяца.
-   * По умолчанию — предыдущая завершённая неделя.
+   * Закрыть месяц: топ-27 месячного рейтинга получают место в Финале месяца.
+   * По умолчанию — предыдущий завершённый месяц.
    */
-  async closeWeek(
-    options?: {
-      weekKey?: string;
-      target?: 'previous' | 'current';
-      force?: boolean;
-      rebuild?: boolean;
-    },
-    adminId?: string | null,
-  ) {
-    const result = await this.ratingService.closeWeek(options);
+  async closeMonth(options?: { monthKey?: string; rebuild?: boolean }, adminId?: string | null) {
+    const result = await this.ratingService.closeMonth(options);
 
-    if (!result.alreadyClosed) {
+    if (!result.alreadyClosed || result.rebuilt) {
       for (const player of result.qualified) {
-        await this.notifyQualified(player, result.weekKey, result.monthKey);
+        await this.notifyQualified(player, result.monthKey);
       }
       this.logger.log(
-        `Неделя ${result.weekKey} закрыта админом ${adminId ?? 'system'}: ${result.qualified.length} финалистов`,
-      );
-    } else if (result.rebuilt) {
-      this.logger.log(
-        `Неделя ${result.weekKey} пересобрана админом ${adminId ?? 'system'}: ${result.qualified.length} финалистов`,
+        `Месяц ${result.monthKey} закрыт админом ${adminId ?? 'system'}: ${result.qualified.length} финалистов`,
       );
     }
 
-    return {
-      ...result,
-      topN: WEEKLY_FINAL_TOP,
-    };
+    return result;
   }
 
   /**
-   * После субботнего турнира закрывает неделю, которой принадлежит турнир.
-   * Если на эту субботу ещё идёт другой турнир — ждём его.
+   * Выплата XP топ-3 по итогам месяца.
+   * Берёт зафиксированный топ-27; если месяц ещё не закрыт — живой лидерборд месяца.
    */
-  async maybeCloseWeekAfterSaturdayTournament(
-    tournament: { id: string; date: Date | string },
-    adminId?: string | null,
-  ) {
-    const tournamentDate = new Date(tournament.date);
-    if (!isClubSaturday(tournamentDate)) {
-      return null;
-    }
-
-    const live = await this.prisma.tournament.findMany({
-      where: { status: TournamentStatus.IN_PROGRESS, id: { not: tournament.id } },
-      select: { id: true, date: true },
-    });
-    if (live.some((row) => isClubSaturday(row.date))) {
-      this.logger.log(
-        `Автозакрытие недели отложено: ещё идёт субботний турнир ${live.map((row) => row.id).join(', ')}`,
-      );
-      return null;
-    }
-
-    const week = getClubWeekBounds(tournamentDate);
-    const current = getClubWeekBounds();
-
-    try {
-      return await this.closeWeek(
-        {
-          weekKey: week.weekKey,
-          force: week.weekKey === current.weekKey,
-          rebuild: true,
-        },
-        adminId,
-      );
-    } catch (error) {
-      this.logger.warn(
-        `Не удалось закрыть неделю после субботнего турнира: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      );
-      return null;
-    }
-  }
-
-  /** Запасное закрытие: вс 06:00, если субботний турнир уже не идёт. */
-  async closeCurrentWeekIfNoLiveSaturday(adminId?: string | null) {
-    const live = await this.prisma.tournament.findMany({
-      where: { status: TournamentStatus.IN_PROGRESS },
-      select: { id: true, date: true },
-    });
-    if (live.some((row) => isClubSaturday(row.date))) {
-      this.logger.log('Автозакрытие недели пропущено: субботний турнир ещё идёт');
-      return null;
-    }
-
-    return this.closeWeek({ target: 'current', force: true, rebuild: true }, adminId);
-  }
-
-  async payoutWeekly(adminId?: string | null) {
-    const previous = getPreviousClubWeekBounds();
-    const frozen = await this.ratingService.listWeekQualifiers(previous.weekKey);
-    const leaderboard =
-      frozen.length > 0
-        ? frozen
-        : (await this.ratingService.getPointsLeaderboard(previous.start, previous.end)).map(
-            (row, index) => ({ ...row, rank: index + 1 }),
-          );
-
-    return this.payout(RatingPeriodType.WEEKLY, previous.weekKey, leaderboard, adminId);
-  }
-
   async payoutMonthly(adminId?: string | null) {
-    const { monthKey } = getClubMonthBounds();
-    const leaderboard = await this.ratingService.getMonthlyFinalRating();
+    const monthKey = getPreviousClubMonthBounds().monthKey;
+    const frozen = await this.ratingService.getMonthFinalists(monthKey);
+
+    const leaderboard =
+      frozen.entries.length > 0
+        ? frozen.entries
+        : (
+            await this.ratingService.getPointsLeaderboard(
+              getPreviousClubMonthBounds().start,
+              getPreviousClubMonthBounds().end,
+            )
+          ).map((row, index) => ({ ...row, rank: index + 1 }));
+
     return this.payout(RatingPeriodType.MONTHLY, monthKey, leaderboard, adminId);
   }
 
@@ -189,7 +92,6 @@ export class RatingRewardsService {
     leaderboard: RatingRow[],
     adminId?: string | null,
   ) {
-    const keys = periodType === RatingPeriodType.WEEKLY ? WEEKLY_KEYS : MONTHLY_KEYS;
     const settings = await this.xpSettingsService.getAll();
     const top3 = leaderboard.slice(0, 3);
 
@@ -199,7 +101,7 @@ export class RatingRewardsService {
     for (let index = 0; index < top3.length; index += 1) {
       const place = index + 1;
       const entry = top3[index];
-      const xp = settings[keys[place]] ?? 0;
+      const xp = settings[MONTHLY_KEYS[place]] ?? 0;
 
       const existing = await this.prisma.ratingReward.findUnique({
         where: {
@@ -220,14 +122,8 @@ export class RatingRewardsService {
         await this.xpService.award(tx, {
           userId: entry.userId,
           amount: xp,
-          reason:
-            periodType === RatingPeriodType.WEEKLY
-              ? XPReason.WEEKLY_RATING
-              : XPReason.MONTHLY_FINAL,
-          eventType:
-            periodType === RatingPeriodType.WEEKLY
-              ? PlayerEventType.WEEKLY_RATING_REWARD
-              : PlayerEventType.MONTHLY_FINAL_REWARD,
+          reason: XPReason.MONTHLY_FINAL,
+          eventType: PlayerEventType.MONTHLY_FINAL_REWARD,
           performedById: adminId ?? null,
           metadata: { periodType, periodKey, place, xp },
         });
@@ -253,17 +149,13 @@ export class RatingRewardsService {
         );
       }
 
-      await this.notifyWinner(player, periodType);
+      await this.notifyWinner(player);
     }
 
     return { periodType, periodKey, awarded, skipped };
   }
 
-  private async notifyQualified(
-    player: RatingRow,
-    weekKey: string,
-    monthKey: string,
-  ): Promise<void> {
+  private async notifyQualified(player: RatingRow, monthKey: string): Promise<void> {
     const user = await this.prisma.user.findUnique({
       where: { id: player.userId },
       select: { telegramId: true },
@@ -277,15 +169,14 @@ export class RatingRewardsService {
       userId: player.userId,
       telegramId: user.telegramId,
       type: NotificationType.SYSTEM,
-      title: 'Вы в финале месяца',
+      title: 'Вы в Финале месяца',
       message:
-        `🎖 ${player.weekPlace ?? player.rank} место недели ${weekKey}\n` +
-        `+${player.points} очков перенесено в финал ${monthKey}.\n` +
-        `Топ-7 недели становятся финалистами.`,
+        `🏆 ${player.finalistPlace ?? player.rank} место рейтинга за ${monthKey}\n` +
+        `Топ-27 месяца получают место в Финале месяца.`,
     });
   }
 
-  private async notifyWinner(player: RewardedPlayer, periodType: RatingPeriodType): Promise<void> {
+  private async notifyWinner(player: RewardedPlayer): Promise<void> {
     const user = await this.prisma.user.findUnique({
       where: { id: player.userId },
       select: { telegramId: true },
@@ -295,7 +186,7 @@ export class RatingRewardsService {
       return;
     }
 
-    const label = periodType === RatingPeriodType.WEEKLY ? 'недельного рейтинга' : 'финала месяца';
+    const label = 'итогов месяца';
     const medal = player.place === 1 ? '🥇' : player.place === 2 ? '🥈' : '🥉';
 
     await this.notificationsService.notify({

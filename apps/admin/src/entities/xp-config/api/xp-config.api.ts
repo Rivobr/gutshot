@@ -1,7 +1,7 @@
 import type {
   LevelThresholdDto,
+  MonthCloseResultDto,
   RatingRewardPayoutDto,
-  WeeklyCloseResultDto,
   XpConfigDto,
   XpSettingDto,
 } from '@gutshot/types';
@@ -20,14 +20,14 @@ export const xpConfigApi = {
     const { data } = await apiClient.put('/admin/xp-settings/levels', { levels });
     return data.data;
   },
-  async closeWeek(payload?: {
-    weekKey?: string;
-    target?: 'previous' | 'current';
-  }): Promise<WeeklyCloseResultDto> {
-    const { data } = await apiClient.post('/admin/rating-rewards/close-week', payload ?? {});
+  async closeMonth(payload?: {
+    monthKey?: string;
+    rebuild?: boolean;
+  }): Promise<MonthCloseResultDto> {
+    const { data } = await apiClient.post('/admin/rating-rewards/close-month', payload ?? {});
     return data.data;
   },
-  async payoutRatingRewards(period: 'weekly' | 'monthly'): Promise<RatingRewardPayoutDto> {
+  async payoutRatingRewards(period: 'monthly'): Promise<RatingRewardPayoutDto> {
     const { data } = await apiClient.post(`/admin/rating-rewards/${period}`);
     return data.data;
   },

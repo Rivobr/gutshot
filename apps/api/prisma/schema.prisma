@@ -191,6 +191,7 @@ enum BroadcastDeliveryStatus {
   SENT
   FAILED
   SKIPPED
+  DELETED
 }
 
 // ---------------------------------
@@ -249,6 +250,7 @@ model User {
   playerAchievements         PlayerAchievement[]
   ratingRewards              RatingReward[]
   weeklyFinalQualifications  WeeklyFinalQualification[]
+  monthlyFinalQualifications MonthlyFinalQualification[]
   events                     PlayerEvent[]
   broadcastDeliveries        BroadcastDelivery[]
   targetedBroadcasts         BroadcastCampaign[] @relation("BroadcastTargetUser")
@@ -537,6 +539,25 @@ model WeeklyFinalQualification {
   @@index([weekKey])
 }
 
+/// Итоги месяца: топ-27 месячного рейтинга получают место в Финале месяца.
+/// monthKey = '2026-09' — месяц, за который начислено (финал проходит в следующем).
+model MonthlyFinalQualification {
+  id        String   @id @default(cuid())
+  monthKey  String
+  userId    String
+  /// Место в месячном рейтинге (1..27).
+  place     Int
+  /// Очки рейтинга за весь месяц.
+  points    Int
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([monthKey, userId])
+  @@index([monthKey])
+  @@index([userId])
+}
+
 /// Настраиваемые значения XP. Редактируются из админ-панели без изменения кода.
 model XpSetting {
   key       XpSettingKey @id
@@ -583,7 +604,7 @@ model AchievementText {
   updatedBy AdminUser? @relation(fields: [updatedById], references: [id])
 }
 
-/// Рассылка из админки (анонс / RSVP / сегмент).
+/// Рассылка из админки (анонс, всем или одному по Telegram ID).
 model BroadcastCampaign {
   id             String           @id @default(cuid())
   title          String
@@ -592,8 +613,14 @@ model BroadcastCampaign {
   tournamentId   String?
   /// Конкретный игрок (для сегмента SINGLE_PLAYER).
   targetUserId   String?
+  /// Telegram ID конкретного получателя (для сегмента SINGLE_PLAYER).
+  targetTelegramId String?
   /// URL картинки для sendPhoto (Telegram скачает сам).
   photoUrl       String?
+  /// Локальный путь к загруженному фото (относительно uploads/).
+  photoPath      String?
+  /// Telegram file_id фото — чтобы не загружать файл при каждой отправке.
+  photoFileId    String?
   buttons        BroadcastButtons @default(NONE)
   /// Свои кнопки: [{ text, type?: "url"|"open_app", url?: string }]
   customButtons  Json?
@@ -620,7 +647,8 @@ model BroadcastCampaign {
 model BroadcastDelivery {
   id                String                  @id @default(cuid())
   campaignId        String
-  userId            String
+  /// null, если получатель не найден в базе (отправка по «голому» Telegram ID).
+  userId            String?
   telegramId        String
   status            BroadcastDeliveryStatus @default(PENDING)
   telegramMessageId Int?
@@ -630,7 +658,7 @@ model BroadcastDelivery {
   createdAt         DateTime                @default(now())
 
   campaign BroadcastCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([campaignId])
   @@index([userId])

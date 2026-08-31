@@ -40,16 +40,16 @@ export class PublicController {
   }
 
   @Public()
-  @Get('ratings/weekly')
-  async weeklyRating(@Query('mode') mode?: 'current' | 'previous') {
-    const rating = await this.ratingService.getWeeklyRating(
+  @Get('ratings/monthly')
+  async monthlyRating(@Query('mode') mode?: 'current' | 'previous') {
+    const rating = await this.ratingService.getMonthlyRating(
       mode === 'previous' ? 'previous' : 'current',
     );
     return {
-      weekKey: rating.weekKey,
+      monthKey: rating.monthKey,
       start: rating.start,
       end: rating.end,
-      period: rating.period,
+      finalistTop: rating.finalistTop,
       entries: rating.entries.slice(0, 20),
     };
   }
@@ -57,7 +57,26 @@ export class PublicController {
   @Public()
   @Get('ratings/final')
   async finalRating() {
-    const entries = await this.ratingService.getMonthlyFinalRating();
-    return { entries: entries.slice(0, 20) };
+    const finalists = await this.ratingService.getMonthFinalists();
+    return { monthKey: finalists.monthKey, entries: finalists.entries };
+  }
+
+  /** Глобальный рейтинг по XP — как в боте (топ-10, без входа). */
+  @Public()
+  @Get('ratings/overall')
+  async overallRating() {
+    const entries = await this.ratingService.getOverallRating();
+    return {
+      total: entries.length,
+      entries: entries.slice(0, 10).map((entry) => ({
+        rank: entry.rank,
+        userId: entry.userId,
+        firstName: entry.firstName,
+        lastName: entry.lastName,
+        nickname: entry.nickname,
+        level: entry.level,
+        points: entry.points,
+      })),
+    };
   }
 }

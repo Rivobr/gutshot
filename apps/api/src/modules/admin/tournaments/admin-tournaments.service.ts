@@ -24,7 +24,6 @@ import { AchievementEngineService } from '../../progression/achievement-engine.s
 import { PlayerEventsService } from '../../progression/player-events.service';
 import { UsersService } from '../../users/users.service';
 import { isTelegramUsername } from '../../../common/utils/pending-telegram-user';
-import { RatingRewardsService } from '../../rating/rating-rewards.service';
 import { CreateTournamentDto } from './dto/create-tournament.dto';
 import { UpdateTournamentDto, UpdateTournamentLiveDto } from './dto/update-tournament.dto';
 import { TournamentResultEntryDto } from './dto/finish-tournament.dto';
@@ -68,7 +67,6 @@ export class AdminTournamentsService {
     private readonly achievementEngine: AchievementEngineService,
     private readonly usersService: UsersService,
     private readonly playerEventsService: PlayerEventsService,
-    private readonly ratingRewardsService: RatingRewardsService,
   ) {}
 
   async findAll() {
@@ -999,11 +997,6 @@ export class AdminTournamentsService {
         });
       }
     }
-
-    await this.ratingRewardsService.maybeCloseWeekAfterSaturdayTournament(
-      { id: tournament.id, date: tournament.date },
-      adminId,
-    );
 
     return this.findById(id);
   }

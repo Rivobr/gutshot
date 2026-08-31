@@ -9,16 +9,7 @@ import {
 } from '../../common/utils/showcase-achievements.util';
 import { LevelsService } from '../progression/levels.service';
 import { XpSettingsService } from '../progression/xp-settings.service';
-import {
-  WEEKLY_FINAL_TOP,
-  getClubMonthBounds,
-  getClubWeekBounds,
-  getPreviousClubWeekBounds,
-  resolveWeeklyDisplayWeeks,
-  selectWeeklyRatingPeriod,
-  sortClubWeekKeys,
-  type ClubPeriodBounds,
-} from './rating-period';
+import { MONTHLY_FINAL_TOP, getClubMonthBounds, getPreviousClubMonthBounds } from './rating-period';
 
 /** Очки рейтинга — места в турнирах и баунти (не XP за явку/комбо). */
 export const RATING_POINT_REASONS: XPReason[] = [
@@ -36,13 +27,12 @@ export interface RatingRow {
   photoUrl?: string | null;
   username?: string | null;
   points: number;
-  weeklyXp?: number;
   level?: number;
   showcaseAchievements?: ShowcaseAchievementDto[];
-  qualifiedWeeks?: number;
-  /** Номера недель месяца, где игрок был в топ-7: [2] = только 2-я неделя. */
-  qualifiedWeekNumbers?: number[];
-  weekPlace?: number;
+  /** Попадание в топ-27 месяца → место в Финале месяца. */
+  finalist?: boolean;
+  /** Место внутри топ-27 (1..27), только для финалистов. */
+  finalistPlace?: number;
 }
 
 @Injectable()
@@ -57,7 +47,7 @@ export class RatingService implements OnModuleInit {
 
   async onModuleInit() {
     try {
-      await this.repairQualificationsExcludingHidden();
+      await this.repairMonthlyFinalistsExcludingHidden();
     } catch (error) {
       this.logger.warn(
         `Не удалось починить финалистов после исключения из рейтинга: ${
@@ -69,7 +59,7 @@ export class RatingService implements OnModuleInit {
 
   /**
    * Глобальный рейтинг по XP. Владельцы клуба здесь видны —
-   * hiddenFromRating действует только на недельный / финальный рейтинг очков.
+   * hiddenFromRating действует только на месячный / финальный рейтинг очков.
    */
   async getOverallRating() {
     const [profiles, thresholds] = await Promise.all([
@@ -100,129 +90,74 @@ export class RatingService implements OnModuleInit {
   }
 
   /**
-   * Недельный рейтинг клуба (пн–сб, Europe/Moscow).
-   * current/auto — живая неделя (пустая, пока нет очков).
-   * previous — явно прошлый период.
-   * Закрытая досрочно календарная неделя уходит в previous, current = следующая.
+   * Месячный рейтинг клуба (календарный месяц, Europe/Moscow).
+   * Рейтинг формируется весь месяц: очки за места и баунти во всех турнирах месяца.
+   * Топ-27 по итогам месяца получают место в Финале месяца.
    */
-  async getWeeklyRating(mode: 'current' | 'previous' | 'auto' = 'auto'): Promise<{
-    weekKey: string;
+  async getMonthlyRating(mode: 'current' | 'previous' = 'current'): Promise<{
     monthKey: string;
-    period: 'current' | 'previous';
-    fallbackFromEmptyCurrent: boolean;
+    finalistTop: number;
     start: string;
     end: string;
     entries: RatingRow[];
   }> {
-    const calendarCurrent = getClubWeekBounds();
-    const currentWeekClosed =
-      (await this.prisma.weeklyFinalQualification.count({
-        where: { weekKey: calendarCurrent.weekKey },
-      })) > 0;
-    const display = resolveWeeklyDisplayWeeks(new Date(), currentWeekClosed);
-    const period = selectWeeklyRatingPeriod(mode);
-    const week = period === 'previous' ? display.previous : display.current;
-    return this.buildWeeklyRating(week, period, false);
-  }
-
-  private async buildWeeklyRating(
-    week: ClubPeriodBounds,
-    period: 'current' | 'previous',
-    fallbackFromEmptyCurrent: boolean,
-    preloaded?: Omit<RatingRow, 'rank'>[],
-  ) {
-    const rows = preloaded ?? (await this.getPointsLeaderboard(week.start, week.end));
-    const ranked = rows.map((row, index) => ({
-      ...row,
-      rank: index + 1,
-      weekPlace: index + 1 <= WEEKLY_FINAL_TOP ? index + 1 : undefined,
-    }));
+    const month = mode === 'previous' ? getPreviousClubMonthBounds() : getClubMonthBounds();
+    const rows = await this.getPointsLeaderboard(month.start, month.end);
+    const ranked = rows.map((row, index) => {
+      const place = index + 1;
+      return {
+        ...row,
+        rank: place,
+        finalist: place <= MONTHLY_FINAL_TOP,
+        finalistPlace: place <= MONTHLY_FINAL_TOP ? place : undefined,
+      };
+    });
     const entries = await this.attachLevelAndShowcase(ranked);
 
     return {
-      weekKey: week.weekKey,
-      monthKey: week.monthKey,
-      period,
-      fallbackFromEmptyCurrent,
-      start: week.start.toISOString(),
-      end: week.end.toISOString(),
+      monthKey: month.monthKey,
+      finalistTop: MONTHLY_FINAL_TOP,
+      start: month.start.toISOString(),
+      end: month.end.toISOString(),
       entries,
     };
   }
 
   /**
-   * Финалисты месяца: сумма очков только за недели, где игрок вошёл в топ-7.
-   * Данные берутся из закрытых недель (WeeklyFinalQualification).
+   * Финалисты месяца: зафиксированный топ-27 месячного рейтинга.
+   * Данные берутся из закрытых месяцев (MonthlyFinalQualification).
+   * Без monthKey — последний закрытый месяц (тот, за чей итог разыгрывается финал).
    */
-  async getMonthlyFinalRating(): Promise<RatingRow[]> {
-    const { monthKey } = getClubMonthBounds();
-    const qualifications = await this.prisma.weeklyFinalQualification.findMany({
-      where: { monthKey, user: { hiddenFromRating: false } },
+  async getMonthFinalists(monthKey?: string): Promise<{
+    monthKey: string;
+    finalistTop: number;
+    entries: RatingRow[];
+  }> {
+    const resolvedKey = monthKey ?? (await this.resolveLatestMonthKey());
+    const rows = await this.prisma.monthlyFinalQualification.findMany({
+      where: { monthKey: resolvedKey, user: { hiddenFromRating: false } },
       include: { user: true },
+      orderBy: { place: 'asc' },
     });
 
-    const weekOrder = sortClubWeekKeys(qualifications.map((row) => row.weekKey));
-
-    const byUser = new Map<
-      string,
-      {
-        userId: string;
-        firstName?: string | null;
-        lastName?: string | null;
-        nickname?: string | null;
-        photoUrl?: string | null;
-        username?: string | null;
-        points: number;
-        qualifiedWeeks: number;
-        qualifiedWeekNumbers: number[];
-      }
-    >();
-
-    for (const row of qualifications) {
-      if (this.isHiddenFromRating(row.user)) {
-        continue;
-      }
-      const weekNumber = weekOrder.indexOf(row.weekKey) + 1;
-      const current = byUser.get(row.userId);
-      if (current) {
-        current.points += row.weekPoints;
-        current.qualifiedWeeks += 1;
-        if (weekNumber > 0 && !current.qualifiedWeekNumbers.includes(weekNumber)) {
-          current.qualifiedWeekNumbers.push(weekNumber);
-          current.qualifiedWeekNumbers.sort((a, b) => a - b);
-        }
-      } else {
-        byUser.set(row.userId, {
+    const entries = await this.attachLevelAndShowcase(
+      rows
+        .filter((row) => !this.isHiddenFromRating(row.user))
+        .map((row) => ({
           userId: row.userId,
           firstName: row.user.firstName,
           lastName: row.user.lastName,
           nickname: row.user.nickname,
           photoUrl: row.user.photoUrl,
           username: row.user.username,
-          points: row.weekPoints,
-          qualifiedWeeks: 1,
-          qualifiedWeekNumbers: weekNumber > 0 ? [weekNumber] : [],
-        });
-      }
-    }
+          points: row.points,
+          rank: row.place,
+          finalist: true,
+          finalistPlace: row.place,
+        })),
+    );
 
-    const ranked = Array.from(byUser.values())
-      .sort((a, b) => b.points - a.points || a.userId.localeCompare(b.userId))
-      .map((entry, index) => ({
-        rank: index + 1,
-        userId: entry.userId,
-        firstName: entry.firstName,
-        lastName: entry.lastName,
-        nickname: entry.nickname,
-        photoUrl: entry.photoUrl,
-        username: entry.username,
-        points: entry.points,
-        weeklyXp: entry.points,
-        qualifiedWeeks: entry.qualifiedWeeks,
-        qualifiedWeekNumbers: entry.qualifiedWeekNumbers,
-      }));
-
-    return this.attachLevelAndShowcase(ranked);
+    return { monthKey: resolvedKey, finalistTop: MONTHLY_FINAL_TOP, entries };
   }
 
   /** Лидерборд очков за места в заданном интервале [start, end). */
@@ -259,149 +194,126 @@ export class RatingService implements OnModuleInit {
           photoUrl: user?.photoUrl,
           username: user?.username,
           points,
-          weeklyXp: points,
         };
       });
   }
 
   /**
-   * Закрыть неделю: топ-7 переносят свои недельные очки в финал месяца.
-   * По умолчанию — предыдущая завершённая неделя. Идемпотентно.
-   * rebuild — пересобрать топ-7, если неделю уже закрыли до финиша субботнего турнира.
-   * Текущую (ещё идущую) неделю без force закрыть нельзя.
+   * Закрыть месяц: топ-27 месячного рейтинга получают место в Финале месяца.
+   * По умолчанию — предыдущий завершённый месяц. Идемпотентно.
+   * rebuild — пересобрать топ-27, если месяц уже закрыт.
    */
-  async closeWeek(options?: {
-    weekKey?: string;
-    target?: 'previous' | 'current';
-    force?: boolean;
-    rebuild?: boolean;
-  }): Promise<{
-    weekKey: string;
+  async closeMonth(options?: { monthKey?: string; rebuild?: boolean }): Promise<{
     monthKey: string;
     alreadyClosed: boolean;
     rebuilt: boolean;
+    finalistTop: number;
     qualified: RatingRow[];
   }> {
-    const week = this.resolveWeekBounds(options);
-    const current = getClubWeekBounds();
+    const month = this.resolveMonthBounds(options?.monthKey);
 
-    if (week.weekKey === current.weekKey && !options?.force) {
-      throw new BadRequestException(
-        `Неделя ${week.weekKey} ещё идёт. Закрывать можно только после её окончания.`,
-      );
-    }
-
-    const existing = await this.prisma.weeklyFinalQualification.count({
-      where: { weekKey: week.weekKey },
+    const existing = await this.prisma.monthlyFinalQualification.count({
+      where: { monthKey: month.monthKey },
     });
 
     if (existing > 0 && !options?.rebuild) {
-      const qualified = await this.listWeekQualifiers(week.weekKey);
+      const { entries } = await this.getMonthFinalists(month.monthKey);
       return {
-        weekKey: week.weekKey,
-        monthKey: week.monthKey,
+        monthKey: month.monthKey,
         alreadyClosed: true,
         rebuilt: false,
-        qualified,
+        finalistTop: MONTHLY_FINAL_TOP,
+        qualified: entries,
       };
     }
 
-    const qualified = await this.replaceWeekQualifications(week);
+    const qualified = await this.replaceMonthQualifications(month);
     return {
-      weekKey: week.weekKey,
-      monthKey: week.monthKey,
+      monthKey: month.monthKey,
       alreadyClosed: existing > 0,
       rebuilt: existing > 0,
+      finalistTop: MONTHLY_FINAL_TOP,
       qualified,
     };
   }
 
-  private async replaceWeekQualifications(week: ClubPeriodBounds): Promise<RatingRow[]> {
-    const leaderboard = await this.getPointsLeaderboard(week.start, week.end);
-    const top = leaderboard.slice(0, WEEKLY_FINAL_TOP).filter((row) => row.points > 0);
+  private async replaceMonthQualifications(month: {
+    start: Date;
+    end: Date;
+    monthKey: string;
+  }): Promise<RatingRow[]> {
+    const leaderboard = await this.getPointsLeaderboard(month.start, month.end);
+    const top = leaderboard.slice(0, MONTHLY_FINAL_TOP).filter((row) => row.points > 0);
 
     if (top.length === 0) {
       throw new BadRequestException(
-        `За неделю ${week.weekKey} нет очков рейтинга — закрывать нечего`,
+        `За месяц ${month.monthKey} нет очков рейтинга — закрывать нечего`,
       );
     }
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.weeklyFinalQualification.deleteMany({ where: { weekKey: week.weekKey } });
-      await tx.weeklyFinalQualification.createMany({
+      await tx.monthlyFinalQualification.deleteMany({ where: { monthKey: month.monthKey } });
+      await tx.monthlyFinalQualification.createMany({
         data: top.map((row, index) => ({
-          weekKey: week.weekKey,
-          monthKey: week.monthKey,
+          monthKey: month.monthKey,
           userId: row.userId,
-          weekPlace: index + 1,
-          weekPoints: row.points,
+          place: index + 1,
+          points: row.points,
         })),
       });
     });
 
-    return this.listWeekQualifiers(week.weekKey);
-  }
-
-  async listWeekQualifiers(weekKey: string): Promise<RatingRow[]> {
-    const rows = await this.prisma.weeklyFinalQualification.findMany({
-      where: { weekKey, user: { hiddenFromRating: false } },
-      include: { user: true },
-      orderBy: { weekPlace: 'asc' },
-    });
-
-    return rows
-      .filter((row) => !this.isHiddenFromRating(row.user))
-      .map((row, index) => ({
-        rank: index + 1,
-        userId: row.userId,
-        firstName: row.user.firstName,
-        lastName: row.user.lastName,
-        nickname: row.user.nickname,
-        photoUrl: row.user.photoUrl,
-        username: row.user.username,
-        points: row.weekPoints,
-        weeklyXp: row.weekPoints,
-        weekPlace: index + 1,
-        qualifiedWeeks: 1,
-      }));
+    const { entries } = await this.getMonthFinalists(month.monthKey);
+    return entries;
   }
 
   /**
-   * После исключения владельцев: пересобрать топ-7 закрытых недель,
+   * После исключения владельцев: пересобрать топ-27 закрытых месяцев,
    * чтобы их слоты заняли следующие игроки.
    */
-  async repairQualificationsExcludingHidden(): Promise<void> {
-    const weeks = await this.prisma.weeklyFinalQualification.findMany({
-      distinct: ['weekKey'],
-      select: { weekKey: true },
+  async repairMonthlyFinalistsExcludingHidden(): Promise<void> {
+    const months = await this.prisma.monthlyFinalQualification.findMany({
+      distinct: ['monthKey'],
+      select: { monthKey: true },
     });
-    if (weeks.length === 0) {
+    if (months.length === 0) {
       return;
     }
 
-    for (const { weekKey } of weeks) {
-      const bounds = this.resolveWeekBounds({ weekKey });
-      const leaderboard = await this.getPointsLeaderboard(bounds.start, bounds.end);
-      const top = leaderboard.slice(0, WEEKLY_FINAL_TOP).filter((row) => row.points > 0);
+    for (const { monthKey } of months) {
+      const month = this.resolveMonthBounds(monthKey);
+      const leaderboard = await this.getPointsLeaderboard(month.start, month.end);
+      const top = leaderboard.slice(0, MONTHLY_FINAL_TOP).filter((row) => row.points > 0);
 
       await this.prisma.$transaction(async (tx) => {
-        await tx.weeklyFinalQualification.deleteMany({ where: { weekKey } });
+        await tx.monthlyFinalQualification.deleteMany({ where: { monthKey } });
         if (top.length === 0) {
           return;
         }
-        await tx.weeklyFinalQualification.createMany({
+        await tx.monthlyFinalQualification.createMany({
           data: top.map((row, index) => ({
-            weekKey,
-            monthKey: bounds.monthKey,
+            monthKey,
             userId: row.userId,
-            weekPlace: index + 1,
-            weekPoints: row.points,
+            place: index + 1,
+            points: row.points,
           })),
         });
       });
     }
 
-    this.logger.log(`Пересобраны финалисты ${weeks.length} закрытых недель без владельцев клуба`);
+    this.logger.log(`Пересобраны финалисты ${months.length} закрытых месяцев без владельцев клуба`);
+  }
+
+  private async resolveLatestMonthKey(): Promise<string> {
+    const last = await this.prisma.monthlyFinalQualification.findFirst({
+      orderBy: { monthKey: 'desc' },
+      select: { monthKey: true },
+    });
+    if (last) {
+      return last.monthKey;
+    }
+    // Ещё ничего не закрыто — итоги прошлого месяца (можно закрыть вручную).
+    return getPreviousClubMonthBounds().monthKey;
   }
 
   private isHiddenFromRating(user: {
@@ -411,35 +323,32 @@ export class RatingService implements OnModuleInit {
     return Boolean(user.hiddenFromRating) || isRatingExcludedUsername(user.username);
   }
 
-  private resolveWeekBounds(options?: {
-    weekKey?: string;
-    target?: 'previous' | 'current';
-  }): ClubPeriodBounds {
-    if (options?.weekKey) {
-      let probe = getClubWeekBounds();
-      for (let i = 0; i < 80; i += 1) {
-        if (probe.weekKey === options.weekKey) {
-          return probe;
-        }
-        probe = getClubWeekBounds(new Date(probe.start.getTime() - 12 * 60 * 60 * 1000));
-      }
-
-      probe = getClubWeekBounds();
-      for (let i = 0; i < 12; i += 1) {
-        if (probe.weekKey === options.weekKey) {
-          return probe;
-        }
-        probe = getClubWeekBounds(new Date(probe.end.getTime() + 12 * 60 * 60 * 1000));
-      }
-
-      throw new BadRequestException(`Не удалось найти неделю ${options.weekKey}`);
+  private resolveMonthBounds(monthKey?: string): {
+    start: Date;
+    end: Date;
+    monthKey: string;
+  } {
+    if (!monthKey) {
+      return getPreviousClubMonthBounds();
     }
 
-    if (options?.target === 'current') {
-      return getClubWeekBounds();
+    let probe = getPreviousClubMonthBounds();
+    for (let i = 0; i < 80; i += 1) {
+      if (probe.monthKey === monthKey) {
+        return probe;
+      }
+      probe = getPreviousClubMonthBounds(probe.start);
     }
 
-    return getPreviousClubWeekBounds();
+    probe = getClubMonthBounds();
+    for (let i = 0; i < 12; i += 1) {
+      if (probe.monthKey === monthKey) {
+        return probe;
+      }
+      probe = getClubMonthBounds(probe.end);
+    }
+
+    throw new BadRequestException(`Не удалось найти месяц ${monthKey}`);
   }
 
   /** Шкала очков за места 1–20. */
