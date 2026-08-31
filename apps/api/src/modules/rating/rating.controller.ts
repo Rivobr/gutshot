@@ -44,11 +44,6 @@ export class RatingController {
     return this.ratingService.getMonthlyRating(mode);
   }
 
-  @Get('final')
-  getFinal(@Query('month') month?: string) {
-    return this.ratingService.getMonthFinalists(month || undefined);
-  }
-
   @Get('scale')
   getScale() {
     return this.ratingService.getPlaceScale();

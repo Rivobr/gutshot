@@ -1,11 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { RatingEntry } from '@gutshot/types';
 import { ratingApi } from '@/shared/api/public.api';
 import { useAuth } from '@/app/providers/auth-provider';
 import { displayName, formatPoints, initialsOf } from '@/shared/lib/format';
-
-type Tab = 'monthly' | 'final';
 
 const FINALIST_TOP = 27;
 
@@ -22,27 +20,16 @@ function monthLabelFromKey(monthKey?: string): string {
 }
 
 export function RatingPage() {
-  const [tab, setTab] = useState<Tab>('monthly');
   const { user } = useAuth();
   const myUserId = user?.id;
 
   const monthlyQuery = useQuery({
     queryKey: ['ratings', 'monthly'],
     queryFn: () => ratingApi.monthly('current'),
-    enabled: tab === 'monthly',
-  });
-  const finalQuery = useQuery({
-    queryKey: ['ratings', 'final'],
-    queryFn: () => ratingApi.final(),
-    enabled: tab === 'final',
   });
 
-  const rating: RatingEntry[] =
-    tab === 'monthly' ? (monthlyQuery.data?.entries ?? []) : (finalQuery.data?.entries ?? []);
-  const monthLabel =
-    tab === 'monthly'
-      ? monthLabelFromKey(monthlyQuery.data?.monthKey)
-      : monthLabelFromKey(finalQuery.data?.monthKey);
+  const rating: RatingEntry[] = monthlyQuery.data?.entries ?? [];
+  const monthLabel = monthLabelFromKey(monthlyQuery.data?.monthKey);
 
   const me = useMemo(
     () => (myUserId ? rating.find((entry) => entry.userId === myUserId) : undefined),
@@ -50,7 +37,6 @@ export function RatingPage() {
   );
 
   const youHere = useMemo(() => {
-    if (!myUserId) return null;
     const myPoints = me ? pointsOf(me) : 0;
     const myRank = me?.rank;
     const cut = rating[FINALIST_TOP - 1];
@@ -64,19 +50,7 @@ export function RatingPage() {
         points: 0,
         highlight: false,
         title: 'Вас пока нет в таблице',
-        subtitle:
-          tab === 'monthly'
-            ? 'Каждый турнир месяца влияет на позицию — играйте и набирайте очки'
-            : 'Попадите в топ-27 месяца — и вы в Финале месяца',
-      };
-    }
-    if (tab === 'final') {
-      return {
-        rank: myRank ?? null,
-        points: myPoints,
-        highlight: true,
-        title: myRank === 1 ? 'Вы лидируете в финале' : `Вы в финале · ${myRank} место`,
-        subtitle: `Итоги месяца ${monthLabel}`.trim(),
+        subtitle: 'Каждый турнир месяца влияет на позицию — играйте и набирайте очки',
       };
     }
     if (myRank != null && myRank <= FINALIST_TOP) {
@@ -105,7 +79,7 @@ export function RatingPage() {
           ? `До топ-${FINALIST_TOP}: ${formatPoints(toTop)} очков`
           : `Ещё немного — и вы в топ-${FINALIST_TOP}`,
     };
-  }, [me, myUserId, rating, tab, monthLabel]);
+  }, [me, rating]);
 
   const top3 = rating.slice(0, 3);
   const rest = rating.slice(3);
@@ -117,22 +91,13 @@ export function RatingPage() {
     <div className="stack-16">
       <header>
         <h1 className="serif" style={{ fontSize: 26 }}>
-          Рейтинг клуба
+          Финал месяца
         </h1>
         <p className="muted" style={{ fontSize: 12, marginTop: 2 }}>
-          Рейтинг за весь месяц · топ-27 → Финал месяца
+          Топ-27 месяца → место в Финале месяца
           {monthLabel ? ` · ${monthLabel}` : ''}
         </p>
       </header>
-
-      <div className="seg" style={{ maxWidth: 480 }}>
-        <button className={tab === 'monthly' ? 'on' : ''} onClick={() => setTab('monthly')}>
-          Месяц
-        </button>
-        <button className={tab === 'final' ? 'on' : ''} onClick={() => setTab('final')}>
-          Финал месяца
-        </button>
-      </div>
 
       {youHere && (
         <div className={`youhere ${youHere.highlight ? '' : 'dim'}`} style={{ maxWidth: 640 }}>
@@ -191,7 +156,6 @@ export function RatingPage() {
         <p className="eyebrow mb-12">Полная таблица</p>
         {rest.map((p, i) => {
           const isMe = p.userId === myUserId;
-          const isFinalist = tab === 'monthly' && p.finalist;
           return (
             <div
               key={p.userId}
@@ -202,7 +166,7 @@ export function RatingPage() {
               <div className="ava">{avatarOf(p)}</div>
               <div style={{ minWidth: 0 }}>
                 <p className="nm">{nameOf(p)}</p>
-                {isFinalist && (
+                {p.finalist && (
                   <p className="fl" style={{ color: 'var(--gold)' }}>
                     👑 Финалист месяца
                   </p>
@@ -220,19 +184,13 @@ export function RatingPage() {
           <div className="center" style={{ padding: '48px 0' }}>
             <span style={{ fontSize: 32, opacity: 0.25 }}>♠</span>
             <p className="serif muted" style={{ fontSize: 16 }}>
-              {tab === 'monthly' ? 'В этом месяце пока нет очков' : 'Финалисты ещё не определены'}
+              В этом месяце пока нет очков
             </p>
           </div>
         )}
 
-        {tab === 'monthly' && rest.length > 0 && (
+        {rest.length > 0 && (
           <p className="hint center mt-12">Топ-27 месяца получает место в Финале месяца</p>
-        )}
-        {tab === 'final' && (
-          <div className="note mt-16" style={{ fontSize: 11.5 }}>
-            Финалисты — топ-27 по очкам рейтинга за весь месяц. Каждый турнир влияет на итоговую
-            позицию: чем стабильнее результаты, тем выше место.
-          </div>
         )}
       </div>
 

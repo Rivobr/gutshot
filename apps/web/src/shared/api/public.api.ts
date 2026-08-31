@@ -1,8 +1,6 @@
 import { apiGet, apiPost } from '@/shared/api/client';
 import type {
-  MonthFinalistsResponse,
   PublicLandingResponse,
-  PublicMonthFinalistsResponse,
   PublicMonthlyRatingResponse,
   Registration,
   Tournament,
@@ -23,7 +21,6 @@ export const publicApi = {
   landing: () => apiGet<PublicLandingResponse>('/public/landing'),
   monthlyRating: (mode: 'current' | 'previous' = 'current') =>
     apiGet<PublicMonthlyRatingResponse>(`/public/ratings/monthly?mode=${mode}`),
-  finalRating: () => apiGet<PublicMonthFinalistsResponse>('/public/ratings/final'),
   overallRating: () =>
     apiGet<{ total: number; entries: OverallRatingEntry[] }>('/public/ratings/overall'),
 };
@@ -38,7 +35,5 @@ export const tournamentsApi = {
 export const ratingApi = {
   monthly: (mode: 'current' | 'previous' = 'current') =>
     apiGet<MonthlyRatingResponse>(`/ratings/monthly?month=${mode}`),
-  final: (month?: string) =>
-    apiGet<MonthFinalistsResponse>(`/ratings/final${month ? `?month=${month}` : ''}`),
   overall: () => apiGet<OverallRatingEntry[]>('/ratings'),
 };

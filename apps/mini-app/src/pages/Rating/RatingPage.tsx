@@ -1,17 +1,15 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Loader } from '@gutshot/ui';
-import type { MonthFinalistsResponse, MonthlyRatingResponse, RatingEntry } from '@gutshot/types';
+import type { MonthlyRatingResponse, RatingEntry } from '@gutshot/types';
 import { apiClient } from '../../shared/api/client';
 import { useProfile } from '../../entities/player';
 import { SectionLabel } from '../../shared/ui/figma';
 import { PlayerAvatar } from '../../shared/ui/PlayerAvatar';
 import { PlayerLevelBadge, PlayerShowcaseMedals } from '../../shared/ui/PlayerShowcase';
 import { displayNameOf } from '../../shared/lib/display-name';
-
-type Tab = 'monthly' | 'final';
 
 const FINALIST_TOP = 27;
 
@@ -23,16 +21,6 @@ async function fetchMonthlyRating(): Promise<MonthlyRatingResponse> {
     finalistTop: Number(payload?.finalistTop ?? FINALIST_TOP),
     start: String(payload?.start ?? ''),
     end: String(payload?.end ?? ''),
-    entries: Array.isArray(payload?.entries) ? payload.entries : [],
-  };
-}
-
-async function fetchFinalRating(): Promise<MonthFinalistsResponse> {
-  const { data } = await apiClient.get('/ratings/final');
-  const payload = data?.data ?? data;
-  return {
-    monthKey: String(payload?.monthKey ?? ''),
-    finalistTop: Number(payload?.finalistTop ?? FINALIST_TOP),
     entries: Array.isArray(payload?.entries) ? payload.entries : [],
   };
 }
@@ -53,41 +41,18 @@ function monthLabelFromKey(monthKey: string): string {
   );
 }
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'monthly', label: 'Месяц' },
-  { id: 'final', label: 'Финал месяца' },
-];
-
 export function RatingPage(): JSX.Element {
   const navigate = useNavigate();
-  const [tab, setTab] = useState<Tab>('monthly');
   const { data: profile } = useProfile();
 
   const monthlyQuery = useQuery({
     queryKey: ['ratings', 'monthly'],
     queryFn: fetchMonthlyRating,
-    enabled: tab === 'monthly',
   });
 
-  const finalQuery = useQuery({
-    queryKey: ['ratings', 'final'],
-    queryFn: fetchFinalRating,
-    enabled: tab === 'final',
-  });
-
-  const monthly = monthlyQuery.data;
-  const rating: RatingEntry[] =
-    tab === 'monthly'
-      ? (monthly?.entries ?? [])
-      : Array.isArray(finalQuery.data?.entries)
-        ? finalQuery.data.entries
-        : [];
-  const ratingQuery = tab === 'monthly' ? monthlyQuery : finalQuery;
+  const rating: RatingEntry[] = monthlyQuery.data?.entries ?? [];
   const myUserId = profile?.id;
-  const monthLabel =
-    tab === 'monthly'
-      ? monthLabelFromKey(monthly?.monthKey ?? '')
-      : monthLabelFromKey(finalQuery.data?.monthKey ?? '');
+  const monthLabel = monthLabelFromKey(monthlyQuery.data?.monthKey ?? '');
 
   const openPlayer = (userId: string) => {
     navigate(userId === myUserId ? '/profile' : `/players/${userId}`);
@@ -99,10 +64,6 @@ export function RatingPage(): JSX.Element {
   );
 
   const youHere = useMemo(() => {
-    if (!myUserId) {
-      return null;
-    }
-
     const myPoints = me ? pointsOf(me) : 0;
     const myRank = me?.rank;
     const cut = rating[FINALIST_TOP - 1];
@@ -116,20 +77,7 @@ export function RatingPage(): JSX.Element {
         points: 0,
         highlight: false,
         title: 'Вас пока нет в таблице',
-        subtitle:
-          tab === 'monthly'
-            ? 'Каждый турнир месяца влияет на позицию — играйте и набирайте очки'
-            : 'Попадите в топ-27 месяца — и вы в Финале месяца',
-      };
-    }
-
-    if (tab === 'final') {
-      return {
-        rank: myRank ?? null,
-        points: myPoints,
-        highlight: true,
-        title: myRank === 1 ? 'Вы лидируете в финале' : `Вы в финале · ${myRank} место`,
-        subtitle: `Итоги месяца ${monthLabel}`.trim(),
+        subtitle: 'Каждый турнир месяца влияет на позицию — играйте и набирайте очки',
       };
     }
 
@@ -160,7 +108,7 @@ export function RatingPage(): JSX.Element {
           ? `До топ-${FINALIST_TOP}: ${formatPoints(toTop)} очков`
           : `Ещё немного — и вы в топ-${FINALIST_TOP}`,
     };
-  }, [me, myUserId, rating, tab, monthLabel]);
+  }, [me, rating]);
 
   const top3 = rating.slice(0, 3);
   const rest = rating.slice(3);
@@ -174,39 +122,15 @@ export function RatingPage(): JSX.Element {
     <div className="flex flex-col">
       <div className="px-5 pt-6 pb-4">
         <h2 className="serif font-semibold" style={{ fontSize: 24, color: '#F5EDD6' }}>
-          Рейтинг клуба
+          Финал месяца
         </h2>
         <p className="sans mt-1" style={{ fontSize: 12, color: '#6B614E' }}>
-          Рейтинг за весь месяц · топ-27 → Финал месяца
+          Топ-27 месяца → место в Финале месяца
           {monthLabel ? ` · ${monthLabel}` : ''}
         </p>
-
-        <div
-          className="flex rounded-[14px] p-1 gap-1 mt-4"
-          style={{ background: '#0F0D09', border: '1px solid rgba(199,154,61,0.15)' }}
-        >
-          {TABS.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => setTab(option.id)}
-              className="flex-1 py-2.5 rounded-[10px] sans font-medium transition-all duration-300"
-              style={{
-                fontSize: 12,
-                cursor: 'pointer',
-                border: 'none',
-                background:
-                  tab === option.id ? 'linear-gradient(135deg, #9C6A1F, #C89A3D)' : 'transparent',
-                color: tab === option.id ? '#0A0A0A' : '#6B614E',
-              }}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
       </div>
 
-      {ratingQuery.isLoading ? (
+      {monthlyQuery.isLoading ? (
         <Loader />
       ) : (
         <>
@@ -331,7 +255,7 @@ export function RatingPage(): JSX.Element {
             </div>
             {rest.map((p, i) => {
               const isMe = p.userId === myUserId;
-              const isFinalist = tab === 'monthly' && p.finalist;
+              const isFinalist = p.finalist;
               return (
                 <motion.button
                   type="button"
@@ -396,9 +320,7 @@ export function RatingPage(): JSX.Element {
               <div className="flex flex-col items-center justify-center py-16 gap-3">
                 <span style={{ fontSize: 32, opacity: 0.25 }}>♠</span>
                 <p className="serif" style={{ fontSize: 16, color: '#6B614E' }}>
-                  {tab === 'monthly'
-                    ? 'В этом месяце пока нет очков'
-                    : 'Финалисты ещё не определены'}
+                  В этом месяце пока нет очков
                 </p>
               </div>
             )}

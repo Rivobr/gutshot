@@ -54,13 +54,6 @@ export class PublicController {
     };
   }
 
-  @Public()
-  @Get('ratings/final')
-  async finalRating() {
-    const finalists = await this.ratingService.getMonthFinalists();
-    return { monthKey: finalists.monthKey, entries: finalists.entries };
-  }
-
   /** Глобальный рейтинг по XP — как в боте (топ-10, без входа). */
   @Public()
   @Get('ratings/overall')

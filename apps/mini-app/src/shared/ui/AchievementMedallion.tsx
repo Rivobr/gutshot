@@ -37,7 +37,9 @@ export function AchievementMedallion({
   title?: string;
   achievementId?: string;
 }): JSX.Element {
-  const src = (group && ICON_BY_GROUP[group]) || FALLBACK_ICON;
+  // Уникальное изображение на каждое достижение; групповой PNG — запасной вариант.
+  const perAchievement = achievementId ? `/achievements/${achievementId}.svg` : undefined;
+  const fallback = (group && ICON_BY_GROUP[group]) || FALLBACK_ICON;
   const style = rarity ? styleForAchievement(achievementId, rarity) : null;
   const pad = rarity && rarity !== 'common' ? Math.max(2, Math.round(size * 0.08)) : 0;
   const outer = size + pad * 2;
@@ -62,11 +64,18 @@ export function AchievementMedallion({
       }}
     >
       <img
-        src={src}
+        src={perAchievement ?? fallback}
         alt=""
         width={size}
         height={size}
         draggable={false}
+        onError={(event) => {
+          const image = event.currentTarget;
+          if (perAchievement && !image.dataset.fallback) {
+            image.dataset.fallback = '1';
+            image.src = fallback;
+          }
+        }}
         style={{
           width: size,
           height: size,

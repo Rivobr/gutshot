@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  <defs>
+    <radialGradient id="rim-32" cx="35%" cy="28%" r="85%">
+      <stop offset="0%" stop-color="#FFF0B8"/>
+      <stop offset="45%" stop-color="hsl(61, 74%, 58%)"/>
+      <stop offset="100%" stop-color="hsl(53, 70%, 28%)"/>
+    </radialGradient>
+    <radialGradient id="core-32" cx="50%" cy="36%" r="78%">
+      <stop offset="0%" stop-color="hsl(61, 78%, 69%)"/>
+      <stop offset="58%" stop-color="hsl(61, 72%, 46%)"/>
+      <stop offset="100%" stop-color="hsl(55, 68%, 27%)"/>
+    </radialGradient>
+  </defs>
+  <circle cx="48" cy="48" r="47" fill="url(#rim-32)"/>
+  <circle cx="48" cy="48" r="45.4" fill="none" stroke="#BA55FF" stroke-width="2.4"/>
+  <circle cx="48" cy="48" r="40" fill="none" stroke="hsl(51, 66%, 24%)" stroke-width="0.8" opacity="0.7"/>
+  <g>
+    <line x1="48" y1="48" x2="83.5" y2="54.3" stroke="hsl(61, 70%, 38%)" stroke-width="1" opacity="0.35"/>
+    <line x1="48" y1="48" x2="78.4" y2="67.3" stroke="hsl(61, 70%, 38%)" stroke-width="1" opacity="0.35"/>
+    <line x1="48" y1="48" x2="68.6" y2="77.5" stroke="hsl(61, 70%, 38%)" stroke-width="1" opacity="0.35"/>
+    <line x1="48" y1="48" x2="55.8" y2="83.1" stroke="hsl(61, 70%, 38%)" stroke-width="1" opacity="0.35"/>
+    <line x1="48" y1="48" x2="41.7" y2="83.5" stroke="hsl(61, 70%, 38%)" stroke-width="1" opacity="0.35"/>
+    <line x1="48" y1="48" x2="28.7" y2="78.4" stroke="hsl(61, 70%, 38%)" stroke-width="1" opacity="0.35"/>
+    <line x1="48" y1="48" x2="18.5" y2="68.6" stroke="hsl(61, 70%, 38%)" stroke-width="1" opacity="0.35"/>
+    <line x1="48" y1="48" x2="12.9" y2="55.8" stroke="hsl(61, 70%, 38%)" stroke-width="1" opacity="0.35"/>
+    <line x1="48" y1="48" x2="12.5" y2="41.7" stroke="hsl(61, 70%, 38%)" stroke-width="1" opacity="0.35"/>
+    <line x1="48" y1="48" x2="17.6" y2="28.7" stroke="hsl(61, 70%, 38%)" stroke-width="1" opacity="0.35"/>
+    <line x1="48" y1="48" x2="27.4" y2="18.5" stroke="hsl(61, 70%, 38%)" stroke-width="1" opacity="0.35"/>
+    <line x1="48" y1="48" x2="40.2" y2="12.9" stroke="hsl(61, 70%, 38%)" stroke-width="1" opacity="0.35"/>
+    <line x1="48" y1="48" x2="54.3" y2="12.5" stroke="hsl(61, 70%, 38%)" stroke-width="1" opacity="0.35"/>
+    <line x1="48" y1="48" x2="67.3" y2="17.6" stroke="hsl(61, 70%, 38%)" stroke-width="1" opacity="0.35"/>
+    <line x1="48" y1="48" x2="77.5" y2="27.4" stroke="hsl(61, 70%, 38%)" stroke-width="1" opacity="0.35"/>
+    <line x1="48" y1="48" x2="83.1" y2="40.2" stroke="hsl(61, 70%, 38%)" stroke-width="1" opacity="0.35"/>
+  </g>
+  <circle cx="48" cy="48" r="34.5" fill="url(#core-32)" stroke="hsl(51, 64%, 22%)" stroke-width="1.1"/>
+  <g opacity="0.85">
+    <ellipse cx="41.1" cy="77.5" rx="5.2" ry="2.1" fill="#B98A22" opacity="0.9" transform="rotate(70 41.1 77.5)"/><ellipse cx="35.3" cy="76.3" rx="5.2" ry="2.1" fill="#B98A22" opacity="0.9" transform="rotate(54 35.3 76.3)"/><ellipse cx="29.8" cy="74.3" rx="5.2" ry="2.1" fill="#B98A22" opacity="0.9" transform="rotate(38 29.8 74.3)"/><ellipse cx="24.8" cy="71.8" rx="5.2" ry="2.1" fill="#B98A22" opacity="0.9" transform="rotate(22 24.8 71.8)"/><ellipse cx="20.3" cy="68.6" rx="5.2" ry="2.1" fill="#B98A22" opacity="0.9" transform="rotate(6 20.3 68.6)"/><ellipse cx="16.6" cy="64.9" rx="5.2" ry="2.1" fill="#B98A22" opacity="0.9" transform="rotate(-10 16.6 64.9)"/>
+    <ellipse cx="54.9" cy="77.5" rx="5.2" ry="2.1" fill="#B98A22" opacity="0.9" transform="rotate(-70 54.9 77.5)"/><ellipse cx="60.7" cy="76.3" rx="5.2" ry="2.1" fill="#B98A22" opacity="0.9" transform="rotate(-54 60.7 76.3)"/><ellipse cx="66.2" cy="74.3" rx="5.2" ry="2.1" fill="#B98A22" opacity="0.9" transform="rotate(-38 66.2 74.3)"/><ellipse cx="71.2" cy="71.8" rx="5.2" ry="2.1" fill="#B98A22" opacity="0.9" transform="rotate(-22 71.2 71.8)"/><ellipse cx="75.7" cy="68.6" rx="5.2" ry="2.1" fill="#B98A22" opacity="0.9" transform="rotate(-6 75.7 68.6)"/><ellipse cx="79.4" cy="64.9" rx="5.2" ry="2.1" fill="#B98A22" opacity="0.9" transform="rotate(10 79.4 64.9)"/>
+  </g>
+  <text x="48" y="51" text-anchor="middle" dominant-baseline="central" font-size="32" font-family="'Noto Color Emoji','Apple Color Emoji','Segoe UI Emoji',sans-serif">🧨</text>
+  <path d="M 63.58 5.98 Q 64.14 8.52 66.67 9.07 Q 64.14 9.63 63.58 12.17 Q 63.03 9.63 60.49 9.07 Q 63.03 8.52 63.58 5.98 Z" fill="#FFF3C4" opacity="0.87"/>
+  <path d="M 61.35 85.02 Q 61.71 86.64 63.34 87.00 Q 61.71 87.36 61.35 88.99 Q 61.00 87.36 59.37 87.00 Q 61.00 86.64 61.35 85.02 Z" fill="#FFF3C4" opacity="0.65"/>
+  <path d="M 25.19 12.72 Q 25.56 14.42 27.26 14.79 Q 25.56 15.16 25.19 16.86 Q 24.81 15.16 23.12 14.79 Q 24.81 14.42 25.19 12.72 Z" fill="#FFF3C4" opacity="0.86"/>
+  <path d="M 60.51 83.44 Q 60.95 85.48 62.99 85.93 Q 60.95 86.37 60.51 88.41 Q 60.06 86.37 58.02 85.93 Q 60.06 85.48 60.51 83.44 Z" fill="#FFF3C4" opacity="0.75"/>
+  <path d="M 82.64 27.80 Q 83.09 29.84 85.14 30.29 Q 83.09 30.74 82.64 32.79 Q 82.19 30.74 80.15 30.29 Q 82.19 29.84 82.64 27.80 Z" fill="#FFF3C4" opacity="0.70"/>
+</svg>

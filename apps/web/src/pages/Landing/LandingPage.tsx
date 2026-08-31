@@ -183,12 +183,11 @@ export function LandingPage() {
 
       <section className="section" id="rating" style={{ paddingTop: 0 }}>
         <span className="eyebrow">Витрина рейтинга</span>
-        <h2 className="serif">Неделя и финал месяца</h2>
+        <h2 className="serif">Финал месяца</h2>
         <div className="cols-2 mt-24">
           <MonthlyVitrine />
-          <FinalVitrine />
+          <GlobalRatingVitrine />
         </div>
-        <GlobalRatingVitrine />
         <p className="note gold mt-16" style={{ maxWidth: 720 }}>
           Очки рейтинга ≠ XP. Баунти = 50 очков. XP — только опыт игрока.
         </p>
@@ -360,9 +359,9 @@ function MonthlyVitrine() {
     <div className="card">
       <div className="row between mb-16">
         <b className="serif" style={{ fontSize: 17 }}>
-          Рейтинг месяца
+          Финал месяца
         </b>
-        <span className="chip">топ-27 → финал</span>
+        <span className="chip chip-ruby">топ-27 месяца</span>
       </div>
       {entries.length === 0 ? (
         <p className="muted" style={{ fontSize: 13 }}>
@@ -379,43 +378,6 @@ function MonthlyVitrine() {
                 </td>
                 <td className="r num">
                   <b>{e.points ?? e.weeklyXp ?? 0}</b> очк.
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
-  );
-}
-
-function FinalVitrine() {
-  const { data } = useQuery({ queryKey: ['public-final'], queryFn: publicApi.finalRating });
-  const entries = data?.entries?.slice(0, 5) ?? [];
-
-  return (
-    <div className="card">
-      <div className="row between mb-16">
-        <b className="serif" style={{ fontSize: 17 }}>
-          Финал месяца
-        </b>
-        <span className="chip chip-ruby">топ-27 рейтинга</span>
-      </div>
-      {entries.length === 0 ? (
-        <p className="muted" style={{ fontSize: 13 }}>
-          Финал месяца ещё формируется
-        </p>
-      ) : (
-        <table className="tbl">
-          <tbody>
-            {entries.map((e, i) => (
-              <tr key={e.userId}>
-                <td className="rank">{i + 1}</td>
-                <td>
-                  {e.nickname ?? [e.firstName, e.lastName].filter(Boolean).join(' ') ?? 'Игрок'}
-                </td>
-                <td className="r num">
-                  <b>{(e.points ?? 0).toLocaleString('ru-RU')}</b>
                 </td>
               </tr>
             ))}

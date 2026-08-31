@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  <defs>
+    <radialGradient id="rim-10" cx="35%" cy="28%" r="85%">
+      <stop offset="0%" stop-color="#FFF0B8"/>
+      <stop offset="45%" stop-color="hsl(49, 74%, 58%)"/>
+      <stop offset="100%" stop-color="hsl(41, 70%, 28%)"/>
+    </radialGradient>
+    <radialGradient id="core-10" cx="50%" cy="36%" r="78%">
+      <stop offset="0%" stop-color="hsl(49, 78%, 70%)"/>
+      <stop offset="58%" stop-color="hsl(49, 72%, 46%)"/>
+      <stop offset="100%" stop-color="hsl(43, 68%, 27%)"/>
+    </radialGradient>
+  </defs>
+  <circle cx="48" cy="48" r="47" fill="url(#rim-10)"/>
+  <circle cx="48" cy="48" r="45.4" fill="none" stroke="#DC3030" stroke-width="2.4"/>
+  <circle cx="48" cy="48" r="40" fill="none" stroke="hsl(39, 66%, 24%)" stroke-width="0.8" opacity="0.7"/>
+  <g>
+    <line x1="48" y1="48" x2="39.9" y2="12.9" stroke="hsl(49, 70%, 38%)" stroke-width="1" opacity="0.35"/>
+    <line x1="48" y1="48" x2="58.5" y2="13.6" stroke="hsl(49, 70%, 38%)" stroke-width="1" opacity="0.35"/>
+    <line x1="48" y1="48" x2="74.3" y2="23.4" stroke="hsl(49, 70%, 38%)" stroke-width="1" opacity="0.35"/>
+    <line x1="48" y1="48" x2="83.1" y2="39.9" stroke="hsl(49, 70%, 38%)" stroke-width="1" opacity="0.35"/>
+    <line x1="48" y1="48" x2="82.4" y2="58.5" stroke="hsl(49, 70%, 38%)" stroke-width="1" opacity="0.35"/>
+    <line x1="48" y1="48" x2="72.6" y2="74.3" stroke="hsl(49, 70%, 38%)" stroke-width="1" opacity="0.35"/>
+    <line x1="48" y1="48" x2="56.1" y2="83.1" stroke="hsl(49, 70%, 38%)" stroke-width="1" opacity="0.35"/>
+    <line x1="48" y1="48" x2="37.5" y2="82.4" stroke="hsl(49, 70%, 38%)" stroke-width="1" opacity="0.35"/>
+    <line x1="48" y1="48" x2="21.7" y2="72.6" stroke="hsl(49, 70%, 38%)" stroke-width="1" opacity="0.35"/>
+    <line x1="48" y1="48" x2="12.9" y2="56.1" stroke="hsl(49, 70%, 38%)" stroke-width="1" opacity="0.35"/>
+    <line x1="48" y1="48" x2="13.6" y2="37.5" stroke="hsl(49, 70%, 38%)" stroke-width="1" opacity="0.35"/>
+    <line x1="48" y1="48" x2="23.4" y2="21.7" stroke="hsl(49, 70%, 38%)" stroke-width="1" opacity="0.35"/>
+  </g>
+  <circle cx="48" cy="48" r="34.5" fill="url(#core-10)" stroke="hsl(39, 64%, 22%)" stroke-width="1.1"/>
+  <g opacity="0.85">
+    <ellipse cx="41.1" cy="77.5" rx="5.2" ry="2.1" fill="#B98A22" opacity="0.9" transform="rotate(70 41.1 77.5)"/><ellipse cx="35.3" cy="76.3" rx="5.2" ry="2.1" fill="#B98A22" opacity="0.9" transform="rotate(54 35.3 76.3)"/><ellipse cx="29.8" cy="74.3" rx="5.2" ry="2.1" fill="#B98A22" opacity="0.9" transform="rotate(38 29.8 74.3)"/><ellipse cx="24.8" cy="71.8" rx="5.2" ry="2.1" fill="#B98A22" opacity="0.9" transform="rotate(22 24.8 71.8)"/><ellipse cx="20.3" cy="68.6" rx="5.2" ry="2.1" fill="#B98A22" opacity="0.9" transform="rotate(6 20.3 68.6)"/><ellipse cx="16.6" cy="64.9" rx="5.2" ry="2.1" fill="#B98A22" opacity="0.9" transform="rotate(-10 16.6 64.9)"/>
+    <ellipse cx="54.9" cy="77.5" rx="5.2" ry="2.1" fill="#B98A22" opacity="0.9" transform="rotate(-70 54.9 77.5)"/><ellipse cx="60.7" cy="76.3" rx="5.2" ry="2.1" fill="#B98A22" opacity="0.9" transform="rotate(-54 60.7 76.3)"/><ellipse cx="66.2" cy="74.3" rx="5.2" ry="2.1" fill="#B98A22" opacity="0.9" transform="rotate(-38 66.2 74.3)"/><ellipse cx="71.2" cy="71.8" rx="5.2" ry="2.1" fill="#B98A22" opacity="0.9" transform="rotate(-22 71.2 71.8)"/><ellipse cx="75.7" cy="68.6" rx="5.2" ry="2.1" fill="#B98A22" opacity="0.9" transform="rotate(-6 75.7 68.6)"/><ellipse cx="79.4" cy="64.9" rx="5.2" ry="2.1" fill="#B98A22" opacity="0.9" transform="rotate(10 79.4 64.9)"/>
+  </g>
+  <text x="48" y="51" text-anchor="middle" dominant-baseline="central" font-size="32" font-family="'Noto Color Emoji','Apple Color Emoji','Segoe UI Emoji',sans-serif">🐉</text>
+  <path d="M 9.98 47.27 Q 10.42 49.28 12.43 49.72 Q 10.42 50.16 9.98 52.18 Q 9.53 50.16 7.52 49.72 Q 9.53 49.28 9.98 47.27 Z" fill="#FFF3C4" opacity="0.75"/>
+  <path d="M 65.17 82.71 Q 65.46 84.03 66.78 84.32 Q 65.46 84.61 65.17 85.93 Q 64.89 84.61 63.57 84.32 Q 64.89 84.03 65.17 82.71 Z" fill="#FFF3C4" opacity="0.55"/>
+  <path d="M 62.79 82.25 Q 63.26 84.40 65.41 84.87 Q 63.26 85.34 62.79 87.49 Q 62.31 85.34 60.16 84.87 Q 62.31 84.40 62.79 82.25 Z" fill="#FFF3C4" opacity="0.65"/>
+  <path d="M 12.74 25.87 Q 13.22 28.05 15.40 28.53 Q 13.22 29.01 12.74 31.19 Q 12.26 29.01 10.08 28.53 Q 12.26 28.05 12.74 25.87 Z" fill="#FFF3C4" opacity="0.88"/>
+  <path d="M 36.08 86.16 Q 36.38 87.53 37.74 87.82 Q 36.38 88.12 36.08 89.48 Q 35.78 88.12 34.42 87.82 Q 35.78 87.53 36.08 86.16 Z" fill="#FFF3C4" opacity="0.69"/>
+</svg>

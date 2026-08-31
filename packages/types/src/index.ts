@@ -276,13 +276,6 @@ export interface WeeklyRatingResponse {
   entries: RatingEntry[];
 }
 
-/** Ответ «Финал месяца»: зафиксированный топ-27 месячного рейтинга. */
-export interface MonthFinalistsResponse {
-  monthKey: string;
-  finalistTop: number;
-  entries: RatingEntry[];
-}
-
 /** Результат закрытия месяца: топ-27 получают место в Финале месяца. */
 export interface MonthCloseResultDto {
   monthKey: string;
@@ -842,10 +835,5 @@ export interface PublicMonthlyRatingResponse {
   start: string;
   end: string;
   finalistTop: number;
-  entries: RatingEntry[];
-}
-
-export interface PublicMonthFinalistsResponse {
-  monthKey: string;
   entries: RatingEntry[];
 }
