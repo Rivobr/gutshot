@@ -48,6 +48,16 @@ export class AdminTournamentsController {
     return this.adminTournamentsService.findAll();
   }
 
+  @Get('schedule-template')
+  previewScheduleTemplate() {
+    return this.adminTournamentsService.previewScheduleTemplate();
+  }
+
+  @Post('schedule-template')
+  applyScheduleTemplate() {
+    return this.adminTournamentsService.applyScheduleTemplate();
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.adminTournamentsService.findById(id);
