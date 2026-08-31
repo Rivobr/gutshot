@@ -38,7 +38,7 @@ export function AchievementMedallion({
   achievementId?: string;
 }): JSX.Element {
   // Уникальное изображение на каждое достижение; групповой PNG — запасной вариант.
-  const perAchievement = achievementId ? `/achievements/${achievementId}.svg` : undefined;
+  const perAchievement = achievementId ? `/achievements/${achievementId}.png` : undefined;
   const fallback = (group && ICON_BY_GROUP[group]) || FALLBACK_ICON;
   const style = rarity ? styleForAchievement(achievementId, rarity) : null;
   const pad = rarity && rarity !== 'common' ? Math.max(2, Math.round(size * 0.08)) : 0;
