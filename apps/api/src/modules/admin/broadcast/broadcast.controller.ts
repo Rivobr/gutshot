@@ -7,20 +7,28 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { BroadcastSegment } from '@prisma/client';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
+import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { AdminRole } from '../../../common/enums/admin-role.enum';
 import { Roles } from '../../../common/decorators/roles.decorator';
 import { AdminAuthGuard } from '../../auth/guards/admin-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
+import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import { AdminJwtPayload } from '../../../common/interfaces/jwt-payload.interface';
 import { AdminBroadcastService } from './broadcast.service';
-import {
-  CreateBroadcastDto,
-  TestBroadcastDto,
-  UpdateBroadcastDto,
-} from './dto/broadcast.dto';
+import { CreateBroadcastDto, UpdateBroadcastDto } from './dto/broadcast.dto';
+
+interface UploadedPhoto {
+  buffer: Buffer;
+  originalname: string;
+  mimetype: string;
+  size: number;
+}
 
 @ApiTags('Admin / Broadcasts')
 @ApiBearerAuth()
@@ -37,11 +45,10 @@ export class AdminBroadcastController {
 
   @Get('preview')
   preview(
-    @Query('segment') segment: BroadcastSegment,
-    @Query('tournamentId') tournamentId?: string,
-    @Query('targetUserId') targetUserId?: string,
+    @Query('segment') segment: 'ALL_ACTIVE' | 'SINGLE_PLAYER',
+    @Query('targetTelegramId') targetTelegramId?: string,
   ) {
-    return this.broadcastService.previewSegment(segment, tournamentId, targetUserId);
+    return this.broadcastService.preview(segment, targetTelegramId);
   }
 
   @Get(':id')
@@ -49,9 +56,22 @@ export class AdminBroadcastController {
     return this.broadcastService.getById(id);
   }
 
+  /** Загрузка фото для рассылки (multipart, поле photo). */
+  @Post('photo')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileInterceptor('photo', {
+      storage: memoryStorage(),
+      limits: { fileSize: 10 * 1024 * 1024 },
+    }),
+  )
+  uploadPhoto(@UploadedFile() file?: UploadedPhoto) {
+    return this.broadcastService.savePhoto(file);
+  }
+
   @Post()
-  create(@Body() dto: CreateBroadcastDto) {
-    return this.broadcastService.create(dto);
+  create(@Body() dto: CreateBroadcastDto, @CurrentUser() admin?: AdminJwtPayload) {
+    return this.broadcastService.create(dto, admin?.sub);
   }
 
   @Patch(':id')
@@ -59,20 +79,21 @@ export class AdminBroadcastController {
     return this.broadcastService.update(id, dto);
   }
 
-  @Post(':id/test')
-  test(@Param('id') id: string, @Body() dto: TestBroadcastDto) {
-    return this.broadcastService.sendTest(id, dto.telegramId);
-  }
-
   @Post(':id/send')
   send(@Param('id') id: string) {
     return this.broadcastService.send(id);
   }
 
-  /** Удалить отправленные Telegram-сообщения по сохранённым message_id. */
+  /** Удалить все отправленные Telegram-сообщения по сохранённым message_id. */
   @Post(':id/delete-messages')
   deleteMessages(@Param('id') id: string) {
     return this.broadcastService.deleteMessages(id);
+  }
+
+  /** Удалить одно сообщение в Telegram по message_id конкретной доставки. */
+  @Delete(':id/messages/:deliveryId')
+  deleteDeliveryMessage(@Param('id') id: string, @Param('deliveryId') deliveryId: string) {
+    return this.broadcastService.deleteDeliveryMessage(id, deliveryId);
   }
 
   @Delete(':id')

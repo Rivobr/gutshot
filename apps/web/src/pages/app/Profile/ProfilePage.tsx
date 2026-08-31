@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { apiGet, apiErrorMessage } from '@/shared/api/client';
 import type { PlayerProfileDto } from '@gutshot/types';
 import { authApi } from '@/shared/api/auth.api';
+import { ratingApi } from '@/shared/api/public.api';
 import { useAuth } from '@/app/providers/auth-provider';
 import { useInstallPrompt } from '@/shared/hooks/use-install-prompt';
 import { formatDateShort } from '@/shared/lib/format';
@@ -87,6 +88,8 @@ export function ProfilePage() {
             </div>
           </div>
         </article>
+
+        <GlobalRatingCard currentUserId={user.id} />
 
         <section className="card">
           <p className="eyebrow">Вход и привязки · один игрок = один аккаунт</p>
@@ -255,5 +258,64 @@ export function ProfilePage() {
         </section>
       </div>
     </div>
+  );
+}
+
+/** Глобальный рейтинг по XP — как в боте: место игрока + топ-5. */
+function GlobalRatingCard({ currentUserId }: { currentUserId?: string }) {
+  const { data } = useQuery({ queryKey: ['rating-overall'], queryFn: ratingApi.overall });
+  const entries = data ?? [];
+  const mine = entries.find((e) => e.userId === currentUserId);
+  const preview = entries.slice(0, 5);
+
+  return (
+    <section className="card">
+      <div className="row between mb-16">
+        <b className="serif" style={{ fontSize: 17 }}>
+          Глобальный рейтинг
+        </b>
+        <span className="chip">топ по XP</span>
+      </div>
+      {mine ? (
+        <div className="row between mb-16" style={{ fontSize: 13 }}>
+          <span className="muted">Ваше место</span>
+          <b className="num" style={{ color: 'var(--gold)' }}>
+            #{mine.rank} · {mine.points.toLocaleString('ru-RU')} XP
+          </b>
+        </div>
+      ) : null}
+      {entries.length === 0 ? (
+        <p className="muted" style={{ fontSize: 13 }}>
+          Рейтинг пока пуст
+        </p>
+      ) : (
+        <table className="tbl">
+          <tbody>
+            {preview.map((e) => (
+              <tr
+                key={e.userId}
+                style={
+                  e.userId === currentUserId
+                    ? { background: 'rgba(200, 154, 61, 0.12)', borderRadius: 10 }
+                    : undefined
+                }
+              >
+                <td className="rank">{e.rank}</td>
+                <td>
+                  {e.nickname ?? [e.firstName, e.lastName].filter(Boolean).join(' ') ?? 'Игрок'}
+                </td>
+                <td className="r num">
+                  <span className="muted" style={{ fontSize: 11 }}>
+                    Ур. {e.level ?? '—'}
+                  </span>{' '}
+                  <b>{e.points.toLocaleString('ru-RU')}</b>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      <p className="hint mt-12">XP за явку, комбо и уровни. Очки недельного рейтинга — отдельно.</p>
+    </section>
   );
 }

@@ -41,6 +41,7 @@ docker/postgres/backups/
 docker/redis/data/
 docker/nginx/certs/
 docker/nginx/www/
+docker/uploads/
 
 # Misc
 *.tsbuildinfo

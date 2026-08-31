@@ -64,7 +64,7 @@ export class TelegramService {
     photoUrl: string,
     caption: string,
     replyMarkup?: object,
-  ): Promise<{ messageId: number; chatId: number } | null> {
+  ): Promise<{ messageId: number; chatId: number; fileId?: string } | null> {
     const result = await this.callTelegramApi('sendPhoto', {
       chat_id: telegramId,
       photo: photoUrl,
@@ -75,12 +75,112 @@ export class TelegramService {
     if (!result) {
       return null;
     }
+    return this.readPhotoResult(result, telegramId);
+  }
+
+  /**
+   * Фото загруженным файлом (multipart) + caption (HTML) + кнопки.
+   * Возвращает file_id — его можно переиспользовать для остальных получателей.
+   */
+  async sendPhotoFileDetailed(
+    telegramId: string,
+    file: { buffer: Buffer; filename: string; mimeType: string },
+    caption: string,
+    replyMarkup?: object,
+  ): Promise<{ messageId: number; chatId: number; fileId?: string } | null> {
+    if (!this.botToken) {
+      this.logger.warn('TELEGRAM_BOT_TOKEN не задан — sendPhoto не выполнен');
+      return null;
+    }
+    if (isPendingTelegramId(telegramId)) {
+      this.logger.debug(`Пропуск sendPhoto: временный telegramId ${telegramId}`);
+      return null;
+    }
+
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= 4; attempt += 1) {
+      try {
+        const form = new FormData();
+        form.append('chat_id', telegramId);
+        form.append('caption', caption.slice(0, 1024));
+        form.append('parse_mode', 'HTML');
+        if (replyMarkup) {
+          form.append('reply_markup', JSON.stringify(replyMarkup));
+        }
+        form.append(
+          'photo',
+          new Blob([new Uint8Array(file.buffer)], { type: file.mimeType }),
+          file.filename,
+        );
+
+        const response = await fetch(`https://api.telegram.org/bot${this.botToken}/sendPhoto`, {
+          method: 'POST',
+          body: form,
+          signal: AbortSignal.timeout(30_000),
+        });
+
+        if (!response.ok) {
+          const raw = await response.text();
+          this.logger.error(`Telegram sendPhoto(multipart) error: ${response.status} ${raw}`);
+          if (response.status < 500 && response.status !== 429) {
+            return null;
+          }
+          throw new Error(`http ${response.status}`);
+        }
+
+        const payload = (await response.json()) as {
+          ok?: boolean;
+          result?: Record<string, unknown>;
+        };
+        if (!payload.result) {
+          return null;
+        }
+        return this.readPhotoResult(payload.result, telegramId);
+      } catch (error) {
+        lastError = error;
+        this.logger.warn(
+          `Telegram sendPhoto(multipart) attempt ${attempt}/4 failed: ${(error as Error).message}`,
+        );
+        await new Promise((r) => setTimeout(r, 500 * attempt));
+      }
+    }
+
+    this.logger.error('Ошибка Telegram sendPhoto(multipart)', lastError as Error);
+    return null;
+  }
+
+  /** Фото по file_id (быстрая повторная отправка) + caption (HTML) + кнопки. */
+  async sendPhotoFileIdDetailed(
+    telegramId: string,
+    fileId: string,
+    caption: string,
+    replyMarkup?: object,
+  ): Promise<{ messageId: number; chatId: number; fileId?: string } | null> {
+    const result = await this.callTelegramApi('sendPhoto', {
+      chat_id: telegramId,
+      photo: fileId,
+      caption: caption.slice(0, 1024),
+      parse_mode: 'HTML',
+      ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
+    });
+    if (!result) {
+      return null;
+    }
+    return this.readPhotoResult(result, telegramId);
+  }
+
+  private readPhotoResult(
+    result: Record<string, unknown>,
+    telegramId: string,
+  ): { messageId: number; chatId: number; fileId?: string } | null {
     const messageId = Number(result.message_id);
     const chatId = Number((result.chat as { id?: number } | undefined)?.id ?? telegramId);
     if (!Number.isFinite(messageId)) {
       return null;
     }
-    return { messageId, chatId };
+    const photos = result.photo as Array<{ file_id?: string }> | undefined;
+    const fileId = photos?.length ? photos[photos.length - 1]?.file_id : undefined;
+    return { messageId, chatId, ...(fileId ? { fileId } : {}) };
   }
 
   /** Удалить сообщение бота (по сохранённому message_id рассылки). */
@@ -184,7 +284,10 @@ export class TelegramService {
           throw new Error(`http ${response.status}`);
         }
 
-        const payload = (await response.json()) as { ok?: boolean; result?: Record<string, unknown> };
+        const payload = (await response.json()) as {
+          ok?: boolean;
+          result?: Record<string, unknown>;
+        };
         return payload.result ?? {};
       } catch (error) {
         lastError = error;

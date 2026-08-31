@@ -1,38 +1,41 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { FormEvent, useEffect, useRef, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { isAxiosError } from 'axios';
-import type {
-  BroadcastButtons,
-  BroadcastCustomButton,
-  BroadcastSegment,
-} from '@gutshot/types';
+import type { BroadcastDeliveryDto, BroadcastSegment } from '@gutshot/types';
 import { Button, Card, Loader } from '@gutshot/ui';
 import {
+  broadcastPhotoUrl,
   useBroadcast,
   useBroadcastPreview,
   useCreateBroadcast,
+  useDeleteBroadcastDraft,
+  useDeleteBroadcastMessage,
   useDeleteBroadcastMessages,
   useSendBroadcast,
-  useTestBroadcast,
   useUpdateBroadcast,
+  useUploadBroadcastPhoto,
 } from '../../entities/broadcast';
-import { useAdminTournaments } from '../../entities/tournament';
-import { usePlayers } from '../../entities/player';
 import { formatDateTime } from '../../shared/lib/event-labels';
 
 const SEGMENT_OPTIONS: { value: BroadcastSegment; label: string }[] = [
-  { value: 'ALL_ACTIVE', label: 'Все активные игроки' },
-  { value: 'TOURNAMENT_REGISTERED', label: 'Записанные на турнир' },
-  { value: 'TOURNAMENT_RSVP_PENDING', label: 'Записанные, ещё не подтвердили RSVP' },
-  { value: 'SINGLE_PLAYER', label: 'Один игрок' },
+  { value: 'ALL_ACTIVE', label: 'Всем игрокам' },
+  { value: 'SINGLE_PLAYER', label: 'Одному человеку (по Telegram ID)' },
 ];
 
-const BUTTON_OPTIONS: { value: BroadcastButtons; label: string }[] = [
-  { value: 'NONE', label: 'Без кнопок' },
-  { value: 'OPEN_APP', label: 'Открыть клуб' },
-  { value: 'RSVP', label: 'Буду / Не смогу' },
-  { value: 'CUSTOM', label: 'Свои кнопки' },
-];
+const STATUS_LABEL: Record<string, string> = {
+  DRAFT: 'Черновик',
+  SENDING: 'Отправляется',
+  SENT: 'Отправлена',
+  FAILED: 'Ошибка',
+};
+
+const DELIVERY_STATUS_LABEL: Record<string, string> = {
+  PENDING: 'Ожидает',
+  SENT: 'Доставлено',
+  FAILED: 'Ошибка',
+  SKIPPED: 'Пропущено',
+  DELETED: 'Удалено',
+};
 
 function errorMessage(error: unknown): string {
   if (isAxiosError(error)) {
@@ -43,158 +46,89 @@ function errorMessage(error: unknown): string {
   return 'Ошибка запроса';
 }
 
-function playerLabel(p: {
-  nickname?: string | null;
-  firstName?: string | null;
-  username?: string | null;
-  telegramId: string;
-}): string {
-  return p.nickname || p.firstName || (p.username ? `@${p.username}` : p.telegramId);
-}
-
 export function BroadcastEditorPage({ id }: { id?: string }): JSX.Element {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const isNew = !id || id === 'new';
 
   const { data: existing, isLoading } = useBroadcast(isNew ? '' : id);
-  const { data: tournaments } = useAdminTournaments();
-  const { data: players } = usePlayers();
   const createBroadcast = useCreateBroadcast();
   const updateBroadcast = useUpdateBroadcast(id ?? '');
-  const testBroadcast = useTestBroadcast(id ?? '');
   const sendBroadcast = useSendBroadcast(id ?? '');
+  const uploadPhoto = useUploadBroadcastPhoto();
   const deleteMessages = useDeleteBroadcastMessages(id ?? '');
+  const deleteMessage = useDeleteBroadcastMessage(id ?? '');
+  const removeDraft = useDeleteBroadcastDraft();
 
   const [title, setTitle] = useState('');
   const [bodyHtml, setBodyHtml] = useState('');
   const [segment, setSegment] = useState<BroadcastSegment>('ALL_ACTIVE');
-  const [tournamentId, setTournamentId] = useState('');
-  const [targetUserId, setTargetUserId] = useState('');
-  const [playerQuery, setPlayerQuery] = useState('');
-  const [photoUrl, setPhotoUrl] = useState('');
-  const [buttons, setButtons] = useState<BroadcastButtons>('NONE');
-  const [customButtons, setCustomButtons] = useState<BroadcastCustomButton[]>([
-    { text: '', type: 'url', url: '' },
-  ]);
-  const [testTelegramId, setTestTelegramId] = useState('');
+  const [targetTelegramId, setTargetTelegramId] = useState('');
+  const [photoPath, setPhotoPath] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (isNew) {
-      const seg = searchParams.get('segment') as BroadcastSegment | null;
-      const tid = searchParams.get('tournamentId');
-      const btn = searchParams.get('buttons') as BroadcastButtons | null;
-      const preTitle = searchParams.get('title');
-      const uid = searchParams.get('targetUserId');
-      if (seg) setSegment(seg);
-      if (tid) setTournamentId(tid);
-      if (btn) setButtons(btn);
-      if (preTitle) setTitle(preTitle);
-      if (uid) setTargetUserId(uid);
-      return;
-    }
-    if (!existing) return;
+    if (isNew || !existing) return;
     setTitle(existing.title);
     setBodyHtml(existing.bodyHtml);
-    setSegment(existing.segment);
-    setTournamentId(existing.tournamentId ?? '');
-    setTargetUserId(existing.targetUserId ?? '');
-    setPhotoUrl(existing.photoUrl ?? '');
-    setButtons(existing.buttons);
-    setCustomButtons(
-      existing.customButtons?.length
-        ? existing.customButtons
-        : [{ text: '', type: 'url', url: '' }],
-    );
-  }, [existing, isNew, searchParams]);
+    if (existing.segment === 'ALL_ACTIVE' || existing.segment === 'SINGLE_PLAYER') {
+      setSegment(existing.segment);
+    }
+    setTargetTelegramId(existing.targetTelegramId ?? '');
+    setPhotoPath(existing.photoPath ?? '');
+  }, [existing, isNew]);
 
-  const needsTournament =
-    segment === 'TOURNAMENT_REGISTERED' ||
-    segment === 'TOURNAMENT_RSVP_PENDING' ||
-    buttons === 'RSVP';
-  const needsPlayer = segment === 'SINGLE_PLAYER';
+  const legacySegment =
+    existing && existing.segment !== 'ALL_ACTIVE' && existing.segment !== 'SINGLE_PLAYER';
 
   const preview = useBroadcastPreview(
     segment,
-    tournamentId || undefined,
-    targetUserId || undefined,
+    segment === 'SINGLE_PLAYER' ? targetTelegramId.trim() || undefined : undefined,
   );
 
-  const filteredPlayers = useMemo(() => {
-    const q = playerQuery.trim().toLowerCase();
-    const list = players ?? [];
-    const matched = !q
-      ? list.slice(0, 40)
-      : list
-          .filter((p) => {
-            const hay =
-              `${p.nickname ?? ''} ${p.firstName ?? ''} ${p.username ?? ''} ${p.telegramId}`.toLowerCase();
-            return hay.includes(q);
-          })
-          .slice(0, 40);
-    const selected = list.find((p) => p.id === targetUserId);
-    if (selected && !matched.some((p) => p.id === selected.id)) {
-      return [selected, ...matched];
-    }
-    return matched;
-  }, [players, playerQuery, targetUserId]);
-
-  const isDraft = isNew || existing?.status === 'DRAFT' || existing?.status === 'FAILED';
   const canEdit = isNew || existing?.status === 'DRAFT' || existing?.status === 'FAILED';
 
-  const payload = useMemo(
-    () => ({
-      title: title.trim(),
-      bodyHtml: bodyHtml.trim(),
-      segment,
-      tournamentId: needsTournament ? tournamentId || undefined : undefined,
-      targetUserId: needsPlayer ? targetUserId || undefined : undefined,
-      photoUrl: photoUrl.trim() || undefined,
-      buttons,
-      customButtons:
-        buttons === 'CUSTOM'
-          ? customButtons
-              .filter((b) => b.text.trim())
-              .map((b) => ({
-                text: b.text.trim(),
-                type: b.type ?? 'url',
-                url: b.type === 'open_app' ? undefined : b.url?.trim() || undefined,
-              }))
-          : undefined,
-    }),
-    [
-      title,
-      bodyHtml,
-      segment,
-      tournamentId,
-      targetUserId,
-      photoUrl,
-      needsTournament,
-      needsPlayer,
-      buttons,
-      customButtons,
-    ],
-  );
+  const photoPreviewSrc = photoPath
+    ? broadcastPhotoUrl(photoPath)
+    : existing?.photoUrl && !photoPath
+      ? existing.photoUrl
+      : null;
+
+  const onPickPhoto = async (file: File | undefined) => {
+    if (!file) return;
+    setMessage(null);
+    setIsError(false);
+    try {
+      const res = await uploadPhoto.mutateAsync(file);
+      setPhotoPath(res.photoPath);
+    } catch (error) {
+      setIsError(true);
+      setMessage(errorMessage(error));
+    } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
   const onSave = async (event: FormEvent) => {
     event.preventDefault();
     setMessage(null);
     setIsError(false);
+    const payload = {
+      title: title.trim(),
+      bodyHtml: bodyHtml.trim(),
+      segment,
+      targetTelegramId: segment === 'SINGLE_PLAYER' ? targetTelegramId.trim() : null,
+      photoPath: photoPath || null,
+    };
     try {
       if (isNew) {
         const created = await createBroadcast.mutateAsync(payload);
-        setMessage('Черновик сохранён');
         navigate(`/broadcasts/${created.id}`, { replace: true });
       } else {
-        await updateBroadcast.mutateAsync({
-          ...payload,
-          tournamentId: needsTournament ? tournamentId || null : null,
-          targetUserId: needsPlayer ? targetUserId || null : null,
-          photoUrl: photoUrl.trim() || null,
-          customButtons: buttons === 'CUSTOM' ? payload.customButtons ?? [] : null,
-        });
+        await updateBroadcast.mutateAsync(payload);
         setMessage('Сохранено');
       }
     } catch (error) {
@@ -219,10 +153,19 @@ export function BroadcastEditorPage({ id }: { id?: string }): JSX.Element {
         <h1 className="text-2xl font-medium">{isNew ? 'Новая рассылка' : existing?.title}</h1>
         <p className="text-sm text-muted-foreground">
           {isNew
-            ? 'Сначала сохраните черновик, затем тест и отправка'
-            : `Статус: ${existing?.status} · получателей ${existing?.recipientCount}`}
+            ? 'Текст, фото и получатель — потом «Отправить»'
+            : `Статус: ${STATUS_LABEL[existing?.status ?? ''] ?? existing?.status} · получателей ${existing?.recipientCount}`}
         </p>
       </div>
+
+      {legacySegment && (
+        <Card className="gap-2 border-amber-500/50">
+          <p className="text-sm">
+            Это рассылка старого формата (сегмент «{existing?.segment}»). Отправить её заново нельзя
+            — создайте новую.
+          </p>
+        </Card>
+      )}
 
       <form onSubmit={onSave} className="flex flex-col gap-4">
         <Card className="gap-4">
@@ -235,6 +178,48 @@ export function BroadcastEditorPage({ id }: { id?: string }): JSX.Element {
               className="rounded-md border border-border bg-secondary px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary"
               required
             />
+          </label>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm text-muted-foreground">Текст сообщения</span>
+            <textarea
+              value={bodyHtml}
+              disabled={!canEdit}
+              onChange={(e) => setBodyHtml(e.target.value)}
+              rows={8}
+              placeholder="Поддерживается HTML Telegram: &lt;b&gt;жирный&lt;/b&gt;, &lt;i&gt;курсив&lt;/i&gt;"
+              className="rounded-md border border-border bg-secondary px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary"
+              required
+            />
+          </label>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm text-muted-foreground">Фото (необязательно)</span>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              disabled={!canEdit || uploadPhoto.isPending}
+              onChange={(e) => void onPickPhoto(e.target.files?.[0])}
+              className="rounded-md border border-border bg-secondary px-3 py-2.5 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-sm file:text-primary-foreground"
+            />
+            <span className="text-xs text-muted-foreground">
+              JPEG / PNG / WebP, до 10 МБ. Текст уйдёт подписью к фото.
+            </span>
+            {photoPreviewSrc && (
+              <div className="mt-1 flex flex-col items-start gap-2">
+                <img
+                  src={photoPreviewSrc}
+                  alt="Превью фото"
+                  className="max-h-48 rounded-md border border-border object-contain"
+                />
+                {canEdit && (
+                  <Button type="button" variant="secondary" onClick={() => setPhotoPath('')}>
+                    Убрать фото
+                  </Button>
+                )}
+              </div>
+            )}
           </label>
 
           <label className="flex flex-col gap-1.5">
@@ -253,300 +238,128 @@ export function BroadcastEditorPage({ id }: { id?: string }): JSX.Element {
             </select>
           </label>
 
-          {needsTournament && (
-            <label className="flex flex-col gap-1.5">
-              <span className="text-sm text-muted-foreground">Турнир</span>
-              <select
-                value={tournamentId}
+          {segment === 'SINGLE_PLAYER' && (
+            <label className="flex flex-col gap-1.5 sm:max-w-sm">
+              <span className="text-sm text-muted-foreground">Telegram ID получателя</span>
+              <input
+                value={targetTelegramId}
                 disabled={!canEdit}
-                onChange={(e) => setTournamentId(e.target.value)}
+                onChange={(e) => setTargetTelegramId(e.target.value)}
+                placeholder="например 123456789"
+                inputMode="numeric"
                 className="rounded-md border border-border bg-secondary px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary"
                 required
-              >
-                <option value="">Выберите турнир</option>
-                {(tournaments ?? []).map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.title} · {new Date(t.date).toLocaleString('ru-RU')}
-                  </option>
-                ))}
-              </select>
+              />
             </label>
           )}
 
-          {needsPlayer && (
-            <div className="flex flex-col gap-2">
-              <label className="flex flex-col gap-1.5">
-                <span className="text-sm text-muted-foreground">Поиск игрока</span>
-                <input
-                  value={playerQuery}
-                  disabled={!canEdit}
-                  onChange={(e) => setPlayerQuery(e.target.value)}
-                  placeholder="ник / @username / telegram id"
-                  className="rounded-md border border-border bg-secondary px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary"
-                />
-              </label>
-              <label className="flex flex-col gap-1.5">
-                <span className="text-sm text-muted-foreground">Игрок</span>
-                <select
-                  value={targetUserId}
-                  disabled={!canEdit}
-                  onChange={(e) => setTargetUserId(e.target.value)}
-                  className="rounded-md border border-border bg-secondary px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary"
-                  required
-                >
-                  <option value="">Выберите игрока</option>
-                  {filteredPlayers.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {playerLabel(p)} · {p.telegramId}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-          )}
-
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm text-muted-foreground">
-              Фото (URL картинки, необязательно)
-            </span>
-            <input
-              value={photoUrl}
-              disabled={!canEdit}
-              onChange={(e) => setPhotoUrl(e.target.value)}
-              placeholder="https://..."
-              className="rounded-md border border-border bg-secondary px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary"
-            />
-            <span className="text-xs text-muted-foreground">
-              Telegram скачает фото по ссылке. Текст уйдёт подписью к фото.
-            </span>
-            {photoUrl.trim() && (
-              <img
-                src={photoUrl.trim()}
-                alt="Превью"
-                className="mt-1 max-h-40 rounded-md border border-border object-contain"
-              />
-            )}
-          </label>
-
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm text-muted-foreground">Кнопки</span>
-            <select
-              value={buttons}
-              disabled={!canEdit}
-              onChange={(e) => setButtons(e.target.value as BroadcastButtons)}
-              className="rounded-md border border-border bg-secondary px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary"
-            >
-              {BUTTON_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          {buttons === 'CUSTOM' && (
-            <div className="flex flex-col gap-3 rounded-md border border-border p-3">
-              <p className="text-sm font-medium">Свои кнопки</p>
-              {customButtons.map((btn, index) => (
-                <div key={index} className="grid gap-2 sm:grid-cols-3">
-                  <input
-                    value={btn.text}
-                    disabled={!canEdit}
-                    placeholder="Текст"
-                    onChange={(e) => {
-                      const next = [...customButtons];
-                      next[index] = { ...next[index], text: e.target.value };
-                      setCustomButtons(next);
-                    }}
-                    className="rounded-md border border-border bg-secondary px-3 py-2 text-sm"
-                  />
-                  <select
-                    value={btn.type ?? 'url'}
-                    disabled={!canEdit}
-                    onChange={(e) => {
-                      const next = [...customButtons];
-                      next[index] = {
-                        ...next[index],
-                        type: e.target.value as 'url' | 'open_app',
-                      };
-                      setCustomButtons(next);
-                    }}
-                    className="rounded-md border border-border bg-secondary px-3 py-2 text-sm"
-                  >
-                    <option value="url">Ссылка</option>
-                    <option value="open_app">Открыть клуб</option>
-                  </select>
-                  <div className="flex gap-2">
-                    <input
-                      value={btn.url ?? ''}
-                      disabled={!canEdit || btn.type === 'open_app'}
-                      placeholder="https://..."
-                      onChange={(e) => {
-                        const next = [...customButtons];
-                        next[index] = { ...next[index], url: e.target.value };
-                        setCustomButtons(next);
-                      }}
-                      className="min-w-0 flex-1 rounded-md border border-border bg-secondary px-3 py-2 text-sm"
-                    />
-                    {canEdit && customButtons.length > 1 && (
-                      <button
-                        type="button"
-                        className="rounded-md border border-border px-2 text-sm"
-                        onClick={() =>
-                          setCustomButtons(customButtons.filter((_, i) => i !== index))
-                        }
-                      >
-                        ×
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-              {canEdit && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() =>
-                    setCustomButtons([...customButtons, { text: '', type: 'url', url: '' }])
-                  }
-                >
-                  + Кнопка
-                </Button>
-              )}
-            </div>
-          )}
-
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm text-muted-foreground">
-              Текст (HTML Telegram: &lt;b&gt;, &lt;i&gt;)
-            </span>
-            <textarea
-              value={bodyHtml}
-              disabled={!canEdit}
-              onChange={(e) => setBodyHtml(e.target.value)}
-              rows={10}
-              className="rounded-md border border-border bg-secondary px-3 py-2.5 font-mono text-sm outline-none focus:ring-2 focus:ring-primary"
-              required
-            />
-          </label>
-
           <div className="rounded-md border border-border bg-secondary/50 p-3 text-sm">
-            <p className="font-medium">Получателей сейчас: {preview.data?.count ?? '…'}</p>
-            {preview.data?.sample?.length ? (
+            <p className="font-medium">
+              Получателей: {preview.isFetching ? '…' : (preview.data?.count ?? '—')}
+            </p>
+            {segment === 'SINGLE_PLAYER' && preview.data?.sample?.length ? (
               <p className="mt-1 text-xs text-muted-foreground">
-                Например: {preview.data.sample.map((s) => s.name).join(', ')}
+                Найден игрок: {preview.data.sample.map((s) => s.name).join(', ')}
               </p>
             ) : null}
           </div>
 
           {canEdit && (
-            <Button type="submit" isLoading={createBroadcast.isPending || updateBroadcast.isPending}>
-              {isNew ? 'Сохранить черновик' : 'Сохранить изменения'}
+            <Button
+              type="submit"
+              isLoading={createBroadcast.isPending || updateBroadcast.isPending}
+            >
+              {isNew ? 'Сохранить рассылку' : 'Сохранить изменения'}
             </Button>
           )}
         </Card>
       </form>
 
-      {!isNew && (
+      {!isNew && existing && !legacySegment && (
         <Card className="gap-4">
-          <h2 className="text-lg font-medium">Тест и отправка</h2>
-          <label className="flex flex-col gap-1.5 sm:max-w-sm">
-            <span className="text-sm text-muted-foreground">Telegram ID для теста</span>
-            <input
-              value={testTelegramId}
-              onChange={(e) => setTestTelegramId(e.target.value)}
-              placeholder="например 123456789"
-              className="rounded-md border border-border bg-secondary px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary"
-            />
-          </label>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="secondary"
-              isLoading={testBroadcast.isPending}
-              onClick={async () => {
-                setMessage(null);
-                setIsError(false);
-                try {
-                  const res = await testBroadcast.mutateAsync(testTelegramId.trim());
-                  setMessage(`Тест отправлен, message_id=${res.messageId}`);
-                } catch (error) {
-                  setIsError(true);
-                  setMessage(errorMessage(error));
-                }
-              }}
-            >
-              Отправить тест
-            </Button>
-            {isDraft && (
-              <Button
-                isLoading={sendBroadcast.isPending}
-                onClick={async () => {
-                  if (
-                    !window.confirm(
-                      `Отправить рассылку ${preview.data?.count ?? existing?.recipientCount ?? ''} получателям?`,
-                    )
-                  ) {
-                    return;
-                  }
-                  setMessage(null);
-                  setIsError(false);
-                  try {
-                    const res = await sendBroadcast.mutateAsync();
-                    setMessage(`Готово: доставлено ${res.sentCount}, ошибок ${res.failedCount}`);
-                  } catch (error) {
-                    setIsError(true);
-                    setMessage(errorMessage(error));
-                  }
-                }}
-              >
-                Утвердить и отправить
-              </Button>
-            )}
-            {existing?.status === 'SENT' && (
-              <Button
-                variant="secondary"
-                isLoading={deleteMessages.isPending}
-                onClick={async () => {
-                  if (!window.confirm('Удалить все отправленные сообщения этой рассылки в Telegram?')) {
-                    return;
-                  }
-                  setMessage(null);
-                  setIsError(false);
-                  try {
-                    const res = await deleteMessages.mutateAsync();
-                    setMessage(`Удалено сообщений: ${res.deleted}, ошибок: ${res.failed}`);
-                  } catch (error) {
-                    setIsError(true);
-                    setMessage(errorMessage(error));
-                  }
-                }}
-              >
-                Удалить сообщения в Telegram
-              </Button>
-            )}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-medium">Отправка</h2>
+            <div className="flex flex-wrap gap-2">
+              {(existing.status === 'DRAFT' || existing.status === 'FAILED') && (
+                <Button
+                  isLoading={sendBroadcast.isPending}
+                  onClick={async () => {
+                    if (
+                      !window.confirm(
+                        `Отправить рассылку «${existing.title}» ${existing.recipientCount} получателю(ям)?`,
+                      )
+                    ) {
+                      return;
+                    }
+                    setMessage(null);
+                    setIsError(false);
+                    try {
+                      const res = await sendBroadcast.mutateAsync();
+                      setMessage(`Готово: доставлено ${res.sentCount}, ошибок ${res.failedCount}`);
+                    } catch (error) {
+                      setIsError(true);
+                      setMessage(errorMessage(error));
+                    }
+                  }}
+                >
+                  Отправить
+                </Button>
+              )}
+              {existing.deliveries.some(
+                (d) => d.status === 'SENT' && d.telegramMessageId != null,
+              ) && (
+                <Button
+                  variant="secondary"
+                  isLoading={deleteMessages.isPending}
+                  onClick={async () => {
+                    if (
+                      !window.confirm(
+                        'Удалить ВСЕ отправленные сообщения этой рассылки в Telegram?',
+                      )
+                    ) {
+                      return;
+                    }
+                    setMessage(null);
+                    setIsError(false);
+                    try {
+                      const res = await deleteMessages.mutateAsync();
+                      setMessage(`Удалено сообщений: ${res.deleted}, ошибок: ${res.failed}`);
+                    } catch (error) {
+                      setIsError(true);
+                      setMessage(errorMessage(error));
+                    }
+                  }}
+                >
+                  Удалить все сообщения
+                </Button>
+              )}
+              {existing.status === 'DRAFT' && (
+                <Button
+                  variant="secondary"
+                  isLoading={removeDraft.isPending}
+                  onClick={async () => {
+                    if (!window.confirm('Удалить черновик?')) return;
+                    try {
+                      await removeDraft.mutateAsync(existing.id);
+                      navigate('/broadcasts');
+                    } catch (error) {
+                      setIsError(true);
+                      setMessage(errorMessage(error));
+                    }
+                  }}
+                >
+                  Удалить черновик
+                </Button>
+              )}
+            </div>
           </div>
-        </Card>
-      )}
 
-      {!isNew && existing && 'deliveries' in existing && existing.deliveries && (
-        <Card className="gap-4">
-          <h2 className="text-lg font-medium">Отчёт / message_id</h2>
           {existing.deliveries.length === 0 ? (
             <p className="text-sm text-muted-foreground">Ещё не отправляли</p>
           ) : (
             <ul className="flex flex-col divide-y divide-border">
               {existing.deliveries.map((d) => (
-                <li key={d.id} className="flex flex-wrap justify-between gap-2 py-2 text-sm">
-                  <span>
-                    {d.name} · {d.telegramId}
-                  </span>
-                  <span className="text-muted-foreground">
-                    {d.status}
-                    {d.telegramMessageId != null ? ` · msg ${d.telegramMessageId}` : ''}
-                    {d.sentAt ? ` · ${formatDateTime(d.sentAt)}` : ''}
-                    {d.error ? ` · ${d.error}` : ''}
-                  </span>
-                </li>
+                <DeliveryRow key={d.id} delivery={d} onDelete={deleteMessage} />
               ))}
             </ul>
           )}
@@ -557,6 +370,55 @@ export function BroadcastEditorPage({ id }: { id?: string }): JSX.Element {
         <p className={`text-sm ${isError ? 'text-red-400' : 'text-primary'}`}>{message}</p>
       )}
     </div>
+  );
+}
+
+function DeliveryRow({
+  delivery,
+  onDelete,
+}: {
+  delivery: BroadcastDeliveryDto;
+  onDelete: ReturnType<typeof useDeleteBroadcastMessage>;
+}): JSX.Element {
+  const canDelete =
+    delivery.status === 'SENT' && delivery.telegramMessageId != null && !onDelete.isPending;
+
+  return (
+    <li className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+      <span>
+        {delivery.name} · {delivery.telegramId}
+      </span>
+      <span className="flex items-center gap-2 text-muted-foreground">
+        {DELIVERY_STATUS_LABEL[delivery.status] ?? delivery.status}
+        {delivery.telegramMessageId != null ? (
+          <>
+            {' '}
+            · message_id{' '}
+            <code className="rounded bg-secondary px-1">{delivery.telegramMessageId}</code>
+          </>
+        ) : null}
+        {delivery.sentAt ? ` · ${formatDateTime(delivery.sentAt)}` : ''}
+        {delivery.error ? ` · ${delivery.error}` : ''}
+        {canDelete && (
+          <button
+            type="button"
+            className="rounded-md border border-border px-2 py-1 text-xs text-red-400 hover:bg-secondary"
+            disabled={onDelete.isPending}
+            onClick={() => {
+              if (
+                window.confirm(
+                  `Удалить сообщение ${delivery.telegramMessageId} у ${delivery.name}?`,
+                )
+              ) {
+                onDelete.mutate(delivery.id);
+              }
+            }}
+          >
+            Удалить
+          </button>
+        )}
+      </span>
+    </li>
   );
 }
 

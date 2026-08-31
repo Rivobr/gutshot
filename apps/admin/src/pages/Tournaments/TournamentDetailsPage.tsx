@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { isAxiosError } from 'axios';
 import type { AdminTournamentRegistration } from '@gutshot/types';
 import { Avatar, Badge, Button, Card, Loader } from '@gutshot/ui';
@@ -210,20 +210,6 @@ export function TournamentDetailsPage(): JSX.Element {
               onFinish={() => setFinishOpen(true)}
               onDeleted={() => navigate('/tournaments')}
             />
-            <div className="flex flex-wrap gap-2">
-              <Link
-                to={`/broadcasts/new?tournamentId=${tournament.id}&segment=TOURNAMENT_REGISTERED&buttons=OPEN_APP&title=${encodeURIComponent(`Анонс: ${tournament.title}`)}`}
-                className="inline-flex items-center rounded-md border border-border bg-secondary px-3 py-1.5 text-xs"
-              >
-                📣 Написать записанным
-              </Link>
-              <Link
-                to={`/broadcasts/new?tournamentId=${tournament.id}&segment=TOURNAMENT_REGISTERED&buttons=RSVP&title=${encodeURIComponent(`RSVP: ${tournament.title}`)}`}
-                className="inline-flex items-center rounded-md border border-border bg-secondary px-3 py-1.5 text-xs"
-              >
-                ✅ Подтверждение явки
-              </Link>
-            </div>
           </div>
         </div>
       </div>

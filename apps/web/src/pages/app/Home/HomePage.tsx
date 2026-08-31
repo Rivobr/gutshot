@@ -108,9 +108,9 @@ export function CabinetHomePage() {
             <span className="chip">неделя пн–сб</span>
           </div>
           <div className="week-grid" style={{ gap: 10 }}>
-            <div className="day">
+            <div className="day hot">
               <b>СР</b>
-              <span>19:00 · рейтинг</span>
+              <span>19:00 · фриролл</span>
             </div>
             <div className="day hot">
               <b>ПТ</b>
@@ -118,7 +118,7 @@ export function CabinetHomePage() {
             </div>
             <div className="day hot">
               <b>СБ</b>
-              <span>17:00 · рейтинг</span>
+              <span>17:00 · баунти фриролл</span>
             </div>
           </div>
         </div>

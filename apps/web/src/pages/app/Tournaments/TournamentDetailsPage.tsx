@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { apiGet } from '@/shared/api/client';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiErrorMessage, apiGet } from '@/shared/api/client';
 import { tournamentsApi } from '@/shared/api/public.api';
 import { formatDateShort, formatTime } from '@/shared/lib/format';
+import { useAuth } from '@/app/providers/auth-provider';
 
 interface TournamentParticipant {
   userId: string;
@@ -14,6 +16,9 @@ interface TournamentParticipant {
 
 export function TournamentDetailsPage() {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [notice, setNotice] = useState<string | null>(null);
   const { data: tournament } = useQuery({
     queryKey: ['tournament', id],
     queryFn: () => tournamentsApi.byId(id!),
@@ -23,6 +28,27 @@ export function TournamentDetailsPage() {
     queryKey: ['tournament-participants', id],
     queryFn: () => apiGet<TournamentParticipant[]>(`/tournaments/${id}/participants`),
     enabled: Boolean(id),
+  });
+
+  const myRegistration = participants?.find((p) => p.userId === user?.id);
+  const activeStatuses = ['REGISTERED', 'CHECKED_IN', 'PLAYING', 'WAITING'];
+  const alreadyIn = Boolean(myRegistration && activeStatuses.includes(myRegistration.status ?? ''));
+
+  const register = useMutation({
+    mutationFn: () => tournamentsApi.register(id!),
+    onSuccess: (reg) => {
+      setNotice(
+        reg.status === 'WAITING'
+          ? 'Свободных мест нет — вы в листе ожидания'
+          : 'Вы записаны на турнир',
+      );
+      void queryClient.invalidateQueries({ queryKey: ['tournament-participants', id] });
+      void queryClient.invalidateQueries({ queryKey: ['tournament', id] });
+    },
+    onError: (error) => {
+      setNotice(apiErrorMessage(error, 'Не удалось записаться. Попробуйте ещё раз.'));
+      void queryClient.invalidateQueries({ queryKey: ['tournament-participants', id] });
+    },
   });
 
   if (!tournament) {
@@ -72,9 +98,32 @@ export function TournamentDetailsPage() {
             <i style={{ width: `${Math.min(100, Math.round((taken / max) * 100))}%` }} />
           </div>
         </div>
-        <p className="hint mt-12">
-          Запись — в Telegram-боте или по приходу в клуб. QR для входа — в разделе «QR».
-        </p>
+        <div className="mt-16">
+          {alreadyIn ? (
+            <p className="note gold center" style={{ margin: 0 }}>
+              {myRegistration?.status === 'WAITING'
+                ? '⏳ Вы в листе ожидания'
+                : '✓ Вы записаны на турнир'}
+            </p>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-gold btn-block"
+              disabled={register.isPending}
+              onClick={() => register.mutate()}
+            >
+              {register.isPending ? 'Записываем…' : 'Записаться на турнир'}
+            </button>
+          )}
+          {notice && (
+            <p className="hint center mt-8" style={{ margin: '8px 0 0' }}>
+              {notice}
+            </p>
+          )}
+          <p className="hint mt-12" style={notice ? { marginTop: 6 } : undefined}>
+            QR для входа — в разделе «QR». Можно прийти и без записи.
+          </p>
+        </div>
       </article>
 
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>

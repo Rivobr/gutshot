@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Disallow: /app
+Disallow: /api/
+
+User-agent: Yandex
+Allow: /
+Disallow: /app
+Disallow: /api/
+
+Clean-param: utm_source&utm_medium&utm_campaign&utm_content&utm_term&ref
+
+Sitemap: https://gutshotapp.ru/sitemap.xml
+Host: gutshotapp.ru

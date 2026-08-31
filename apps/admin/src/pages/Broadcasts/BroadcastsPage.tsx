@@ -12,10 +12,8 @@ const STATUS_LABEL: Record<BroadcastStatus, string> = {
 };
 
 const SEGMENT_LABEL: Record<string, string> = {
-  ALL_ACTIVE: 'Все активные',
-  TOURNAMENT_REGISTERED: 'Записанные на турнир',
-  TOURNAMENT_RSVP_PENDING: 'Не подтвердили RSVP',
-  SINGLE_PLAYER: 'Один игрок',
+  ALL_ACTIVE: 'Всем',
+  SINGLE_PLAYER: 'Одному человеку',
 };
 
 export function BroadcastsPage(): JSX.Element {
@@ -28,14 +26,14 @@ export function BroadcastsPage(): JSX.Element {
         <div>
           <h1 className="text-2xl font-medium">Рассылки</h1>
           <p className="text-sm text-muted-foreground">
-            Сообщения игрокам в Telegram: анонсы, RSVP, сегменты
+            Сообщения игрокам в Telegram: текст, фото, всем или одному
           </p>
         </div>
         <Link
           to="/broadcasts/new"
           className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
         >
-          Создать рассылку
+          Добавить рассылку
         </Link>
       </div>
 
@@ -49,14 +47,18 @@ export function BroadcastsPage(): JSX.Element {
             {data.map((item) => (
               <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
                 <div className="min-w-0">
-                  <Link to={`/broadcasts/${item.id}`} className="text-sm font-medium hover:underline">
+                  <Link
+                    to={`/broadcasts/${item.id}`}
+                    className="text-sm font-medium hover:underline"
+                  >
                     {item.title}
                   </Link>
                   <p className="text-xs text-muted-foreground">
                     {STATUS_LABEL[item.status]} · {SEGMENT_LABEL[item.segment] ?? item.segment}
-                    {item.tournament ? ` · ${item.tournament.title}` : ''}
-                    {item.targetUser ? ` · ${item.targetUser.name}` : ''}
-                    {item.photoUrl ? ' · с фото' : ''}
+                    {item.segment === 'SINGLE_PLAYER' && item.targetTelegramId
+                      ? ` · ${item.targetTelegramId}`
+                      : ''}
+                    {item.photoPath ? ' · с фото' : ''}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {formatDateTime(item.createdAt)}

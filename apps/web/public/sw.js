@@ -1,6 +1,6 @@
 /* eslint-env serviceworker */
 /* GUTSHOT service worker: оболочка и статика — офлайн, API — только сеть. */
-const CACHE = 'gutshot-v1';
+const CACHE = 'gutshot-v2';
 const SHELL = [
   '/',
   '/index.html',

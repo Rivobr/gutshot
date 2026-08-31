@@ -1,37 +1,9 @@
-import {
-  IsArray,
-  IsEnum,
-  IsOptional,
-  IsString,
-  MaxLength,
-  MinLength,
-  ValidateNested,
-} from 'class-validator';
-import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { BroadcastButtons, BroadcastSegment } from '@prisma/client';
-
-export class CustomBroadcastButtonDto {
-  @ApiProperty({ example: 'Записаться' })
-  @IsString()
-  @MinLength(1)
-  @MaxLength(64)
-  text!: string;
-
-  @ApiPropertyOptional({ enum: ['url', 'open_app'], default: 'url' })
-  @IsOptional()
-  @IsEnum(['url', 'open_app'] as const)
-  type?: 'url' | 'open_app';
-
-  @ApiPropertyOptional({ description: 'Ссылка для type=url' })
-  @IsOptional()
-  @IsString()
-  @MaxLength(1024)
-  url?: string;
-}
+import { IsEnum, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { BroadcastSegment } from '@prisma/client';
 
 export class CreateBroadcastDto {
-  @ApiProperty({ example: 'RSVP фриролл 12.08' })
+  @ApiProperty({ example: 'Анонс фриролла' })
   @IsString()
   @MinLength(2)
   @MaxLength(120)
@@ -43,37 +15,23 @@ export class CreateBroadcastDto {
   @MaxLength(4000)
   bodyHtml!: string;
 
-  @ApiProperty({ enum: BroadcastSegment })
+  @ApiProperty({ enum: ['ALL_ACTIVE', 'SINGLE_PLAYER'], default: 'ALL_ACTIVE' })
   @IsEnum(BroadcastSegment)
   segment!: BroadcastSegment;
 
-  @ApiPropertyOptional({ description: 'Нужен для сегментов турнира и RSVP-кнопок' })
+  @ApiPropertyOptional({ description: 'Telegram ID получателя для SINGLE_PLAYER' })
   @IsOptional()
   @IsString()
-  tournamentId?: string;
+  @Matches(/^[0-9]{5,20}$/, { message: 'Telegram ID должен быть числом' })
+  targetTelegramId?: string;
 
-  @ApiPropertyOptional({ description: 'ID игрока для SINGLE_PLAYER' })
+  @ApiPropertyOptional({
+    description: 'Путь к загруженному фото (из ответа POST admin/broadcasts/photo)',
+  })
   @IsOptional()
   @IsString()
-  targetUserId?: string;
-
-  @ApiPropertyOptional({ description: 'URL картинки (Telegram скачает по ссылке)' })
-  @IsOptional()
-  @IsString()
-  @MaxLength(2000)
-  photoUrl?: string;
-
-  @ApiPropertyOptional({ enum: BroadcastButtons, default: BroadcastButtons.NONE })
-  @IsOptional()
-  @IsEnum(BroadcastButtons)
-  buttons?: BroadcastButtons;
-
-  @ApiPropertyOptional({ type: [CustomBroadcastButtonDto] })
-  @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => CustomBroadcastButtonDto)
-  customButtons?: CustomBroadcastButtonDto[];
+  @MaxLength(512)
+  photoPath?: string;
 }
 
 export class UpdateBroadcastDto {
@@ -91,7 +49,7 @@ export class UpdateBroadcastDto {
   @MaxLength(4000)
   bodyHtml?: string;
 
-  @ApiPropertyOptional({ enum: BroadcastSegment })
+  @ApiPropertyOptional({ enum: ['ALL_ACTIVE', 'SINGLE_PLAYER'] })
   @IsOptional()
   @IsEnum(BroadcastSegment)
   segment?: BroadcastSegment;
@@ -99,36 +57,12 @@ export class UpdateBroadcastDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  tournamentId?: string | null;
+  @Matches(/^[0-9]{5,20}$/, { message: 'Telegram ID должен быть числом' })
+  targetTelegramId?: string | null;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  targetUserId?: string | null;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  @MaxLength(2000)
-  photoUrl?: string | null;
-
-  @ApiPropertyOptional({ enum: BroadcastButtons })
-  @IsOptional()
-  @IsEnum(BroadcastButtons)
-  buttons?: BroadcastButtons;
-
-  @ApiPropertyOptional({ type: [CustomBroadcastButtonDto] })
-  @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => CustomBroadcastButtonDto)
-  customButtons?: CustomBroadcastButtonDto[] | null;
-}
-
-export class TestBroadcastDto {
-  @ApiProperty({ description: 'Telegram ID, куда отправить тестовое сообщение' })
-  @IsString()
-  @MinLength(5)
-  @MaxLength(32)
-  telegramId!: string;
+  @MaxLength(512)
+  photoPath?: string | null;
 }

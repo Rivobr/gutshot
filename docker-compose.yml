@@ -46,6 +46,9 @@ services:
     # API is published via nginx (:443). Keep 3000 local-only.
     ports:
       - '127.0.0.1:${API_PORT:-3000}:3000'
+    # Uploaded files (broadcast photos) survive container rebuilds.
+    volumes:
+      - ./docker/uploads:/app/apps/api/uploads
     depends_on:
       - postgres
       - redis
@@ -95,8 +98,9 @@ services:
         VITE_TG_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
     container_name: gutshot-web
     restart: unless-stopped
+    # 8082 публично — запасной вход без VPN, если 80/443 фильтрует сеть клуба.
     ports:
-      - '127.0.0.1:8082:80'
+      - '8082:80'
     depends_on:
       - api
     networks:

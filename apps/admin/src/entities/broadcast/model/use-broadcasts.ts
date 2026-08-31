@@ -23,18 +23,17 @@ export function useBroadcast(id: string) {
   });
 }
 
-export function useBroadcastPreview(
-  segment: BroadcastSegment,
-  tournamentId?: string,
-  targetUserId?: string,
-) {
-  const needsTournament =
-    segment === 'TOURNAMENT_REGISTERED' || segment === 'TOURNAMENT_RSVP_PENDING';
-  const needsPlayer = segment === 'SINGLE_PLAYER';
+export function useBroadcastPreview(segment: BroadcastSegment, targetTelegramId?: string) {
   return useQuery({
-    queryKey: [...KEY, 'preview', segment, tournamentId ?? '', targetUserId ?? ''],
-    queryFn: () => adminBroadcastApi.preview(segment, tournamentId, targetUserId),
-    enabled: (!needsTournament || Boolean(tournamentId)) && (!needsPlayer || Boolean(targetUserId)),
+    queryKey: [...KEY, 'preview', segment, targetTelegramId ?? ''],
+    queryFn: () => adminBroadcastApi.preview(segment, targetTelegramId),
+    enabled: segment === 'ALL_ACTIVE' || Boolean(targetTelegramId),
+  });
+}
+
+export function useUploadBroadcastPhoto() {
+  return useMutation({
+    mutationFn: (file: File) => adminBroadcastApi.uploadPhoto(file),
   });
 }
 
@@ -57,12 +56,6 @@ export function useUpdateBroadcast(id: string) {
   });
 }
 
-export function useTestBroadcast(id: string) {
-  return useMutation({
-    mutationFn: (telegramId: string) => adminBroadcastApi.test(id, telegramId),
-  });
-}
-
 export function useSendBroadcast(id: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -75,8 +68,18 @@ export function useSendBroadcast(id: string) {
 }
 
 export function useDeleteBroadcastMessages(id: string) {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: () => adminBroadcastApi.deleteMessages(id),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: [...KEY, id] }),
+  });
+}
+
+export function useDeleteBroadcastMessage(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (deliveryId: string) => adminBroadcastApi.deleteMessage(id, deliveryId),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: [...KEY, id] }),
   });
 }
 

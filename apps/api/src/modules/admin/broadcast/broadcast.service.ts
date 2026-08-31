@@ -1,32 +1,45 @@
-import {
-  BadRequestException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
-import {
-  BroadcastButtons,
-  BroadcastDeliveryStatus,
-  BroadcastSegment,
-  BroadcastStatus,
-  Prisma,
-  RegistrationStatus,
-} from '@prisma/client';
+import { join, basename } from 'path';
+import { mkdir, readFile, writeFile } from 'fs/promises';
+import { randomUUID } from 'crypto';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BroadcastDeliveryStatus, BroadcastSegment, BroadcastStatus } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { TelegramService } from '../../telegram/telegram.service';
-import {
-  CreateBroadcastDto,
-  CustomBroadcastButtonDto,
-  UpdateBroadcastDto,
-} from './dto/broadcast.dto';
+import { CreateBroadcastDto, UpdateBroadcastDto } from './dto/broadcast.dto';
 
-type Recipient = { userId: string; telegramId: string; name: string };
+export const UPLOADS_DIR = join(process.cwd(), 'uploads');
+const BROADCAST_PHOTOS_DIR = 'broadcast';
 
-type CustomButton = {
-  text: string;
-  type?: 'url' | 'open_app';
-  url?: string;
+type Recipient = { userId: string | null; telegramId: string; name: string };
+
+type CampaignRow = {
+  id: string;
+  title: string;
+  bodyHtml: string;
+  segment: BroadcastSegment;
+  targetTelegramId: string | null;
+  photoPath: string | null;
+  photoUrl: string | null;
+  photoFileId: string | null;
+  status: BroadcastStatus;
+  recipientCount: number;
+  sentCount: number;
+  failedCount: number;
+  sentAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
 };
+
+const MIME_BY_EXT: Record<string, string> = {
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.webp': 'image/webp',
+};
+
+function normalizeTelegramId(raw: string): string {
+  return raw.replace(/[^0-9]/g, '');
+}
 
 @Injectable()
 export class AdminBroadcastService {
@@ -41,12 +54,6 @@ export class AdminBroadcastService {
     const items = await this.prisma.broadcastCampaign.findMany({
       orderBy: { createdAt: 'desc' },
       take: 100,
-      include: {
-        tournament: { select: { id: true, title: true, date: true } },
-        targetUser: {
-          select: { id: true, nickname: true, firstName: true, username: true, telegramId: true },
-        },
-      },
     });
     return items.map((item) => this.serializeCampaign(item));
   }
@@ -55,16 +62,11 @@ export class AdminBroadcastService {
     const campaign = await this.prisma.broadcastCampaign.findUnique({
       where: { id },
       include: {
-        tournament: { select: { id: true, title: true, date: true } },
-        targetUser: {
-          select: { id: true, nickname: true, firstName: true, username: true, telegramId: true },
-        },
         deliveries: {
           orderBy: { createdAt: 'asc' },
           include: {
             user: {
               select: {
-                id: true,
                 nickname: true,
                 firstName: true,
                 username: true,
@@ -89,62 +91,38 @@ export class AdminBroadcastService {
         chatId: d.chatId,
         error: d.error,
         sentAt: d.sentAt?.toISOString() ?? null,
-        name:
-          d.user.nickname ||
-          d.user.firstName ||
-          d.user.username ||
-          d.telegramId,
+        name: d.user?.nickname || d.user?.firstName || d.user?.username || d.telegramId,
       })),
     };
   }
 
-  async previewSegment(
-    segment: BroadcastSegment,
-    tournamentId?: string,
-    targetUserId?: string,
-  ) {
-    const recipients = await this.resolveRecipients(segment, tournamentId, targetUserId);
+  async preview(segment: BroadcastSegment, targetTelegramId?: string) {
+    const recipients = await this.resolveRecipients(segment, targetTelegramId ?? null);
     return {
       segment,
-      tournamentId: tournamentId ?? null,
-      targetUserId: targetUserId ?? null,
+      targetTelegramId: targetTelegramId ?? null,
       count: recipients.length,
       sample: recipients.slice(0, 10),
     };
   }
 
   async create(dto: CreateBroadcastDto, createdById?: string) {
-    const buttons = dto.buttons ?? BroadcastButtons.NONE;
-    const customButtons = this.normalizeCustomButtons(dto.customButtons);
-    this.assertConfig(dto.segment, buttons, dto.tournamentId, dto.targetUserId, customButtons);
-    const recipients = await this.resolveRecipients(
-      dto.segment,
-      dto.tournamentId,
-      dto.targetUserId,
-    );
+    this.assertConfig(dto.segment, dto.targetTelegramId);
+    const recipients = await this.resolveRecipients(dto.segment, dto.targetTelegramId ?? null);
 
     const campaign = await this.prisma.broadcastCampaign.create({
       data: {
         title: dto.title.trim(),
         bodyHtml: dto.bodyHtml.trim(),
         segment: dto.segment,
-        tournamentId: dto.tournamentId || null,
-        targetUserId: dto.targetUserId || null,
-        photoUrl: dto.photoUrl?.trim() || null,
-        buttons,
-        customButtons:
-          buttons === BroadcastButtons.CUSTOM
-            ? (customButtons as unknown as Prisma.InputJsonValue)
-            : Prisma.JsonNull,
+        targetTelegramId:
+          dto.segment === BroadcastSegment.SINGLE_PLAYER
+            ? normalizeTelegramId(dto.targetTelegramId ?? '')
+            : null,
+        photoPath: dto.photoPath?.trim() || null,
         createdById: createdById || null,
         recipientCount: recipients.length,
         status: BroadcastStatus.DRAFT,
-      },
-      include: {
-        tournament: { select: { id: true, title: true, date: true } },
-        targetUser: {
-          select: { id: true, nickname: true, firstName: true, username: true, telegramId: true },
-        },
       },
     });
 
@@ -161,72 +139,65 @@ export class AdminBroadcastService {
     }
 
     const segment = dto.segment ?? existing.segment;
-    const buttons = dto.buttons ?? existing.buttons;
-    const tournamentId =
-      dto.tournamentId === undefined ? existing.tournamentId : dto.tournamentId;
-    const targetUserId =
-      dto.targetUserId === undefined ? existing.targetUserId : dto.targetUserId;
-    const photoUrl = dto.photoUrl === undefined ? existing.photoUrl : dto.photoUrl;
-    const customButtons =
-      dto.customButtons === undefined
-        ? this.readCustomButtons(existing.customButtons)
-        : this.normalizeCustomButtons(dto.customButtons ?? []);
-
-    this.assertConfig(segment, buttons, tournamentId, targetUserId, customButtons);
-    const recipients = await this.resolveRecipients(segment, tournamentId, targetUserId);
+    const targetTelegramId =
+      dto.targetTelegramId === undefined
+        ? existing.targetTelegramId
+        : dto.targetTelegramId
+          ? normalizeTelegramId(dto.targetTelegramId)
+          : null;
+    this.assertConfig(segment, targetTelegramId);
+    const recipients = await this.resolveRecipients(segment, targetTelegramId);
 
     const campaign = await this.prisma.broadcastCampaign.update({
       where: { id },
       data: {
         title: dto.title?.trim(),
         bodyHtml: dto.bodyHtml?.trim(),
-        segment: dto.segment,
-        buttons: dto.buttons,
-        tournamentId: tournamentId || null,
-        targetUserId: targetUserId || null,
-        photoUrl: photoUrl?.trim() || null,
-        customButtons:
-          buttons === BroadcastButtons.CUSTOM
-            ? (customButtons as unknown as Prisma.InputJsonValue)
-            : Prisma.JsonNull,
+        segment,
+        targetTelegramId: segment === BroadcastSegment.SINGLE_PLAYER ? targetTelegramId : null,
+        photoPath: dto.photoPath === undefined ? existing.photoPath : dto.photoPath || null,
+        photoFileId:
+          dto.photoPath !== undefined && dto.photoPath !== existing.photoPath
+            ? null
+            : existing.photoFileId,
         recipientCount: recipients.length,
-      },
-      include: {
-        tournament: { select: { id: true, title: true, date: true } },
-        targetUser: {
-          select: { id: true, nickname: true, firstName: true, username: true, telegramId: true },
-        },
       },
     });
 
     return this.serializeCampaign(campaign);
   }
 
-  async sendTest(id: string, telegramId: string) {
-    const campaign = await this.prisma.broadcastCampaign.findUnique({ where: { id } });
-    if (!campaign) {
-      throw new NotFoundException('Рассылка не найдена');
+  /** Сохраняет загруженное фото в uploads/broadcast и возвращает относительный путь. */
+  async savePhoto(
+    file:
+      | {
+          buffer: Buffer;
+          originalname: string;
+          mimetype: string;
+          size: number;
+        }
+      | undefined,
+  ) {
+    if (!file || !file.buffer?.length) {
+      throw new BadRequestException('Файл фото не передан');
+    }
+    if (!file.mimetype.startsWith('image/')) {
+      throw new BadRequestException('Можно загружать только изображения');
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      throw new BadRequestException('Фото больше 10 МБ');
     }
 
-    const result = await this.deliverOne(
-      telegramId.trim(),
-      campaign.bodyHtml,
-      campaign.photoUrl,
-      campaign.buttons,
-      campaign.tournamentId,
-      this.readCustomButtons(campaign.customButtons),
-    );
-    if (!result) {
-      throw new BadRequestException(
-        'Не удалось отправить тест. Проверьте Telegram ID, фото-URL и что бот не заблокирован.',
-      );
-    }
-    return {
-      ok: true,
-      telegramId: telegramId.trim(),
-      messageId: result.messageId,
-      chatId: result.chatId,
-    };
+    const ext =
+      MIME_BY_EXT[`.${file.originalname.split('.').pop()?.toLowerCase() ?? ''}`] === file.mimetype
+        ? file.originalname.split('.').pop()?.toLowerCase()
+        : (file.mimetype.split('/')[1]?.replace('jpeg', 'jpg') ?? 'jpg');
+    const name = `${randomUUID()}.${ext}`;
+    const dir = join(UPLOADS_DIR, BROADCAST_PHOTOS_DIR);
+    await mkdir(dir, { recursive: true });
+    await writeFile(join(dir, name), file.buffer);
+
+    return { photoPath: `${BROADCAST_PHOTOS_DIR}/${name}` };
   }
 
   async send(id: string) {
@@ -238,21 +209,10 @@ export class AdminBroadcastService {
       throw new BadRequestException('Рассылка уже отправляется или отправлена');
     }
 
-    const customButtons = this.readCustomButtons(campaign.customButtons);
-    this.assertConfig(
-      campaign.segment,
-      campaign.buttons,
-      campaign.tournamentId,
-      campaign.targetUserId,
-      customButtons,
-    );
-    const recipients = await this.resolveRecipients(
-      campaign.segment,
-      campaign.tournamentId,
-      campaign.targetUserId,
-    );
+    this.assertConfig(campaign.segment, campaign.targetTelegramId);
+    const recipients = await this.resolveRecipients(campaign.segment, campaign.targetTelegramId);
     if (recipients.length === 0) {
-      throw new BadRequestException('Нет получателей для выбранного сегмента');
+      throw new BadRequestException('Нет получателей');
     }
 
     await this.prisma.broadcastDelivery.deleteMany({ where: { campaignId: id } });
@@ -277,21 +237,22 @@ export class AdminBroadcastService {
 
     let sentCount = 0;
     let failedCount = 0;
+    let photoFileId = campaign.photoFileId;
 
     for (const recipient of recipients) {
-      const result = await this.deliverOne(
-        recipient.telegramId,
-        campaign.bodyHtml,
-        campaign.photoUrl,
-        campaign.buttons,
-        campaign.tournamentId,
-        customButtons,
-      );
+      const result = await this.deliverOne(campaign, recipient.telegramId);
 
       if (result) {
         sentCount += 1;
+        if (result.fileId && campaign.photoPath && !photoFileId) {
+          photoFileId = result.fileId;
+          await this.prisma.broadcastCampaign.update({
+            where: { id },
+            data: { photoFileId: result.fileId },
+          });
+        }
         await this.prisma.broadcastDelivery.updateMany({
-          where: { campaignId: id, userId: recipient.userId },
+          where: { campaignId: id, telegramId: recipient.telegramId },
           data: {
             status: BroadcastDeliveryStatus.SENT,
             telegramMessageId: result.messageId,
@@ -303,7 +264,7 @@ export class AdminBroadcastService {
       } else {
         failedCount += 1;
         await this.prisma.broadcastDelivery.updateMany({
-          where: { campaignId: id, userId: recipient.userId },
+          where: { campaignId: id, telegramId: recipient.telegramId },
           data: {
             status: BroadcastDeliveryStatus.FAILED,
             error: 'Telegram delivery failed',
@@ -322,12 +283,6 @@ export class AdminBroadcastService {
         failedCount,
         sentAt: new Date(),
       },
-      include: {
-        tournament: { select: { id: true, title: true, date: true } },
-        targetUser: {
-          select: { id: true, nickname: true, firstName: true, username: true, telegramId: true },
-        },
-      },
     });
 
     this.logger.log(
@@ -337,6 +292,7 @@ export class AdminBroadcastService {
     return this.serializeCampaign(updated);
   }
 
+  /** Удалить все отправленные сообщения рассылки по сохранённым message_id. */
   async deleteMessages(id: string) {
     const campaign = await this.getById(id);
     let deleted = 0;
@@ -356,6 +312,10 @@ export class AdminBroadcastService {
       );
       if (ok) {
         deleted += 1;
+        await this.prisma.broadcastDelivery.update({
+          where: { id: delivery.id },
+          data: { status: BroadcastDeliveryStatus.DELETED, error: null },
+        });
       } else {
         failed += 1;
       }
@@ -363,6 +323,37 @@ export class AdminBroadcastService {
     }
 
     return { deleted, failed, campaignId: id };
+  }
+
+  /** Удалить одно сообщение рассылки по message_id из доставки. */
+  async deleteDeliveryMessage(id: string, deliveryId: string) {
+    const delivery = await this.prisma.broadcastDelivery.findFirst({
+      where: { id: deliveryId, campaignId: id },
+    });
+    if (!delivery) {
+      throw new NotFoundException('Доставка не найдена');
+    }
+    if (delivery.status !== BroadcastDeliveryStatus.SENT || delivery.telegramMessageId == null) {
+      throw new BadRequestException('У этой доставки нет отправленного сообщения');
+    }
+    if (!delivery.chatId) {
+      throw new BadRequestException('Не сохранён chat_id — удалить сообщение нельзя');
+    }
+
+    const ok = await this.telegramService.deleteMessage(
+      delivery.chatId,
+      delivery.telegramMessageId,
+    );
+    if (!ok) {
+      throw new BadRequestException('Telegram не смог удалить сообщение (возможно, уже удалено)');
+    }
+
+    await this.prisma.broadcastDelivery.update({
+      where: { id: delivery.id },
+      data: { status: BroadcastDeliveryStatus.DELETED, error: null },
+    });
+
+    return { ok: true, deliveryId: delivery.id, telegramMessageId: delivery.telegramMessageId };
   }
 
   async deleteDraft(id: string) {
@@ -378,133 +369,72 @@ export class AdminBroadcastService {
   }
 
   private async deliverOne(
+    campaign: CampaignRow,
     telegramId: string,
-    bodyHtml: string,
-    photoUrl: string | null,
-    buttons: BroadcastButtons,
-    tournamentId: string | null,
-    customButtons: CustomButton[],
-  ) {
-    const markup = this.buildMarkup(buttons, tournamentId, telegramId, customButtons);
-    if (photoUrl?.trim()) {
-      return this.telegramService.sendPhotoDetailed(
+  ): Promise<{ messageId: number; chatId: number; fileId?: string } | null> {
+    if (campaign.photoPath) {
+      if (campaign.photoFileId) {
+        const byFileId = await this.telegramService.sendPhotoFileIdDetailed(
+          telegramId,
+          campaign.photoFileId,
+          campaign.bodyHtml,
+        );
+        if (byFileId) {
+          return byFileId;
+        }
+        // file_id протух — упадём ниже на загрузку файла с диска.
+      }
+
+      const absolutePath = join(UPLOADS_DIR, campaign.photoPath);
+      let buffer: Buffer;
+      try {
+        buffer = await readFile(absolutePath);
+      } catch {
+        throw new BadRequestException('Файл фото не найден на сервере — загрузите фото заново');
+      }
+      const ext = basename(absolutePath).split('.').pop()?.toLowerCase() ?? 'jpg';
+      return this.telegramService.sendPhotoFileDetailed(
         telegramId,
-        photoUrl.trim(),
-        bodyHtml,
-        markup,
+        {
+          buffer,
+          filename: basename(absolutePath),
+          mimeType: MIME_BY_EXT[`.${ext}`] ?? 'image/jpeg',
+        },
+        campaign.bodyHtml,
       );
     }
-    return this.telegramService.sendMessageDetailed(telegramId, bodyHtml, markup);
+
+    if (campaign.photoUrl?.trim()) {
+      return this.telegramService.sendPhotoDetailed(
+        telegramId,
+        campaign.photoUrl.trim(),
+        campaign.bodyHtml,
+      );
+    }
+
+    return this.telegramService.sendMessageDetailed(telegramId, campaign.bodyHtml);
   }
 
-  private buildMarkup(
-    buttons: BroadcastButtons,
-    tournamentId: string | null,
-    telegramId: string,
-    customButtons: CustomButton[],
-  ): object | undefined {
-    if (buttons === BroadcastButtons.OPEN_APP) {
-      return this.telegramService.buildOpenAppKeyboard(telegramId);
+  private assertConfig(segment: BroadcastSegment, targetTelegramId?: string | null) {
+    if (segment !== BroadcastSegment.ALL_ACTIVE && segment !== BroadcastSegment.SINGLE_PLAYER) {
+      throw new BadRequestException('Доступны только сегменты «Всем» и «Одному человеку»');
     }
-    if (buttons === BroadcastButtons.RSVP) {
-      if (!tournamentId) {
-        throw new BadRequestException('Для RSVP нужен tournamentId');
-      }
-      return this.telegramService.buildRsvpKeyboard(tournamentId);
+    if (segment === BroadcastSegment.SINGLE_PLAYER && !targetTelegramId) {
+      throw new BadRequestException('Укажите Telegram ID получателя');
     }
-    if (buttons === BroadcastButtons.CUSTOM) {
-      const mapped = customButtons.map((btn) => {
-        if (btn.type === 'open_app') {
-          const keyboard = this.telegramService.buildOpenAppKeyboard(telegramId) as {
-            inline_keyboard: Array<Array<{ text: string; web_app?: { url: string } }>>;
-          };
-          const open = keyboard.inline_keyboard[0]?.[0];
-          return { text: btn.text || open?.text || '♠️ Открыть клуб', web_app: open?.web_app };
-        }
-        return { text: btn.text, url: btn.url };
-      });
-      const rows: Array<typeof mapped> = [];
-      for (let i = 0; i < mapped.length; i += 2) {
-        rows.push(mapped.slice(i, i + 2));
-      }
-      return { inline_keyboard: rows };
-    }
-    return undefined;
-  }
-
-  private assertConfig(
-    segment: BroadcastSegment,
-    buttons: BroadcastButtons,
-    tournamentId?: string | null,
-    targetUserId?: string | null,
-    customButtons: CustomButton[] = [],
-  ) {
-    const needsTournament =
-      segment === BroadcastSegment.TOURNAMENT_REGISTERED ||
-      segment === BroadcastSegment.TOURNAMENT_RSVP_PENDING ||
-      buttons === BroadcastButtons.RSVP;
-
-    if (needsTournament && !tournamentId) {
-      throw new BadRequestException('Укажите турнир для этого сегмента / RSVP');
-    }
-    if (segment === BroadcastSegment.SINGLE_PLAYER && !targetUserId) {
-      throw new BadRequestException('Выберите игрока');
-    }
-    if (buttons === BroadcastButtons.CUSTOM) {
-      if (!customButtons.length) {
-        throw new BadRequestException('Добавьте хотя бы одну свою кнопку');
-      }
-      for (const btn of customButtons) {
-        if (!btn.text?.trim()) {
-          throw new BadRequestException('У кнопки должен быть текст');
-        }
-        if ((btn.type ?? 'url') === 'url' && !btn.url?.trim()) {
-          throw new BadRequestException(`У кнопки «${btn.text}» нужна ссылка`);
-        }
-      }
-    }
-  }
-
-  private normalizeCustomButtons(
-    buttons?: CustomBroadcastButtonDto[] | null,
-  ): CustomButton[] {
-    return (buttons ?? [])
-      .map((btn) => ({
-        text: btn.text.trim(),
-        type: btn.type ?? 'url',
-        url: btn.url?.trim() || undefined,
-      }))
-      .filter((btn) => btn.text);
-  }
-
-  private readCustomButtons(value: Prisma.JsonValue | null | undefined): CustomButton[] {
-    if (!value || !Array.isArray(value)) {
-      return [];
-    }
-    return value
-      .map((item) => {
-        if (!item || typeof item !== 'object') return null;
-        const raw = item as Record<string, unknown>;
-        const text = typeof raw.text === 'string' ? raw.text : '';
-        const type = raw.type === 'open_app' ? 'open_app' : 'url';
-        const url = typeof raw.url === 'string' ? raw.url : undefined;
-        if (!text) return null;
-        return { text, type, url } as CustomButton;
-      })
-      .filter((item): item is CustomButton => item != null);
   }
 
   private async resolveRecipients(
     segment: BroadcastSegment,
-    tournamentId?: string | null,
-    targetUserId?: string | null,
+    targetTelegramId: string | null,
   ): Promise<Recipient[]> {
     if (segment === BroadcastSegment.SINGLE_PLAYER) {
-      if (!targetUserId) {
-        throw new BadRequestException('Выберите игрока');
+      const telegramId = normalizeTelegramId(targetTelegramId ?? '');
+      if (!/^[0-9]{5,20}$/.test(telegramId)) {
+        throw new BadRequestException('Укажите корректный Telegram ID');
       }
       const user = await this.prisma.user.findUnique({
-        where: { id: targetUserId },
+        where: { telegramId },
         select: {
           id: true,
           telegramId: true,
@@ -514,138 +444,51 @@ export class AdminBroadcastService {
           isBlocked: true,
         },
       });
-      if (!user || user.isBlocked) {
-        throw new NotFoundException('Игрок не найден или заблокирован');
-      }
-      if (!/^[0-9]{6,}$/.test(user.telegramId)) {
-        throw new BadRequestException('У игрока нет корректного Telegram ID');
+      if (user?.isBlocked) {
+        throw new BadRequestException('Этот игрок заблокирован');
       }
       return [
         {
-          userId: user.id,
-          telegramId: user.telegramId,
-          name: user.nickname || user.firstName || user.username || user.telegramId,
+          userId: user?.id ?? null,
+          telegramId,
+          name: user?.nickname || user?.firstName || user?.username || telegramId,
         },
       ];
     }
 
-    if (segment === BroadcastSegment.ALL_ACTIVE) {
-      const users = await this.prisma.user.findMany({
-        where: {
-          isBlocked: false,
-          telegramId: { not: '' },
-        },
-        select: {
-          id: true,
-          telegramId: true,
-          nickname: true,
-          firstName: true,
-          username: true,
-        },
-        orderBy: { createdAt: 'desc' },
-      });
-      return users
-        .filter((u) => /^[0-9]{6,}$/.test(u.telegramId))
-        .filter((u) => !['000000001', '999000111'].includes(u.telegramId))
-        .map((u) => ({
-          userId: u.id,
-          telegramId: u.telegramId,
-          name: u.nickname || u.firstName || u.username || u.telegramId,
-        }));
-    }
-
-    if (!tournamentId) {
-      throw new BadRequestException('Нужен tournamentId');
-    }
-
-    const tournament = await this.prisma.tournament.findUnique({ where: { id: tournamentId } });
-    if (!tournament) {
-      throw new NotFoundException('Турнир не найден');
-    }
-
-    const registrations = await this.prisma.registration.findMany({
+    const users = await this.prisma.user.findMany({
       where: {
-        tournamentId,
-        status: {
-          in: [RegistrationStatus.REGISTERED, RegistrationStatus.CHECKED_IN],
-        },
-        user: { isBlocked: false },
+        isBlocked: false,
+        telegramId: { not: '' },
       },
-      include: {
-        user: {
-          select: {
-            id: true,
-            telegramId: true,
-            nickname: true,
-            firstName: true,
-            username: true,
-          },
-        },
+      select: {
+        id: true,
+        telegramId: true,
+        nickname: true,
+        firstName: true,
+        username: true,
       },
-      orderBy: { registeredAt: 'asc' },
+      orderBy: { createdAt: 'desc' },
     });
-
-    let list = registrations
-      .filter((r) => /^[0-9]{6,}$/.test(r.user.telegramId))
-      .map((r) => ({
-        userId: r.user.id,
-        telegramId: r.user.telegramId,
-        name: r.user.nickname || r.user.firstName || r.user.username || r.user.telegramId,
+    return users
+      .filter((u) => /^[0-9]{6,}$/.test(u.telegramId))
+      .filter((u) => !['000000001', '999000111'].includes(u.telegramId))
+      .map((u) => ({
+        userId: u.id,
+        telegramId: u.telegramId,
+        name: u.nickname || u.firstName || u.username || u.telegramId,
       }));
-
-    if (segment === BroadcastSegment.TOURNAMENT_RSVP_PENDING) {
-      const confirms = await this.prisma.notification.findMany({
-        where: {
-          type: 'SYSTEM',
-          title: 'RSVP: подтверждение',
-          message: { contains: tournamentId },
-          userId: { in: list.map((x) => x.userId) },
-        },
-        select: { userId: true },
-      });
-      const confirmed = new Set(confirms.map((c) => c.userId));
-      list = list.filter((x) => !confirmed.has(x.userId));
-    }
-
-    return list;
   }
 
-  private serializeCampaign(campaign: {
-    id: string;
-    title: string;
-    bodyHtml: string;
-    segment: BroadcastSegment;
-    tournamentId: string | null;
-    targetUserId?: string | null;
-    photoUrl?: string | null;
-    buttons: BroadcastButtons;
-    customButtons?: Prisma.JsonValue | null;
-    status: BroadcastStatus;
-    recipientCount: number;
-    sentCount: number;
-    failedCount: number;
-    sentAt: Date | null;
-    createdAt: Date;
-    updatedAt: Date;
-    tournament?: { id: string; title: string; date: Date } | null;
-    targetUser?: {
-      id: string;
-      nickname: string | null;
-      firstName: string | null;
-      username: string | null;
-      telegramId: string;
-    } | null;
-  }) {
+  private serializeCampaign(campaign: CampaignRow) {
     return {
       id: campaign.id,
       title: campaign.title,
       bodyHtml: campaign.bodyHtml,
       segment: campaign.segment,
-      tournamentId: campaign.tournamentId,
-      targetUserId: campaign.targetUserId ?? null,
+      targetTelegramId: campaign.targetTelegramId ?? null,
+      photoPath: campaign.photoPath ?? null,
       photoUrl: campaign.photoUrl ?? null,
-      buttons: campaign.buttons,
-      customButtons: this.readCustomButtons(campaign.customButtons),
       status: campaign.status,
       recipientCount: campaign.recipientCount,
       sentCount: campaign.sentCount,
@@ -653,24 +496,6 @@ export class AdminBroadcastService {
       sentAt: campaign.sentAt?.toISOString() ?? null,
       createdAt: campaign.createdAt.toISOString(),
       updatedAt: campaign.updatedAt.toISOString(),
-      tournament: campaign.tournament
-        ? {
-            id: campaign.tournament.id,
-            title: campaign.tournament.title,
-            date: campaign.tournament.date.toISOString(),
-          }
-        : null,
-      targetUser: campaign.targetUser
-        ? {
-            id: campaign.targetUser.id,
-            name:
-              campaign.targetUser.nickname ||
-              campaign.targetUser.firstName ||
-              campaign.targetUser.username ||
-              campaign.targetUser.telegramId,
-            telegramId: campaign.targetUser.telegramId,
-          }
-        : null,
     };
   }
 }
