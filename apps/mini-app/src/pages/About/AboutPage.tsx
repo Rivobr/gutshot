@@ -160,14 +160,22 @@ export function AboutPage(): JSX.Element {
 
         <div className="flex flex-col gap-2">
           <a
-            href={club.socials.telegram}
+            href={club.channelUrl}
             target="_blank"
             rel="noreferrer"
             className="vip-card rounded-[18px] px-5 py-4 flex items-center justify-between"
             style={{ textDecoration: 'none' }}
           >
-            <span className="serif font-semibold" style={{ fontSize: 15, color: '#F5EDD6' }}>
-              Telegram-канал
+            <span className="flex flex-col">
+              <span
+                className="sans uppercase"
+                style={{ fontSize: 8.5, color: '#6B614E', letterSpacing: '0.18em' }}
+              >
+                Telegram-канал
+              </span>
+              <span className="serif font-semibold" style={{ fontSize: 15, color: '#F5EDD6' }}>
+                {club.channelUsername}
+              </span>
             </span>
             <span style={{ color: 'rgba(199,154,61,0.6)', fontSize: 20 }}>›</span>
           </a>
