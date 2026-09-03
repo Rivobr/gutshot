@@ -4,22 +4,25 @@ import type { AchievementGroup, AchievementRarity } from '@gutshot/types';
 import { styleForAchievement } from '../lib/achievements-catalog';
 
 /** Значок подбирается по группе достижения — так работает весь каталог клуба. */
+// Версия ассетов: bump при замене PNG, чтобы сбросить кэш WebView (?v=N).
+const BADGES_VERSION = '2';
+
 const ICON_BY_GROUP: Record<AchievementGroup, string> = {
-  wins: '/achievements/first_win.png',
-  final_tables: '/achievements/final_table.png',
-  tournaments: '/achievements/first_visit.png',
-  active_weeks: '/achievements/visit_10.png',
-  weekly_rating: '/achievements/win_streak.png',
-  monthly_final: '/achievements/visit_5.png',
-  four_of_a_kind: '/achievements/four_kind.png',
-  straight_flush: '/achievements/straight_flush.png',
-  royal_flush: '/achievements/royal_flush.png',
-  special: '/achievements/win_streak.png',
-  knockouts: '/achievements/first_knockout.png',
-  legend: '/achievements/royal_flush.png',
+  wins: `/achievements/first_win.png?v=${BADGES_VERSION}`,
+  final_tables: `/achievements/final_table.png?v=${BADGES_VERSION}`,
+  tournaments: `/achievements/first_visit.png?v=${BADGES_VERSION}`,
+  active_weeks: `/achievements/visit_10.png?v=${BADGES_VERSION}`,
+  weekly_rating: `/achievements/win_streak.png?v=${BADGES_VERSION}`,
+  monthly_final: `/achievements/visit_5.png?v=${BADGES_VERSION}`,
+  four_of_a_kind: `/achievements/four_kind.png?v=${BADGES_VERSION}`,
+  straight_flush: `/achievements/straight_flush.png?v=${BADGES_VERSION}`,
+  royal_flush: `/achievements/royal_flush.png?v=${BADGES_VERSION}`,
+  special: `/achievements/win_streak.png?v=${BADGES_VERSION}`,
+  knockouts: `/achievements/first_knockout.png?v=${BADGES_VERSION}`,
+  legend: `/achievements/royal_flush.png?v=${BADGES_VERSION}`,
 };
 
-const FALLBACK_ICON = '/achievements/first_visit.png';
+const FALLBACK_ICON = `/achievements/first_visit.png?v=${BADGES_VERSION}`;
 
 export function AchievementMedallion({
   group,
@@ -38,7 +41,9 @@ export function AchievementMedallion({
   achievementId?: string;
 }): JSX.Element {
   // Уникальное изображение на каждое достижение; групповой PNG — запасной вариант.
-  const perAchievement = achievementId ? `/achievements/${achievementId}.png` : undefined;
+  const perAchievement = achievementId
+    ? `/achievements/${achievementId}.png?v=${BADGES_VERSION}`
+    : undefined;
   const fallback = (group && ICON_BY_GROUP[group]) || FALLBACK_ICON;
   const style = rarity ? styleForAchievement(achievementId, rarity) : null;
   const pad = rarity && rarity !== 'common' ? Math.max(2, Math.round(size * 0.08)) : 0;
