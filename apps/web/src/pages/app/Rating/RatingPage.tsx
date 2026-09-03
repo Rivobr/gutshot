@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { Fragment, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { RatingEntry } from '@gutshot/types';
 import { ratingApi } from '@/shared/api/public.api';
@@ -157,26 +157,28 @@ export function RatingPage() {
         {rest.map((p, i) => {
           const isMe = p.userId === myUserId;
           return (
-            <div
-              key={p.userId}
-              className={`rrow ${isMe ? 'me' : ''}`}
-              style={{ animationDelay: `${0.15 + i * 0.05}s` }}
-            >
-              <span className="rk num">{p.rank}</span>
-              <div className="ava">{avatarOf(p)}</div>
-              <div style={{ minWidth: 0 }}>
-                <p className="nm">{nameOf(p)}</p>
-                {p.finalist && (
-                  <p className="fl" style={{ color: 'var(--gold)' }}>
-                    👑 Финалист месяца
-                  </p>
-                )}
+            <Fragment key={p.userId}>
+              <div
+                className={`rrow ${isMe ? 'me' : ''}`}
+                style={{ animationDelay: `${0.15 + i * 0.05}s` }}
+              >
+                <span className="rk num">{p.rank}</span>
+                <div className="ava">{avatarOf(p)}</div>
+                <div style={{ minWidth: 0 }}>
+                  <p className="nm">{nameOf(p)}</p>
+                </div>
+                <div className="pts">
+                  <b className="num">{formatPoints(pointsOf(p))}</b>
+                  <span>очков</span>
+                </div>
               </div>
-              <div className="pts">
-                <b className="num">{formatPoints(pointsOf(p))}</b>
-                <span>очков</span>
-              </div>
-            </div>
+              {p.rank === FINALIST_TOP && (
+                <div
+                  style={{ height: 2, margin: '4px 0', background: 'rgba(220,48,48,0.7)' }}
+                  aria-hidden
+                />
+              )}
+            </Fragment>
           );
         })}
 

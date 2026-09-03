@@ -100,6 +100,23 @@ export function DirectionsPage(): JSX.Element {
         <WayCard title="Способ 1" steps={WAY_1} delay={0.1} />
         <WayCard title="Способ 2" steps={WAY_2} delay={0.16} />
 
+        <motion.section
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, delay: 0.16 }}
+          className="vip-card rounded-[20px] p-4 flex flex-col gap-3"
+        >
+          <h2 className="serif font-semibold" style={{ fontSize: 17, color: '#F5EDD6' }}>
+            Схема прохода
+          </h2>
+          <img
+            src="/how-to-find-map.jpg"
+            alt="Схема прохода к клубу Gutshot"
+            className="w-full rounded-[14px]"
+            style={{ border: '1px solid rgba(199,154,61,0.25)', display: 'block' }}
+          />
+        </motion.section>
+
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

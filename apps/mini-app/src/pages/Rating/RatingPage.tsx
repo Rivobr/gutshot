@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { Fragment, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -255,65 +255,67 @@ export function RatingPage(): JSX.Element {
             </div>
             {rest.map((p, i) => {
               const isMe = p.userId === myUserId;
-              const isFinalist = p.finalist;
               return (
-                <motion.button
-                  type="button"
-                  key={p.userId}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.4, delay: i * 0.05 }}
-                  whileTap={{ scale: 0.985 }}
-                  onClick={() => openPlayer(p.userId)}
-                  className="flex items-center gap-3 p-4 rounded-[16px] w-full text-left"
-                  style={{
-                    cursor: 'pointer',
-                    background: isMe
-                      ? 'linear-gradient(135deg, rgba(199,154,61,0.16), rgba(20,18,16,0.95))'
-                      : 'rgba(20,18,16,0.85)',
-                    border: isMe
-                      ? '1px solid rgba(247,217,138,0.35)'
-                      : '1px solid rgba(199,154,61,0.12)',
-                  }}
-                >
-                  <span
-                    className="sans num shrink-0"
-                    style={{ width: 28, fontSize: 13, color: '#6B614E' }}
+                <Fragment key={p.userId}>
+                  <motion.button
+                    type="button"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.4, delay: i * 0.05 }}
+                    whileTap={{ scale: 0.985 }}
+                    onClick={() => openPlayer(p.userId)}
+                    className="flex items-center gap-3 p-4 rounded-[16px] w-full text-left"
+                    style={{
+                      cursor: 'pointer',
+                      background: isMe
+                        ? 'linear-gradient(135deg, rgba(199,154,61,0.16), rgba(20,18,16,0.95))'
+                        : 'rgba(20,18,16,0.85)',
+                      border: isMe
+                        ? '1px solid rgba(247,217,138,0.35)'
+                        : '1px solid rgba(199,154,61,0.12)',
+                    }}
                   >
-                    {p.rank}
-                  </span>
-                  <PlayerAvatar
-                    photoUrl={p.photoUrl}
-                    firstName={p.firstName}
-                    lastName={p.lastName}
-                    nickname={p.nickname}
-                    size={40}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <p className="serif truncate" style={{ fontSize: 14, color: '#F5EDD6' }}>
-                        {isMe ? 'Вы' : displayNameOf(p)}
-                      </p>
-                      <PlayerLevelBadge level={p.level} size="xs" />
+                    <span
+                      className="sans num shrink-0"
+                      style={{ width: 28, fontSize: 13, color: '#6B614E' }}
+                    >
+                      {p.rank}
+                    </span>
+                    <PlayerAvatar
+                      photoUrl={p.photoUrl}
+                      firstName={p.firstName}
+                      lastName={p.lastName}
+                      nickname={p.nickname}
+                      size={40}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <p className="serif truncate" style={{ fontSize: 14, color: '#F5EDD6' }}>
+                          {isMe ? 'Вы' : displayNameOf(p)}
+                        </p>
+                        <PlayerLevelBadge level={p.level} size="xs" />
+                      </div>
                     </div>
-                    {isFinalist && (
-                      <p className="sans" style={{ fontSize: 10, color: '#C89A3D' }}>
-                        👑 Финалист месяца
-                      </p>
+                    {p.showcaseAchievements && p.showcaseAchievements.length > 0 && (
+                      <PlayerShowcaseMedals items={p.showcaseAchievements} size={32} />
                     )}
-                  </div>
-                  {p.showcaseAchievements && p.showcaseAchievements.length > 0 && (
-                    <PlayerShowcaseMedals items={p.showcaseAchievements} size={32} />
+                    <div className="text-right">
+                      <p className="gold-text-sm num sans font-semibold" style={{ fontSize: 13 }}>
+                        {formatPoints(pointsOf(p))}
+                      </p>
+                      <p className="sans num" style={{ fontSize: 9, color: '#6B614E' }}>
+                        очков
+                      </p>
+                    </div>
+                  </motion.button>
+                  {p.rank === FINALIST_TOP && (
+                    <div
+                      className="my-1"
+                      style={{ height: 2, background: 'rgba(220,48,48,0.7)' }}
+                      aria-hidden
+                    />
                   )}
-                  <div className="text-right">
-                    <p className="gold-text-sm num sans font-semibold" style={{ fontSize: 13 }}>
-                      {formatPoints(pointsOf(p))}
-                    </p>
-                    <p className="sans num" style={{ fontSize: 9, color: '#6B614E' }}>
-                      очков
-                    </p>
-                  </div>
-                </motion.button>
+                </Fragment>
               );
             })}
             {rest.length === 0 && top3.length === 0 && (

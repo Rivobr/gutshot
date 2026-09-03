@@ -553,35 +553,11 @@ export const ACHIEVEMENTS_CATALOG: AchievementDefinition[] = [
     'monthly_final',
     'monthlyWins',
     '🎖️',
-    'Первая победа месяца',
+    'Победа в финале месяца',
     'Победа в финале месяца',
     'Займите 1 место в финале месяца.',
     1,
     7500,
-    'legend',
-  ),
-  tier(
-    'mf_win_3',
-    'monthly_final',
-    'monthlyWins',
-    '🔱',
-    '3 победы месяца',
-    'Три победы финала месяца',
-    'Три первых места в финале месяца.',
-    3,
-    20000,
-    'legend',
-  ),
-  tier(
-    'mf_win_5',
-    'monthly_final',
-    'monthlyWins',
-    '🦄',
-    '5 побед месяца',
-    'Пять побед финала месяца',
-    'Пять первых мест в финале месяца.',
-    5,
-    35000,
     'legend',
   ),
 
@@ -761,30 +737,6 @@ export const ACHIEVEMENTS_CATALOG: AchievementDefinition[] = [
     'common',
   ),
   tier(
-    'sp_win_no_reentry',
-    'special',
-    'winNoReentry',
-    '🎿',
-    'Победа без повторного входа',
-    'Выиграй без ре-энтри',
-    '1 место при нулевых повторных входах.',
-    1,
-    2500,
-    'rare',
-  ),
-  tier(
-    'sp_short_stack',
-    'special',
-    'shortStackWins',
-    '🌱',
-    'Победа после стека < 10 BB',
-    'Выиграй со короткого стека',
-    'Админ отметит победу после стека менее 10 BB.',
-    1,
-    2500,
-    'rare',
-  ),
-  tier(
     'sp_ft_streak_3',
     'special',
     'finalTableStreak',
@@ -820,18 +772,6 @@ export const ACHIEVEMENTS_CATALOG: AchievementDefinition[] = [
     7500,
     'epic',
   ),
-  tier(
-    'sp_win_streak_3',
-    'special',
-    'backToBackWins',
-    '🐅',
-    '3 победы подряд',
-    'Три победы подряд',
-    'Выиграйте три турнира подряд.',
-    3,
-    15000,
-    'legend',
-  ),
 
   // 👑 Легенда Gutshot
   {
@@ -841,21 +781,16 @@ export const ACHIEVEMENTS_CATALOG: AchievementDefinition[] = [
     icon: '👑',
     title: 'Легенда Gutshot',
     description: 'Высшее признание клуба',
-    howTo:
-      '50 уровень, 50 турниров, 10 побед, 20 финальных столов, 2 топ-10 месяца, ' +
-      'топ-3 финала месяца, 5 каре или 1 стрит-флеш, победа без ре-энтри.',
+    howTo: 'Победа в финале месяца, 3 победы в турнирах, ' + '10 финальных столов и 40 нокаутов.',
     xp: 50000,
-    target: 50,
+    target: 4,
     rarity: 'legend',
     span2: true,
     requires: {
-      level: 50,
-      tournamentsPlayed: 50,
-      wins: 10,
-      finalTables: 20,
-      monthlyTop10: 2,
-      monthlyPrizes: 1,
-      winNoReentry: 1,
+      monthlyWins: 1,
+      wins: 3,
+      finalTables: 10,
+      knockouts: 40,
     },
   },
 ];
@@ -889,6 +824,11 @@ export const REMOVED_ACHIEVEMENT_IDS = [
   'wr_win_3',
   'wr_win_5',
   'wr_win_10',
+  'mf_win_3',
+  'mf_win_5',
+  'sp_win_no_reentry',
+  'sp_short_stack',
+  'sp_win_streak_3',
 ] as const;
 
 export const ACHIEVEMENTS_BY_ID = new Map(ACHIEVEMENTS_CATALOG.map((item) => [item.id, item]));
@@ -900,18 +840,13 @@ export function achievementProgress(
 ): number {
   if (definition.id === 'legend_gutshot') {
     const requirements = definition.requires ?? {};
-    const total = Object.keys(requirements).length + 1;
+    const total = Object.keys(requirements).length;
     let done = 0;
 
     for (const [metric, threshold] of Object.entries(requirements)) {
       if ((metrics[metric as AchievementMetric] ?? 0) >= (threshold as number)) {
         done += 1;
       }
-    }
-
-    // 5 каре ИЛИ 1 стрит-флеш
-    if (metrics.fourOfAKind >= 5 || metrics.straightFlush >= 1) {
-      done += 1;
     }
 
     return Math.round((done / total) * definition.target);
