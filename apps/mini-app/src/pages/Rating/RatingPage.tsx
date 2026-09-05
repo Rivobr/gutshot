@@ -216,7 +216,7 @@ export function RatingPage(): JSX.Element {
                           )}
                           {p.showcaseAchievements && p.showcaseAchievements.length > 0 && (
                             <div className="mt-1 flex justify-center">
-                              <PlayerShowcaseMedals items={p.showcaseAchievements} size={24} />
+                              <PlayerShowcaseMedals items={p.showcaseAchievements} size={28} />
                             </div>
                           )}
                           <p
@@ -297,7 +297,7 @@ export function RatingPage(): JSX.Element {
                       </div>
                     </div>
                     {p.showcaseAchievements && p.showcaseAchievements.length > 0 && (
-                      <PlayerShowcaseMedals items={p.showcaseAchievements} size={32} />
+                      <PlayerShowcaseMedals items={p.showcaseAchievements} size={36} />
                     )}
                     <div className="text-right">
                       <p className="gold-text-sm num sans font-semibold" style={{ fontSize: 13 }}>

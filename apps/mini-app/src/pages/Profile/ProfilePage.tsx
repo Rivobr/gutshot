@@ -469,7 +469,7 @@ export function ProfilePage(): JSX.Element {
                   group={a.group}
                   rarity={a.unlocked ? a.rarity : undefined}
                   locked={!a.unlocked}
-                  size={42}
+                  size={52}
                   title={a.title}
                   achievementId={a.id}
                 />

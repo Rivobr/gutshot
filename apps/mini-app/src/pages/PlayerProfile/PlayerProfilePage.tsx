@@ -11,10 +11,7 @@ import {
 import { SectionLabel } from '../../shared/ui/figma';
 import { PlayerAvatar } from '../../shared/ui/PlayerAvatar';
 import { displayNameOf } from '../../shared/lib/display-name';
-import {
-  styleForAchievement,
-  buildAchievementViews,
-} from '../../shared/lib/achievements-catalog';
+import { styleForAchievement, buildAchievementViews } from '../../shared/lib/achievements-catalog';
 import { AchievementMedallion } from '../../shared/ui/AchievementMedallion';
 
 function LevelBadge({ level, current = false }: { level: number; current?: boolean }): JSX.Element {
@@ -265,7 +262,7 @@ export function PlayerProfilePage(): JSX.Element {
                   <AchievementMedallion
                     group={item.group}
                     rarity={item.rarity}
-                    size={40}
+                    size={48}
                     title={item.title}
                     achievementId={item.id}
                   />
