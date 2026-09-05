@@ -399,6 +399,7 @@ export type ScannerEventType =
   | 'ARRIVED'
   | 'ELIMINATED'
   | 'RE_ENTRY'
+  | 'ADDON'
   | 'BOUNTY'
   | 'FOUR_OF_A_KIND'
   | 'STRAIGHT_FLUSH'
@@ -406,6 +407,29 @@ export type ScannerEventType =
   | 'TUTORIAL_COMPLETED'
   | 'FRIEND_REFERRED'
   | 'SHORT_STACK_WIN';
+
+/** Виды ре-энтри / аддона (для аналитики выручки). */
+export type ReEntryKindType = 'RE_ENTRY_1000' | 'RE_ENTRY_1500' | 'ADDON_1000';
+
+/** Параметры видов ре-энтри / аддона: сумма и фишки. */
+export const RE_ENTRY_KINDS: Record<
+  ReEntryKindType,
+  { label: string; shortLabel: string; amount: number; chips: number }
+> = {
+  RE_ENTRY_1000: {
+    label: 'Ре-энтри · 1000 ₽ / 30k',
+    shortLabel: 'Ре-энтри 30к',
+    amount: 1000,
+    chips: 30000,
+  },
+  RE_ENTRY_1500: {
+    label: 'Ре-энтри · 1500 ₽ / 60k',
+    shortLabel: 'Ре-энтри 60к',
+    amount: 1500,
+    chips: 60000,
+  },
+  ADDON_1000: { label: 'Аддон · 1000 ₽', shortLabel: 'Аддон', amount: 1000, chips: 0 },
+};
 
 export type AchievementCode = 'FOUR_OF_A_KIND' | 'STRAIGHT_FLUSH' | 'ROYAL_FLUSH';
 

@@ -15,6 +15,7 @@ const ALL_ITEMS = [
   { to: '/legal-documents', label: 'Документы', icon: '📄' },
   { to: '/achievements', label: 'Достижения', icon: '🏅' },
   { to: '/statistics', label: 'Статистика', icon: '📈' },
+  { to: '/analytics', label: 'Аналитика', icon: '💹' },
   { to: '/settings', label: 'Настройки', icon: '⚙️' },
 ];
 

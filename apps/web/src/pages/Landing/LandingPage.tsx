@@ -12,6 +12,8 @@ export function LandingPage() {
   const club = data?.club;
   const taken = nearest?._count?.registrations ?? 0;
   const max = nearest?.maxPlayers ?? 40;
+  const seated = Math.min(taken, max);
+  const waiting = Math.max(taken - max, 0);
 
   return (
     <>
@@ -143,12 +145,17 @@ export function LandingPage() {
                 <div className="row between mb-8">
                   <span className="muted">Записались</span>
                   <b className="num">
-                    {taken} / {max}
+                    {seated} / {max}
                   </b>
                 </div>
                 <div className="xp-bar">
-                  <i style={{ width: `${Math.min(100, Math.round((taken / max) * 100))}%` }} />
+                  <i style={{ width: `${Math.min(100, Math.round((seated / max) * 100))}%` }} />
                 </div>
+                {waiting > 0 && (
+                  <p className="hint mt-8" style={{ color: 'var(--gold)' }}>
+                    +{waiting} в листе ожидания
+                  </p>
+                )}
               </div>
             </div>
             <Link className="btn btn-gold btn-block mt-24" to={user ? '/app' : '/register'}>

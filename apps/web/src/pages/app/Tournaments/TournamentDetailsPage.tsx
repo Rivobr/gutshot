@@ -57,6 +57,8 @@ export function TournamentDetailsPage() {
 
   const taken = tournament._count?.registrations ?? participants?.length ?? 0;
   const max = tournament.maxPlayers ?? 40;
+  const seated = Math.min(taken, max);
+  const waiting = Math.max(taken - max, 0);
 
   return (
     <div className="stack-16">
@@ -77,7 +79,8 @@ export function TournamentDetailsPage() {
         </h1>
         <div className="row wrap mt-16" style={{ gap: 10 }}>
           <span className="chip">
-            👥 {taken} / {max}
+            👥 {seated} / {max}
+            {waiting > 0 ? ` · +${waiting} в листе ожидания` : ''}
           </span>
           <span className="chip">💰 {tournament.buyIn > 0 ? `${tournament.buyIn} ₽` : 'Free'}</span>
           <span className="chip">Миллионная, 19</span>
@@ -91,12 +94,17 @@ export function TournamentDetailsPage() {
           <div className="row between mb-8">
             <span className="muted">Мест занято</span>
             <b className="num">
-              {taken} / {max}
+              {seated} / {max}
             </b>
           </div>
           <div className="xp-bar">
-            <i style={{ width: `${Math.min(100, Math.round((taken / max) * 100))}%` }} />
+            <i style={{ width: `${Math.min(100, Math.round((seated / max) * 100))}%` }} />
           </div>
+          {waiting > 0 && (
+            <p className="hint mt-8" style={{ color: 'var(--gold)' }}>
+              +{waiting} в листе ожидания
+            </p>
+          )}
         </div>
         <div className="mt-16">
           {alreadyIn ? (

@@ -18,7 +18,7 @@ import { AchievementsService, ACHIEVEMENT_TITLES } from '../../progression/achie
 import { AchievementEngineService } from '../../progression/achievement-engine.service';
 import { PlayerEventsService } from '../../progression/player-events.service';
 import { NotificationsService } from '../../telegram/notifications.service';
-import { ScannerEvent } from './dto/scanner.dto';
+import { ScannerEvent, ReEntryKind, RE_ENTRY_KIND_PARAMS } from './dto/scanner.dto';
 
 interface EventConfig {
   xpKey: XpSettingKey;
@@ -53,6 +53,15 @@ const EVENT_CONFIG: Record<ScannerEvent, EventConfig> = {
     eventType: PlayerEventType.RE_ENTRY,
     requiresRegistration: true,
     label: 'Ре-энтри',
+  },
+  // Аддон: выручка фиксируется в аналитике, XP не даёт и вылет не сбрасывает.
+  [ScannerEvent.ADDON]: {
+    xpKey: XpSettingKey.RE_ENTRY,
+    xpReason: XPReason.ACHIEVEMENT,
+    eventType: PlayerEventType.RE_ENTRY,
+    requiresRegistration: true,
+    noXp: true,
+    label: 'Аддон',
   },
   [ScannerEvent.BOUNTY]: {
     xpKey: XpSettingKey.BOUNTY,
@@ -196,7 +205,13 @@ export class ScannerService {
    * Применяет событие к игроку: обновляет счетчики, начисляет XP,
    * выдает достижение и пишет запись в историю. Все шаги — в одной транзакции.
    */
-  async applyEvent(rawQrCode: string, event: ScannerEvent, adminId: string, tournamentId?: string) {
+  async applyEvent(
+    rawQrCode: string,
+    event: ScannerEvent,
+    adminId: string,
+    tournamentId?: string,
+    reEntryKind?: ReEntryKind,
+  ) {
     const qrCode = normalizePlayerQrCode(rawQrCode);
     const config = EVENT_CONFIG[event];
 
@@ -224,6 +239,11 @@ export class ScannerService {
       } else if (event === ScannerEvent.ELIMINATED) {
         await this.adminTournamentsService.applyEliminationPlaceInTx(tx, registration!.id);
       } else if (event === ScannerEvent.RE_ENTRY) {
+        const kind =
+          reEntryKind && reEntryKind !== ReEntryKind.ADDON_1000
+            ? reEntryKind
+            : ReEntryKind.RE_ENTRY_1000;
+        const params = RE_ENTRY_KIND_PARAMS[kind];
         await tx.registration.update({
           where: { id: registration!.id },
           data: { reEntries: { increment: 1 }, eliminatedAt: null, place: null },
@@ -232,6 +252,32 @@ export class ScannerService {
           where: { userId: user.id },
           update: { reEntries: { increment: 1 } },
           create: { userId: user.id, xp: 0, reEntries: 1 },
+        });
+        await tx.reEntryLog.create({
+          data: {
+            tournamentId: registration!.tournamentId,
+            registrationId: registration!.id,
+            userId: user.id,
+            playerName: [user.lastName, user.firstName].filter(Boolean).join(' ') || user.nickname,
+            kind,
+            amount: params.amount,
+            chips: params.chips,
+            createdById: adminId,
+          },
+        });
+      } else if (event === ScannerEvent.ADDON) {
+        const params = RE_ENTRY_KIND_PARAMS[ReEntryKind.ADDON_1000];
+        await tx.reEntryLog.create({
+          data: {
+            tournamentId: registration!.tournamentId,
+            registrationId: registration!.id,
+            userId: user.id,
+            playerName: [user.lastName, user.firstName].filter(Boolean).join(' ') || user.nickname,
+            kind: ReEntryKind.ADDON_1000,
+            amount: params.amount,
+            chips: params.chips,
+            createdById: adminId,
+          },
         });
       } else if (event === ScannerEvent.BOUNTY) {
         await tx.registration.update({

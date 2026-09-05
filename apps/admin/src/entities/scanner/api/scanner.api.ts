@@ -1,4 +1,9 @@
-import type { ScannedPlayerDto, ScannerEventResultDto, ScannerEventType } from '@gutshot/types';
+import type {
+  ReEntryKindType,
+  ScannedPlayerDto,
+  ScannerEventResultDto,
+  ScannerEventType,
+} from '@gutshot/types';
 import { apiClient } from '../../../shared/api/client';
 
 export const scannerApi = {
@@ -10,6 +15,7 @@ export const scannerApi = {
     qrCode: string;
     event: ScannerEventType;
     tournamentId?: string;
+    reEntryKind?: ReEntryKindType;
   }): Promise<ScannerEventResultDto> {
     const { data } = await apiClient.post('/admin/scanner/event', payload);
     return data.data;

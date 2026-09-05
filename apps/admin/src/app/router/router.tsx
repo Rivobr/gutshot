@@ -12,12 +12,10 @@ import { LegalDocumentsPage } from '../../pages/LegalDocuments/LegalDocumentsPag
 import { AchievementsAdminPage } from '../../pages/Achievements/AchievementsPage';
 import { HistoryPage } from '../../pages/History/HistoryPage';
 import { StatisticsPage } from '../../pages/Statistics/StatisticsPage';
+import { AnalyticsPage } from '../../pages/Analytics/AnalyticsPage';
 import { SettingsPage } from '../../pages/Settings/SettingsPage';
 import { BroadcastsPage } from '../../pages/Broadcasts/BroadcastsPage';
-import {
-  BroadcastDetailsPage,
-  BroadcastNewPage,
-} from '../../pages/Broadcasts/BroadcastEditorPage';
+import { BroadcastDetailsPage, BroadcastNewPage } from '../../pages/Broadcasts/BroadcastEditorPage';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -40,6 +38,7 @@ export const router = createBrowserRouter([
           { path: '/legal-documents', element: <LegalDocumentsPage /> },
           { path: '/achievements', element: <AchievementsAdminPage /> },
           { path: '/statistics', element: <StatisticsPage /> },
+          { path: '/analytics', element: <AnalyticsPage /> },
           { path: '/settings', element: <SettingsPage /> },
         ],
       },

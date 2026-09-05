@@ -39,6 +39,7 @@ export function TournamentPage(): JSX.Element {
 
   const registrationsCount = tournament._count?.registrations ?? 0;
   const seats = Math.max(tournament.maxPlayers - registrationsCount, 0);
+  const waitingCount = Math.max(registrationsCount - tournament.maxPlayers, 0);
   const upcoming = UPCOMING_STATUSES.includes(tournament.status);
   const myRegistration = myRegistrations.find((r) => r.tournamentId === tournament.id);
   const isMine = Boolean(myRegistration);
@@ -162,8 +163,9 @@ export function TournamentPage(): JSX.Element {
           )}
         </div>
         <p className="relative sans num" style={{ fontSize: 12, color: '#8A7A62' }}>
-          {formatDate(tournament.date)} · {formatTime(tournament.date)} · {registrationsCount}{' '}
-          участников
+          {formatDate(tournament.date)} · {formatTime(tournament.date)} ·{' '}
+          {Math.min(registrationsCount, tournament.maxPlayers)} участников
+          {waitingCount > 0 ? ` · +${waitingCount} в листе ожидания` : ''}
           {tournament.status === 'REGISTRATION_OPEN' && !isMine && seats === 0
             ? ' · лист ожидания'
             : ''}
@@ -197,7 +199,7 @@ export function TournamentPage(): JSX.Element {
             { id: 'about' as const, label: 'О турнире' },
             {
               id: 'players' as const,
-              label: `Участники (${registrationsCount} / ${tournament.maxPlayers})`,
+              label: `Участники (${Math.min(registrationsCount, tournament.maxPlayers)} / ${tournament.maxPlayers})`,
             },
           ] as const
         ).map((item) => {

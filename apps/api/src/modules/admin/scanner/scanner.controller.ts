@@ -26,6 +26,12 @@ export class ScannerController {
   /** Отметка события турнира для отсканированного игрока. */
   @Post('event')
   applyEvent(@CurrentUser() admin: AdminJwtPayload, @Body() dto: ScannerEventDto) {
-    return this.scannerService.applyEvent(dto.qrCode, dto.event, admin.sub, dto.tournamentId);
+    return this.scannerService.applyEvent(
+      dto.qrCode,
+      dto.event,
+      admin.sub,
+      dto.tournamentId,
+      dto.reEntryKind,
+    );
   }
 }

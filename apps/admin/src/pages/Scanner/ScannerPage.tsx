@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import type { ScannedPlayerDto, ScannerEventType } from '@gutshot/types';
+import type { ReEntryKindType, ScannedPlayerDto, ScannerEventType } from '@gutshot/types';
+import { RE_ENTRY_KINDS } from '@gutshot/types';
 import { Avatar, Badge, Button, Card } from '@gutshot/ui';
 import { useApplyScannerEvent, useScanPlayer } from '../../entities/scanner';
 import { QrScanner } from '../../widgets/QrScanner/QrScanner';
@@ -66,7 +67,7 @@ export function ScannerPage(): JSX.Element {
     [lookup],
   );
 
-  const handleEvent = (event: ScannerEventType, label: string) => {
+  const handleEvent = (event: ScannerEventType, label: string, reEntryKind?: ReEntryKindType) => {
     if (!player) {
       return;
     }
@@ -78,6 +79,7 @@ export function ScannerPage(): JSX.Element {
         qrCode,
         event,
         tournamentId: player.registration?.tournamentId,
+        reEntryKind,
       },
       {
         onSuccess: (result) => {
@@ -235,7 +237,7 @@ export function ScannerPage(): JSX.Element {
           <Card className="gap-3">
             <h3 className="font-medium">Отметить событие</h3>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {SCANNER_EVENTS.map((event) => {
+              {SCANNER_EVENTS.filter((event) => event.value !== 'RE_ENTRY').map((event) => {
                 const needsRegistration = ['ARRIVED', 'ELIMINATED', 'RE_ENTRY', 'BOUNTY'].includes(
                   event.value,
                 );
@@ -257,6 +259,33 @@ export function ScannerPage(): JSX.Element {
                   </Button>
                 );
               })}
+            </div>
+
+            <div className="mt-2">
+              <p className="mb-2 text-xs text-muted-foreground">
+                Ре-энтри возвращает в игру (сбрасывает вылет), аддон просто добавляет фишек.
+              </p>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {[
+                  { kind: 'RE_ENTRY_1000' as const, event: 'RE_ENTRY' as const },
+                  { kind: 'RE_ENTRY_1500' as const, event: 'RE_ENTRY' as const },
+                  { kind: 'ADDON_1000' as const, event: 'ADDON' as const },
+                ].map(({ kind, event }) => {
+                  const meta = RE_ENTRY_KINDS[kind];
+                  return (
+                    <Button
+                      key={kind}
+                      variant="primary"
+                      disabled={applyEvent.isPending || player.isBlocked || !registration}
+                      onClick={() => handleEvent(event, meta.label, kind)}
+                      className="flex-col gap-1 py-4"
+                    >
+                      <span className="text-lg">{kind === 'ADDON_1000' ? '➕' : '🔁'}</span>
+                      <span className="text-xs">{meta.label}</span>
+                    </Button>
+                  );
+                })}
+              </div>
             </div>
 
             {applyEvent.isError && (

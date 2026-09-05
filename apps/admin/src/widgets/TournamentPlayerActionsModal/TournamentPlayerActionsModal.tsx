@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { isAxiosError } from 'axios';
-import type { AdminTournamentRegistration, ScannerEventType } from '@gutshot/types';
+import type {
+  AdminTournamentRegistration,
+  ReEntryKindType,
+  ScannerEventType,
+} from '@gutshot/types';
+import { RE_ENTRY_KINDS } from '@gutshot/types';
 import { Avatar, Badge, Button, Card } from '@gutshot/ui';
 import { useApplyScannerEvent } from '../../entities/scanner';
 import { displayPlayerName } from '../../shared/lib/display-name';
@@ -11,11 +16,16 @@ import { showToast } from '../../shared/ui/toast';
 const TOURNAMENT_ACTIONS: ScannerEventType[] = [
   'ARRIVED',
   'ELIMINATED',
-  'RE_ENTRY',
   'BOUNTY',
   'FOUR_OF_A_KIND',
   'STRAIGHT_FLUSH',
   'ROYAL_FLUSH',
+];
+
+const RE_ENTRY_ACTIONS: { kind: ReEntryKindType; event: ScannerEventType }[] = [
+  { kind: 'RE_ENTRY_1000', event: 'RE_ENTRY' },
+  { kind: 'RE_ENTRY_1500', event: 'RE_ENTRY' },
+  { kind: 'ADDON_1000', event: 'ADDON' },
 ];
 
 export interface TournamentPlayerActionsModalProps {
@@ -78,7 +88,7 @@ export function TournamentPlayerActionsModal({
   const qrCode = user.qrCode?.trim() ?? '';
   const canAct = Boolean(qrCode);
 
-  const handleEvent = (event: ScannerEventType, label: string) => {
+  const handleEvent = (event: ScannerEventType, label: string, reEntryKind?: ReEntryKindType) => {
     if (!qrCode) {
       showToast('У игрока нет QR-кода — действие недоступно', 'error');
       return;
@@ -86,7 +96,7 @@ export function TournamentPlayerActionsModal({
 
     setLastLabel(label);
     applyEvent.mutate(
-      { qrCode, event, tournamentId },
+      { qrCode, event, tournamentId, reEntryKind },
       {
         onSuccess: (result) => {
           showToast(
@@ -183,11 +193,7 @@ export function TournamentPlayerActionsModal({
             {events.map((event) => (
               <Button
                 key={event.value}
-                variant={
-                  event.value === 'ELIMINATED' || event.value === 'RE_ENTRY'
-                    ? 'primary'
-                    : 'secondary'
-                }
+                variant={event.value === 'ELIMINATED' ? 'primary' : 'secondary'}
                 disabled={applyEvent.isPending || !canAct}
                 onClick={() => handleEvent(event.value, event.label)}
                 className="flex-col gap-1 py-4"
@@ -196,6 +202,26 @@ export function TournamentPlayerActionsModal({
                 <span className="text-xs">{event.label}</span>
               </Button>
             ))}
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Ре-энтри возвращает в игру (сбрасывает вылет), аддон просто добавляет фишек.
+          </p>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {RE_ENTRY_ACTIONS.map(({ kind, event }) => {
+              const meta = RE_ENTRY_KINDS[kind];
+              return (
+                <Button
+                  key={kind}
+                  variant="primary"
+                  disabled={applyEvent.isPending || !canAct}
+                  onClick={() => handleEvent(event, meta.label, kind)}
+                  className="flex-col gap-1 py-4"
+                >
+                  <span className="text-lg">{kind === 'ADDON_1000' ? '➕' : '🔁'}</span>
+                  <span className="text-xs">{meta.label}</span>
+                </Button>
+              );
+            })}
           </div>
           {!canAct && (
             <p className="text-sm text-destructive">

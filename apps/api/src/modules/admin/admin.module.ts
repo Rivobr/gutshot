@@ -19,6 +19,8 @@ import { XpSettingsController } from './xp-settings/xp-settings.controller';
 import { AdminHistoryController } from './history/admin-history.controller';
 import { AdminBroadcastController } from './broadcast/broadcast.controller';
 import { AdminBroadcastService } from './broadcast/broadcast.service';
+import { AdminAnalyticsController } from './analytics/analytics.controller';
+import { AnalyticsService } from './analytics/analytics.service';
 
 @Module({
   imports: [TelegramModule, RegistrationsModule, ProgressionModule, UsersModule, RatingModule],
@@ -31,6 +33,7 @@ import { AdminBroadcastService } from './broadcast/broadcast.service';
     XpSettingsController,
     AdminHistoryController,
     AdminBroadcastController,
+    AdminAnalyticsController,
   ],
   providers: [
     DashboardService,
@@ -40,6 +43,7 @@ import { AdminBroadcastService } from './broadcast/broadcast.service';
     ScannerService,
     AttendanceService,
     AdminBroadcastService,
+    AnalyticsService,
   ],
 })
 export class AdminModule {}

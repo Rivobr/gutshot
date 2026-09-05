@@ -41,6 +41,16 @@ enum RegistrationStatus {
   WAITING
 }
 
+/// Виды ре-энтри / аддона в турнире (для аналитики выручки).
+enum ReEntryKind {
+  /// Ре-энтри: 1000 ₽ / 30k фишек.
+  RE_ENTRY_1000
+  /// Ре-энтри: 1500 ₽ / 60k фишек.
+  RE_ENTRY_1500
+  /// Аддон: 1000 ₽.
+  ADDON_1000
+}
+
 enum XPReason {
   TOURNAMENT_PARTICIPATION
   TOURNAMENT_PLACE
@@ -313,6 +323,7 @@ model Tournament {
   events            PlayerEvent[]
   blindLevels       BlindLevel[]
   broadcastCampaigns BroadcastCampaign[]
+  reEntryLogs       ReEntryLog[]
 
   @@index([date])
   @@index([status])
@@ -360,6 +371,7 @@ model Registration {
   user       User        @relation(fields: [userId], references: [id])
   tournament Tournament  @relation(fields: [tournamentId], references: [id])
   qrToken    QRToken?
+  reEntryLogs ReEntryLog[]
 
   @@unique([userId, tournamentId])
   @@index([tournamentId])
@@ -442,6 +454,8 @@ model AdminUser {
   updatedDocuments      LegalDocument[]
   updatedAchievements   AchievementText[]
   broadcastCampaigns    BroadcastCampaign[]
+  shiftEntries          ShiftEntry[]
+  reEntryLogs           ReEntryLog[]
 
   @@index([email])
 }
@@ -720,4 +734,48 @@ model ConsentLog {
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([userId])
+}
+
+/// Запись ре-энтри/аддона с видом и стоимостью — для аналитики выручки.
+model ReEntryLog {
+  id             String      @id @default(cuid())
+  tournamentId   String
+  registrationId String?
+  userId         String?
+  /// Игрок на момент записи (снимок имени — на случай удаления профиля).
+  playerName     String?
+  kind           ReEntryKind
+  /// Сумма оплаты, ₽.
+  amount         Int
+  /// Выданные фишки.
+  chips          Int
+  createdAt      DateTime    @default(now())
+  createdById    String?
+
+  createdBy    AdminUser?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  tournament   Tournament    @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  registration Registration? @relation(fields: [registrationId], references: [id], onDelete: SetNull)
+
+  @@index([tournamentId])
+  @@index([createdAt])
+}
+
+/// Учётная запись смены сотрудника (имя, дата, сумма за день) — для аналитики.
+model ShiftEntry {
+  id        String   @id @default(cuid())
+  /// Имя сотрудника — свободный ввод.
+  name      String
+  date      DateTime @db.Date
+  /// Сумма за день, ₽ (может быть отрицательной для корректировок).
+  amount    Int
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  /// Кто создал запись (админ-пользователь).
+  createdById String?
+
+  createdBy AdminUser? @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([date])
+  @@index([name])
 }

@@ -6,10 +6,12 @@ interface PlayersFillBarProps {
   className?: string;
 }
 
-/** Прогресс заполнения турнира: число игроков внутри бара. */
+/** Прогресс заполнения турнира: число игроков внутри бара (не превышает max). */
 export function PlayersFillBar({ taken, max, className }: PlayersFillBarProps): JSX.Element {
   const safeMax = Math.max(max, 1);
-  const pct = Math.min(Math.round((taken / safeMax) * 100), 100);
+  const seated = Math.min(taken, safeMax);
+  const waiting = Math.max(taken - safeMax, 0);
+  const pct = Math.min(Math.round((seated / safeMax) * 100), 100);
 
   return (
     <div className={className}>
@@ -37,9 +39,17 @@ export function PlayersFillBar({ taken, max, className }: PlayersFillBarProps): 
           className="relative z-[1] flex h-full items-center justify-center sans font-semibold"
           style={{ fontSize: 13, color: '#F5EDD6', letterSpacing: '0.04em' }}
         >
-          Игроки {taken} / {max}
+          Игроки {seated} / {max}
         </div>
       </div>
+      {waiting > 0 && (
+        <p
+          className="sans mt-1.5 text-center"
+          style={{ fontSize: 11, color: '#C89A3D', letterSpacing: '0.04em' }}
+        >
+          +{waiting} в листе ожидания
+        </p>
+      )}
     </div>
   );
 }
