@@ -113,40 +113,67 @@ const LEGAL_DOCUMENTS: { type: LegalDocumentType; title: string; content: string
   },
 ];
 
-async function main(): Promise<void> {
-  // Полная замена админ-пользователей: старые admin/dl удаляются,
-  // остаются только 3 OWNER-профиля (Sergei, Tima, Misha).
-  // Пароли задаются переменными окружения ADMIN_PASSWORD_SERGEI и т.д.
-  // (см. docker-entrypoint / запуск seed'а на сервере).
-  await prisma.adminUser.deleteMany({});
+async function upsertAdmin(input: {
+  email: string;
+  name: string;
+  role: AdminRole;
+  password: string;
+}): Promise<{ email: string; role: AdminRole }> {
+  const passwordHash = await hash(input.password, 10);
+  const admin = await prisma.adminUser.upsert({
+    where: { email: input.email },
+    update: {
+      name: input.name,
+      role: input.role,
+      passwordHash,
+    },
+    create: {
+      email: input.email,
+      name: input.name,
+      role: input.role,
+      passwordHash,
+    },
+  });
+  return { email: admin.email, role: admin.role };
+}
 
-  const owners = [
+async function main(): Promise<void> {
+  // Никогда не удаляем живых админов. 2026-09-05 seed с deleteMany({})
+  // стёр admin/dl — дилеры и сотрудники потеряли вход.
+  const admins: { email: string; role: AdminRole }[] = [];
+
+  admins.push(
+    await upsertAdmin({
+      email: 'dl',
+      name: 'Дилер',
+      role: AdminRole.DEALER,
+      password: process.env.ADMIN_PASSWORD_DL || 'dl12345',
+    }),
+  );
+  admins.push(
+    await upsertAdmin({
+      email: 'admin',
+      name: 'Админ',
+      role: AdminRole.OWNER,
+      password: process.env.ADMIN_PASSWORD_ADMIN || 'adminowner12345!',
+    }),
+  );
+
+  const namedOwners = [
     { email: 'Sergei', name: 'Sergei', password: process.env.ADMIN_PASSWORD_SERGEI },
     { email: 'Tima', name: 'Tima', password: process.env.ADMIN_PASSWORD_TIMA },
     { email: 'Misha', name: 'Misha', password: process.env.ADMIN_PASSWORD_MISHA },
   ];
-
-  const admins: { email: string; role: AdminRole }[] = [];
-  for (const owner of owners) {
+  for (const owner of namedOwners) {
     if (!owner.password) {
-      throw new Error(
-        `Не задан пароль для ${owner.email} (ADMIN_PASSWORD_${owner.email.toUpperCase()})`,
-      );
+      continue;
     }
     admins.push(
-      await prisma.adminUser.upsert({
-        where: { email: owner.email },
-        update: {
-          name: owner.name,
-          role: AdminRole.OWNER,
-          passwordHash: await hash(owner.password, 10),
-        },
-        create: {
-          email: owner.email,
-          passwordHash: await hash(owner.password, 10),
-          name: owner.name,
-          role: AdminRole.OWNER,
-        },
+      await upsertAdmin({
+        email: owner.email,
+        name: owner.name,
+        role: AdminRole.OWNER,
+        password: owner.password,
       }),
     );
   }
