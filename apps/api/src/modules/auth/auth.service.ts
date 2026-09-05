@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -32,8 +33,12 @@ interface WebConsents {
   media: boolean;
 }
 
+const REMOVED_ADMIN_LOGINS = new Set(['admin', 'dl', 'tvadmin', 'owner']);
+
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly usersService: UsersService,
     private readonly prisma: PrismaService,
@@ -125,18 +130,29 @@ export class AuthService {
     const login = normalizeAdminLogin(email);
     const secret = normalizeAdminPassword(password);
 
+    if (REMOVED_ADMIN_LOGINS.has(login)) {
+      this.logger.warn(`Admin login rejected removed account "${login}"`);
+      throw new UnauthorizedException(
+        'Логины admin и dl больше не работают. Войдите как Sergei, Tima или Misha',
+      );
+    }
+
     const admin = await this.prisma.adminUser.findFirst({
       where: { email: { equals: login, mode: 'insensitive' } },
     });
 
     if (!admin) {
-      throw new UnauthorizedException('Неверный email или пароль');
+      this.logger.warn(`Admin login unknown "${login}"`);
+      throw new UnauthorizedException(
+        'Такого логина нет. Нужен Sergei, Tima или Misha — латиницей или как обычно пишете имя',
+      );
     }
 
     const passwordValid = await compare(secret, admin.passwordHash);
 
     if (!passwordValid) {
-      throw new UnauthorizedException('Неверный email или пароль');
+      this.logger.warn(`Admin login bad password for "${admin.email}" (len=${secret.length})`);
+      throw new UnauthorizedException('Пароль не подходит. Проверьте раскладку и пробелы');
     }
 
     await this.prisma.adminUser.update({
