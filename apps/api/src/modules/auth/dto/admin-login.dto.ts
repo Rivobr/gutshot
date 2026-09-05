@@ -12,6 +12,9 @@ export class AdminLoginDto {
   email!: string;
 
   @ApiProperty({ example: '********' })
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.replace(/[\u00A0\u200B-\u200D\uFEFF]/g, '').trim() : value,
+  )
   @IsString()
   @IsNotEmpty()
   @MinLength(1)

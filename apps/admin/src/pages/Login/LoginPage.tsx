@@ -20,11 +20,14 @@ function loginErrorMessage(error: unknown): string {
   if (!error.response) {
     return 'Нет связи с сервером. Проверьте интернет и повторите.';
   }
-  if (error.response.status === 401) {
-    return 'Неверный email или пароль';
-  }
   const message = (error.response.data as { message?: string } | undefined)?.message;
-  return message ?? `Ошибка сервера (${error.response.status}). Попробуйте позже.`;
+  if (typeof message === 'string' && message.trim()) {
+    return message;
+  }
+  if (error.response.status === 401) {
+    return 'Неверный логин или пароль';
+  }
+  return `Ошибка сервера (${error.response.status}). Попробуйте позже.`;
 }
 
 export function LoginPage(): JSX.Element {
@@ -41,14 +44,18 @@ export function LoginPage(): JSX.Element {
         <div className="text-center">
           <h1 className="text-xl font-medium text-primary">GUTSHOT CRM</h1>
           <p className="text-sm text-muted-foreground">Вход для сотрудников клуба</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Логин латиницей: Sergei, Tima, Misha
+          </p>
         </div>
 
         <form
           className="flex flex-col gap-4"
+          autoComplete="off"
           onSubmit={handleSubmit((values) =>
             loginMutation.mutate({
-              email: values.email.trim().toLowerCase(),
-              password: values.password,
+              email: values.email.trim(),
+              password: values.password.trim(),
             }),
           )}
         >
@@ -59,7 +66,9 @@ export function LoginPage(): JSX.Element {
               autoCapitalize="none"
               autoCorrect="off"
               className="rounded-md border border-border bg-secondary px-3 py-2.5 text-foreground outline-none focus:ring-2 focus:ring-primary"
-              placeholder="Логин"
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="Sergei"
               {...register('email')}
             />
             {errors.email && (
@@ -71,6 +80,7 @@ export function LoginPage(): JSX.Element {
             <label className="text-sm text-muted-foreground">Пароль</label>
             <input
               type="password"
+              autoComplete="off"
               className="rounded-md border border-border bg-secondary px-3 py-2.5 text-foreground outline-none focus:ring-2 focus:ring-primary"
               placeholder="********"
               {...register('password')}
