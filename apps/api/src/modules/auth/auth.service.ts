@@ -16,6 +16,7 @@ import {
   TelegramWidgetUser,
 } from '../../common/utils/telegram-widget.util';
 import { normalizeRussianPhone } from '../../common/utils/phone.util';
+import { normalizeAdminLogin, normalizeAdminPassword } from '../../common/utils/admin-login.util';
 import { AdminJwtPayload, JwtPayload } from '../../common/interfaces/jwt-payload.interface';
 import { OtpService } from './otp.service';
 import { SmsService } from './sms.service';
@@ -121,17 +122,18 @@ export class AuthService {
   }
 
   async loginAdmin(email: string, password: string) {
-    // Почту вводят с телефона, где часто включена автозаглавная буква,
-    // поэтому ищем без учёта регистра и лишних пробелов.
+    const login = normalizeAdminLogin(email);
+    const secret = normalizeAdminPassword(password);
+
     const admin = await this.prisma.adminUser.findFirst({
-      where: { email: { equals: email.trim(), mode: 'insensitive' } },
+      where: { email: { equals: login, mode: 'insensitive' } },
     });
 
     if (!admin) {
       throw new UnauthorizedException('Неверный email или пароль');
     }
 
-    const passwordValid = await compare(password, admin.passwordHash);
+    const passwordValid = await compare(secret, admin.passwordHash);
 
     if (!passwordValid) {
       throw new UnauthorizedException('Неверный email или пароль');

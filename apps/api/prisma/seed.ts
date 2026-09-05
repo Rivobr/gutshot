@@ -138,26 +138,9 @@ async function upsertAdmin(input: {
 }
 
 async function main(): Promise<void> {
-  // Никогда не удаляем живых админов. 2026-09-05 seed с deleteMany({})
-  // стёр admin/dl — дилеры и сотрудники потеряли вход.
+  // Не трогаем чужие аккаунты и никогда не deleteMany({}) по AdminUser.
+  // admin/dl больше не создаём — только именные OWNER, если задан пароль в env.
   const admins: { email: string; role: AdminRole }[] = [];
-
-  admins.push(
-    await upsertAdmin({
-      email: 'dl',
-      name: 'Дилер',
-      role: AdminRole.DEALER,
-      password: process.env.ADMIN_PASSWORD_DL || 'dl12345',
-    }),
-  );
-  admins.push(
-    await upsertAdmin({
-      email: 'admin',
-      name: 'Админ',
-      role: AdminRole.OWNER,
-      password: process.env.ADMIN_PASSWORD_ADMIN || 'adminowner12345!',
-    }),
-  );
 
   const namedOwners = [
     { email: 'Sergei', name: 'Sergei', password: process.env.ADMIN_PASSWORD_SERGEI },
