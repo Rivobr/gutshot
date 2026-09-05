@@ -5,7 +5,7 @@ import { styleForAchievement } from '../lib/achievements-catalog';
 
 /** Значок подбирается по группе достижения — так работает весь каталог клуба. */
 // Версия ассетов: bump при замене PNG, чтобы сбросить кэш WebView (?v=N).
-const BADGES_VERSION = '2';
+const BADGES_VERSION = '4';
 
 const ICON_BY_GROUP: Record<AchievementGroup, string> = {
   wins: `/achievements/first_win.png?v=${BADGES_VERSION}`,
@@ -46,8 +46,11 @@ export function AchievementMedallion({
     : undefined;
   const fallback = (group && ICON_BY_GROUP[group]) || FALLBACK_ICON;
   const style = rarity ? styleForAchievement(achievementId, rarity) : null;
+  // Рамка редкости рисуется внутри одного и того же квадрата (outer === size),
+  // чтобы все значки в сетке занимали ровно одинаковый размер.
   const pad = rarity && rarity !== 'common' ? Math.max(2, Math.round(size * 0.08)) : 0;
-  const outer = size + pad * 2;
+  const outer = size;
+  const inner = size - pad * 2;
 
   return (
     <span
@@ -71,8 +74,8 @@ export function AchievementMedallion({
       <img
         src={perAchievement ?? fallback}
         alt=""
-        width={size}
-        height={size}
+        width={inner}
+        height={inner}
         draggable={false}
         onError={(event) => {
           const image = event.currentTarget;
@@ -82,8 +85,8 @@ export function AchievementMedallion({
           }
         }}
         style={{
-          width: size,
-          height: size,
+          width: inner,
+          height: inner,
           objectFit: 'contain',
           display: 'block',
           filter: locked

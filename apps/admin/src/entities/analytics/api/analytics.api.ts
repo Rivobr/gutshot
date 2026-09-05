@@ -5,6 +5,7 @@ export interface AnalyticsShiftEntryDto {
   name: string;
   date: string;
   amount: number;
+  paid: boolean;
   note: string | null;
   createdAt: string;
 }
@@ -13,7 +14,9 @@ export interface AnalyticsShiftsResponseDto {
   month: string;
   entries: AnalyticsShiftEntryDto[];
   total: number;
-  byName: { name: string; total: number; days: number }[];
+  unpaid: number;
+  paid: number;
+  byName: { name: string; total: number; days: number; unpaid: number; paid: number }[];
 }
 
 export interface AnalyticsReEntryLogDto {
@@ -47,8 +50,10 @@ export interface AnalyticsSummaryResponseDto {
   month: string;
   shifts: {
     total: number;
+    unpaid: number;
+    paid: number;
     daysCount: number;
-    byName: { name: string; total: number; days: number }[];
+    byName: { name: string; total: number; days: number; unpaid: number; paid: number }[];
   };
   reEntries: {
     total: number;
@@ -86,6 +91,10 @@ export const analyticsApi = {
     payload: { name?: string; date?: string; amount?: number; note?: string },
   ) {
     const { data } = await apiClient.patch(`/admin/analytics/shifts/${id}`, payload);
+    return data.data;
+  },
+  async setShiftPaid(id: string, paid: boolean) {
+    const { data } = await apiClient.patch(`/admin/analytics/shifts/${id}/paid`, { paid });
     return data.data;
   },
   async deleteShift(id: string) {

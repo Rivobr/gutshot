@@ -768,6 +768,8 @@ model ShiftEntry {
   date      DateTime @db.Date
   /// Сумма за день, ₽ (может быть отрицательной для корректировок).
   amount    Int
+  /// Выплачено сотруднику.
+  paid      Boolean  @default(false)
   note      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -778,4 +780,5 @@ model ShiftEntry {
 
   @@index([date])
   @@index([name])
+  @@index([paid])
 }

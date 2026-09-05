@@ -30,7 +30,7 @@ function monthRange(month?: string): { from: Date; to: Date; month: string } {
 export class AnalyticsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Смены за месяц: записи, общий итог и разбивка по сотрудникам. */
+  /** Смены за месяц: записи, итоги (общий, к выплате, выплачено) и разбивка по сотрудникам. */
   async getShifts(query: AnalyticsQueryDto) {
     const { from, to, month } = monthRange(query.month);
 
@@ -40,12 +40,32 @@ export class AnalyticsService {
     });
 
     const total = entries.reduce((sum, entry) => sum + entry.amount, 0);
+    const unpaid = entries
+      .filter((entry) => !entry.paid)
+      .reduce((sum, entry) => sum + entry.amount, 0);
+    const paid = entries
+      .filter((entry) => entry.paid)
+      .reduce((sum, entry) => sum + entry.amount, 0);
 
-    const byNameMap = new Map<string, { name: string; total: number; days: number }>();
+    const byNameMap = new Map<
+      string,
+      { name: string; total: number; days: number; unpaid: number; paid: number }
+    >();
     for (const entry of entries) {
-      const current = byNameMap.get(entry.name) ?? { name: entry.name, total: 0, days: 0 };
+      const current = byNameMap.get(entry.name) ?? {
+        name: entry.name,
+        total: 0,
+        days: 0,
+        unpaid: 0,
+        paid: 0,
+      };
       current.total += entry.amount;
       current.days += 1;
+      if (entry.paid) {
+        current.paid += entry.amount;
+      } else {
+        current.unpaid += entry.amount;
+      }
       byNameMap.set(entry.name, current);
     }
 
@@ -53,6 +73,8 @@ export class AnalyticsService {
       month,
       entries,
       total,
+      unpaid,
+      paid,
       byName: [...byNameMap.values()].sort((a, b) => b.total - a.total),
     };
   }
@@ -63,6 +85,7 @@ export class AnalyticsService {
         name: dto.name.trim(),
         date: new Date(dto.date),
         amount: dto.amount,
+        paid: dto.paid ?? false,
         note: dto.note ?? null,
         createdById: adminId,
       },
@@ -78,8 +101,15 @@ export class AnalyticsService {
         ...(dto.date !== undefined ? { date: new Date(dto.date) } : {}),
         ...(dto.amount !== undefined ? { amount: dto.amount } : {}),
         ...(dto.note !== undefined ? { note: dto.note } : {}),
+        ...(dto.paid !== undefined ? { paid: dto.paid } : {}),
       },
     });
+  }
+
+  /** Отметка выплаты по смене. */
+  async setShiftPaid(id: string, paid: boolean) {
+    await this.ensureShiftExists(id);
+    return this.prisma.shiftEntry.update({ where: { id }, data: { paid } });
   }
 
   async deleteShift(id: string) {
@@ -198,6 +228,8 @@ export class AnalyticsService {
       month: shifts.month,
       shifts: {
         total: shifts.total,
+        unpaid: shifts.unpaid,
+        paid: shifts.paid,
         byName: shifts.byName,
         daysCount: shifts.entries.length,
       },

@@ -7,6 +7,7 @@ import {
   useAnalyticsShifts,
   useCreateShift,
   useDeleteShift,
+  useSetShiftPaid,
 } from '../../entities/analytics';
 import { showToast } from '../../shared/ui/toast';
 
@@ -158,6 +159,7 @@ function ShiftsSection({ month }: { month: string }): JSX.Element {
   const { data, isLoading, isError } = useAnalyticsShifts(month);
   const createShift = useCreateShift();
   const deleteShift = useDeleteShift();
+  const setPaid = useSetShiftPaid();
 
   const [name, setName] = useState('');
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -214,10 +216,18 @@ function ShiftsSection({ month }: { month: string }): JSX.Element {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <Card>
           <p className="text-sm text-muted-foreground">Итог за месяц</p>
-          <p className="text-2xl font-medium text-primary">{formatMoney(data.total)}</p>
+          <p className="text-2xl font-medium">{formatMoney(data.total)}</p>
+        </Card>
+        <Card>
+          <p className="text-sm text-muted-foreground">К выплате</p>
+          <p className="text-2xl font-medium text-destructive">{formatMoney(data.unpaid)}</p>
+        </Card>
+        <Card>
+          <p className="text-sm text-muted-foreground">Выплачено</p>
+          <p className="text-2xl font-medium text-primary">{formatMoney(data.paid)}</p>
         </Card>
         <Card>
           <p className="text-sm text-muted-foreground">Записей за месяц</p>
@@ -226,12 +236,6 @@ function ShiftsSection({ month }: { month: string }): JSX.Element {
         <Card>
           <p className="text-sm text-muted-foreground">Сотрудников</p>
           <p className="text-2xl font-medium">{data.byName.length}</p>
-        </Card>
-        <Card>
-          <p className="text-sm text-muted-foreground">Лучший по сумме</p>
-          <p className="truncate text-lg font-medium">
-            {data.byName[0] ? `${data.byName[0].name} · ${formatMoney(data.byName[0].total)}` : '—'}
-          </p>
         </Card>
       </div>
 
@@ -285,6 +289,7 @@ function ShiftsSection({ month }: { month: string }): JSX.Element {
                     <th className="py-2 pr-3 font-medium">Имя</th>
                     <th className="py-2 pr-3 font-medium">Комментарий</th>
                     <th className="py-2 pr-3 font-medium">Сумма</th>
+                    <th className="py-2 pr-3 font-medium">Выплата</th>
                     <th className="py-2 font-medium" />
                   </tr>
                 </thead>
@@ -294,8 +299,28 @@ function ShiftsSection({ month }: { month: string }): JSX.Element {
                       <td className="py-2.5 pr-3 whitespace-nowrap">{formatDate(entry.date)}</td>
                       <td className="py-2.5 pr-3 font-medium">{entry.name}</td>
                       <td className="py-2.5 pr-3 text-muted-foreground">{entry.note ?? '—'}</td>
-                      <td className="py-2.5 pr-3 font-medium text-primary">
-                        {formatMoney(entry.amount)}
+                      <td className="py-2.5 pr-3 font-medium">{formatMoney(entry.amount)}</td>
+                      <td className="py-2.5 pr-3">
+                        <button
+                          type="button"
+                          disabled={setPaid.isPending}
+                          onClick={() =>
+                            setPaid.mutate(
+                              { id: entry.id, paid: !entry.paid },
+                              {
+                                onError: () =>
+                                  showToast('Не удалось изменить статус выплаты', 'error'),
+                              },
+                            )
+                          }
+                          className={
+                            entry.paid
+                              ? 'rounded-full bg-primary/20 px-3 py-1 text-xs font-medium text-primary hover:bg-primary/30'
+                              : 'rounded-full bg-destructive/15 px-3 py-1 text-xs font-medium text-destructive hover:bg-destructive/25'
+                          }
+                        >
+                          {entry.paid ? 'Выплачено' : 'Не выплачено'}
+                        </button>
                       </td>
                       <td className="py-2.5 text-right">
                         <Button
@@ -326,17 +351,32 @@ function ShiftsSection({ month }: { month: string }): JSX.Element {
             <p className="text-sm text-muted-foreground">Нет данных за месяц.</p>
           ) : (
             data.byName.map((item) => (
-              <div key={item.name} className="flex items-center justify-between gap-2 text-sm">
-                <span className="min-w-0 truncate">
-                  {item.name} <span className="text-muted-foreground">· {item.days} дн.</span>
-                </span>
-                <span className="shrink-0 font-medium text-primary">{formatMoney(item.total)}</span>
+              <div
+                key={item.name}
+                className="flex flex-col gap-1 border-b border-border/60 pb-2 text-sm"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="min-w-0 truncate">
+                    {item.name} <span className="text-muted-foreground">· {item.days} дн.</span>
+                  </span>
+                  <span className="shrink-0 font-medium">{formatMoney(item.total)}</span>
+                </div>
+                <div className="flex items-center gap-3 text-xs">
+                  <span className="text-destructive">К выплате: {formatMoney(item.unpaid)}</span>
+                  <span className="text-primary">Выплачено: {formatMoney(item.paid)}</span>
+                </div>
               </div>
             ))
           )}
-          <div className="mt-2 flex justify-between border-t border-border pt-2 text-sm font-medium">
-            <span>Итого за месяц</span>
-            <span className="text-primary">{formatMoney(data.total)}</span>
+          <div className="mt-2 flex flex-col gap-1 border-t border-border pt-2 text-sm font-medium">
+            <div className="flex justify-between">
+              <span>Итого за месяц</span>
+              <span>{formatMoney(data.total)}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-destructive">К выплате: {formatMoney(data.unpaid)}</span>
+              <span className="text-primary">Выплачено: {formatMoney(data.paid)}</span>
+            </div>
           </div>
         </Card>
       </div>

@@ -106,6 +106,13 @@ html, body {
   border: 1px solid var(--line-strong);
 }
 .btn-ghost:hover { background: rgba(200, 154, 61, 0.11); box-shadow: 0 0 20px rgba(200, 154, 61, 0.16); }
+.btn-find {
+  color: var(--gold);
+  background: linear-gradient(140deg, rgba(200, 154, 61, 0.2) 0%, rgba(120, 84, 28, 0.32) 100%);
+  border: 1px solid rgba(200, 154, 61, 0.45);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+}
+.btn-find:hover { background: linear-gradient(140deg, rgba(200, 154, 61, 0.3) 0%, rgba(120, 84, 28, 0.42) 100%); box-shadow: 0 0 22px rgba(200, 154, 61, 0.25); }
 .btn-dark {
   color: var(--muted-strong); background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(182, 169, 143, 0.18);

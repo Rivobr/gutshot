@@ -97,8 +97,7 @@ const LEGAL_DOCUMENTS: { type: LegalDocumentType; title: string; content: string
   {
     type: LegalDocumentType.USER_AGREEMENT,
     title: 'Публичная оферта',
-    content:
-      'Публичная оферта GUTSHOT.\n\nСкан документа показывается в Mini App.',
+    content: 'Публичная оферта GUTSHOT.\n\nСкан документа показывается в Mini App.',
   },
   {
     type: LegalDocumentType.PERSONAL_DATA_CONSENT,
@@ -115,39 +114,42 @@ const LEGAL_DOCUMENTS: { type: LegalDocumentType; title: string; content: string
 ];
 
 async function main(): Promise<void> {
-  await prisma.adminUser.deleteMany({
-    where: { email: { in: ['owner@gutshot.club', 'tvadmin'] } },
-  });
+  // Полная замена админ-пользователей: старые admin/dl удаляются,
+  // остаются только 3 OWNER-профиля (Sergei, Tima, Misha).
+  // Пароли задаются переменными окружения ADMIN_PASSWORD_SERGEI и т.д.
+  // (см. docker-entrypoint / запуск seed'а на сервере).
+  await prisma.adminUser.deleteMany({});
 
-  const dealer = await prisma.adminUser.upsert({
-    where: { email: 'dl' },
-    update: {
-      name: 'Дилер',
-      role: AdminRole.DEALER,
-      passwordHash: await hash('dl12345', 10),
-    },
-    create: {
-      email: 'dl',
-      passwordHash: await hash('dl12345', 10),
-      name: 'Дилер',
-      role: AdminRole.DEALER,
-    },
-  });
+  const owners = [
+    { email: 'Sergei', name: 'Sergei', password: process.env.ADMIN_PASSWORD_SERGEI },
+    { email: 'Tima', name: 'Tima', password: process.env.ADMIN_PASSWORD_TIMA },
+    { email: 'Misha', name: 'Misha', password: process.env.ADMIN_PASSWORD_MISHA },
+  ];
 
-  const admin = await prisma.adminUser.upsert({
-    where: { email: 'admin' },
-    update: {
-      name: 'Админ',
-      role: AdminRole.OWNER,
-      passwordHash: await hash('adminowner12345!', 10),
-    },
-    create: {
-      email: 'admin',
-      passwordHash: await hash('adminowner12345!', 10),
-      name: 'Админ',
-      role: AdminRole.OWNER,
-    },
-  });
+  const admins: { email: string; role: AdminRole }[] = [];
+  for (const owner of owners) {
+    if (!owner.password) {
+      throw new Error(
+        `Не задан пароль для ${owner.email} (ADMIN_PASSWORD_${owner.email.toUpperCase()})`,
+      );
+    }
+    admins.push(
+      await prisma.adminUser.upsert({
+        where: { email: owner.email },
+        update: {
+          name: owner.name,
+          role: AdminRole.OWNER,
+          passwordHash: await hash(owner.password, 10),
+        },
+        create: {
+          email: owner.email,
+          passwordHash: await hash(owner.password, 10),
+          name: owner.name,
+          role: AdminRole.OWNER,
+        },
+      }),
+    );
+  }
 
   const player = await prisma.user.upsert({
     where: { telegramId: '000000001' },
@@ -199,8 +201,7 @@ async function main(): Promise<void> {
   });
 
   console.log('Seed завершен:', {
-    dealer: dealer.email,
-    admin: admin.email,
+    admins: admins.map((item) => `${item.email} (${item.role})`),
     player: player.telegramId,
     qrCode: player.qrCode,
     tournament: tournament.title,

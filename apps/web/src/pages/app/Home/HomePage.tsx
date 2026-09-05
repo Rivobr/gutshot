@@ -125,7 +125,7 @@ export function CabinetHomePage() {
             </div>
             <div className="day hot">
               <b>СБ</b>
-              <span>17:00 · баунти фриролл</span>
+              <span>18:00 · баунти фриролл</span>
             </div>
           </div>
         </div>

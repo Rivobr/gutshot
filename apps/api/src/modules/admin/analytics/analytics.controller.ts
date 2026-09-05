@@ -17,7 +17,12 @@ import { AdminJwtPayload } from '../../../common/interfaces/jwt-payload.interfac
 import { AdminAuthGuard } from '../../auth/guards/admin-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { AnalyticsService } from './analytics.service';
-import { AnalyticsQueryDto, CreateShiftEntryDto, UpdateShiftEntryDto } from './dto/analytics.dto';
+import {
+  AnalyticsQueryDto,
+  CreateShiftEntryDto,
+  SetShiftPaidDto,
+  UpdateShiftEntryDto,
+} from './dto/analytics.dto';
 
 @ApiTags('Admin / Analytics')
 @ApiBearerAuth()
@@ -47,6 +52,12 @@ export class AdminAnalyticsController {
   @Patch('shifts/:id')
   updateShift(@Param('id') id: string, @Body() dto: UpdateShiftEntryDto) {
     return this.analyticsService.updateShift(id, dto);
+  }
+
+  /** Отметка «выплачено / не выплачено» по смене. */
+  @Patch('shifts/:id/paid')
+  setShiftPaid(@Param('id') id: string, @Body() dto: SetShiftPaidDto) {
+    return this.analyticsService.setShiftPaid(id, dto.paid);
   }
 
   @Delete('shifts/:id')

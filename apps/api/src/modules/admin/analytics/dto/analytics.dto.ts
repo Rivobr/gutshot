@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsBoolean,
   IsDateString,
   IsInt,
   IsOptional,
@@ -29,6 +30,11 @@ export class CreateShiftEntryDto {
   @IsString()
   @MaxLength(500)
   note?: string;
+
+  @ApiPropertyOptional({ description: 'Выплачено', default: false })
+  @IsOptional()
+  @IsBoolean()
+  paid?: boolean;
 }
 
 export class UpdateShiftEntryDto {
@@ -54,6 +60,17 @@ export class UpdateShiftEntryDto {
   @IsString()
   @MaxLength(500)
   note?: string;
+
+  @ApiPropertyOptional({ description: 'Выплачено' })
+  @IsOptional()
+  @IsBoolean()
+  paid?: boolean;
+}
+
+export class SetShiftPaidDto {
+  @ApiProperty({ description: 'true — выплачено, false — не выплачено' })
+  @IsBoolean()
+  paid!: boolean;
 }
 
 export class AnalyticsQueryDto {

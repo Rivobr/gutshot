@@ -26,7 +26,7 @@ export class PublicController {
       schedule: [
         { day: 'СР', time: '19:00', kind: 'РЕЙТИНГ' },
         { day: 'ПТ', time: '19:00', kind: 'ФРИРОЛЛ' },
-        { day: 'СБ', time: '17:00', kind: 'РЕЙТИНГ' },
+        { day: 'СБ', time: '18:00', kind: 'РЕЙТИНГ' },
       ],
       club: {
         name: 'GUTSHOT Poker Club',

@@ -43,6 +43,17 @@ export function useUpdateShift() {
   });
 }
 
+export function useSetShiftPaid() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, paid }: { id: string; paid: boolean }) =>
+      analyticsApi.setShiftPaid(id, paid),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'analytics'] });
+    },
+  });
+}
+
 export function useDeleteShift() {
   const queryClient = useQueryClient();
   return useMutation({

@@ -97,11 +97,14 @@ export function LandingPage() {
               Спортивный покер в центре города: Миллионная, 19. Регулярные турниры, рейтинг сезона,
               финал месяца. Только игра — никаких ставок.
             </p>
-            <div className="row wrap mt-8 hero-line" style={{ animationDelay: '0.72s' }}>
+            <div
+              className="row wrap hero-line"
+              style={{ animationDelay: '0.72s', gap: 18, marginTop: 20 }}
+            >
               <Link className="btn btn-gold" to={user ? '/app' : '/login'}>
                 {user ? 'Войти в кабинет' : 'Войти в клуб'}
               </Link>
-              <a className="btn btn-ghost" href="#about">
+              <a className="btn btn-find" href="#about">
                 Как найти
               </a>
             </div>
@@ -180,7 +183,7 @@ export function LandingPage() {
           </div>
           <div className="day hot">
             <b>СБ</b>
-            <span>17:00 · баунти фриролл</span>
+            <span>18:00 · баунти фриролл</span>
           </div>
         </div>
         <p className="hint mt-12">
