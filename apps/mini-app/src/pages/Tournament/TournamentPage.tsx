@@ -366,7 +366,7 @@ export function TournamentPage(): JSX.Element {
                   </div>
                   <PlayerShowcaseMedals
                     items={p.showcaseAchievements?.length ? p.showcaseAchievements : undefined}
-                    size={42}
+                    size={48}
                   />
                 </motion.button>
               ))}

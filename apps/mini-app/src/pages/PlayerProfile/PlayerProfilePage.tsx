@@ -262,7 +262,7 @@ export function PlayerProfilePage(): JSX.Element {
                   <AchievementMedallion
                     group={item.group}
                     rarity={item.rarity}
-                    size={48}
+                    size={56}
                     title={item.title}
                     achievementId={item.id}
                   />

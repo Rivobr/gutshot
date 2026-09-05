@@ -210,7 +210,7 @@ function AchievementCard({
       }`}
       style={{
         gridColumn: span2 ? '1 / -1' : undefined,
-        minHeight: span2 ? 172 : 214,
+        minHeight: span2 ? 188 : 232,
         borderRadius: 16,
         cursor: 'pointer',
         background: done
@@ -254,7 +254,7 @@ function AchievementCard({
         group={item.group}
         rarity={done ? item.rarity : undefined}
         locked={!done}
-        size={span2 ? 90 : 104}
+        size={span2 ? 102 : 118}
         title={item.title}
         achievementId={item.id}
       />
@@ -398,7 +398,7 @@ function AchievementHowToModal({
             group={item.group}
             rarity={done ? item.rarity : undefined}
             locked={!done}
-            size={128}
+            size={148}
             title={item.title}
             achievementId={item.id}
           />
